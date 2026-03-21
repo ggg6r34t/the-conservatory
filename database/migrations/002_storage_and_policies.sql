@@ -1,0 +1,2 @@
+-- Storage and RLS policies are included in schema.sql for the initial bootstrap.
+-- Split this into a dedicated migration when the database is promoted beyond the first environment.
