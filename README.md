@@ -1,50 +1,114 @@
-# Welcome to your Expo app 👋
+# The Conservatory
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+The Conservatory is an Expo + React Native plant care app focused on a premium editorial UI, local-first reliability, and staged Supabase sync.
 
-## Get started
+## Core Features
 
-1. Install dependencies
+- Email auth flow (local fallback + Supabase when configured)
+- Plant library with create/detail/delete flows
+- Care logging and watering cadence tracking
+- Reminder scheduling and local notifications
+- Dashboard summary (due today, active plants, offline status)
+- Local SQLite persistence with queued sync operations
 
-   ```bash
-   npm install
-   ```
+## Tech Stack
 
-2. Start the app
+- Expo SDK 54 + React Native 0.81
+- Expo Router (file-based routing under `app/`)
+- TypeScript (strict) + Zod validation
+- React Query for async state
+- Zustand for UI/store state
+- Expo SQLite for local-first data
+- Supabase (auth + remote sync adapter)
+- Jest + Testing Library for tests
 
-   ```bash
-   npx expo start
-   ```
+## Project Structure
 
-In the output, you'll find options to open the app in a
+- `app/` route entry points and screens
+- `features/` domain modules (auth, plants, care logs, notifications, dashboard, settings)
+- `services/` infra (database, sync queue, session, analytics)
+- `providers/` app-level providers (theme, query, fonts/bootstrap)
+- `config/` runtime config and environment parsing
+- `database/` SQL schema and migration files for Supabase
+- `tests/` unit/integration tests
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Environment Variables
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Create a local `.env` file from `.env.example`:
 
 ```bash
-npm run reset-project
+cp .env.example .env
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Required/available values:
 
-## Learn more
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_ENABLE_SYNC_TRIALS` (`false` by default)
 
-To learn more about developing your project with Expo, look at the following resources:
+If Supabase vars are omitted, the app uses local fallbacks where implemented.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Getting Started
 
-## Join the community
+1. Install dependencies:
 
-Join our community of developers creating universal apps.
+```bash
+npm install
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+2. Start the app:
+
+```bash
+npm run start
+```
+
+Useful alternatives:
+
+```bash
+npm run android
+npm run ios
+npm run web
+```
+
+## Quality Checks
+
+```bash
+npm run typecheck
+npm test -- --runInBand
+npm run lint
+```
+
+## Notifications + Expo Go Note
+
+`expo-notifications` remote push on Android is not supported in Expo Go (SDK 53+).
+Use a development build for end-to-end push validation.
+
+The app includes runtime safeguards so unsupported notification paths are skipped in Expo Go.
+
+## Sync Model (Local-First)
+
+- Mutations write to local SQLite first.
+- A `sync_queue` records pending operations.
+- Replay is processed by `services/database/sync.ts`.
+- Supabase replay adapter is feature-flagged behind `EXPO_PUBLIC_ENABLE_SYNC_TRIALS`.
+
+## Supabase Schema
+
+Reference SQL is in:
+
+- `database/schema.sql`
+- `database/migrations/`
+
+Apply these in your Supabase project before enabling full remote sync in production.
+
+## Design System
+
+The visual system and UI principles are documented in:
+
+- `docs/DESIGN.md`
+
+## Deployment Notes
+
+- Ensure `.env` is never committed (see `.gitignore`).
+- Prefer EAS development/preview builds for notification and native capability testing.
+- Run typecheck + tests + lint before every release branch/tag.
