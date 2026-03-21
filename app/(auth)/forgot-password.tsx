@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TertiaryButton } from "@/components/common/Buttons/TertiaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
-import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
@@ -40,15 +40,9 @@ export default function ForgotPasswordScreen() {
               <TertiaryButton label="Back to sign in" href="/(auth)/login" />
             </View>
             <View style={styles.copy}>
-              <View>
-                <View>
-                  <PrimaryButton
-                    label="Reset Your Password"
-                    onPress={() => undefined}
-                    disabled
-                  />
-                </View>
-              </View>
+              <Text style={[styles.title, { color: colors.primary }]}>
+                Reset Your Password
+              </Text>
             </View>
           </View>
         </View>
@@ -86,5 +80,10 @@ const styles = StyleSheet.create({
   },
   copy: {
     gap: 12,
+  },
+  title: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 42,
+    lineHeight: 50,
   },
 });

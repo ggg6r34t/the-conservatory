@@ -1,24 +1,29 @@
-import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Alert, StyleSheet, View } from "react-native";
 
-import { PrimaryButton } from '@/components/common/Buttons/PrimaryButton';
-import { TextInputField } from '@/components/common/Forms/TextInput';
-import { useLogin } from '@/features/auth/hooks/useLogin';
-import { loginSchema } from '@/features/auth/schemas/authValidation';
+import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { TextInputField } from "@/components/common/Forms/TextInput";
+import { useLogin } from "@/features/auth/hooks/useLogin";
+import { loginSchema } from "@/features/auth/schemas/authValidation";
 
 export function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const loginMutation = useLogin();
 
   const handleSubmit = async () => {
-    const parsed = loginSchema.safeParse({ email, password });
+    const parsed = loginSchema.safeParse({
+      email: email.trim().toLowerCase(),
+      password,
+    });
     if (!parsed.success) {
       const nextErrors = parsed.error.flatten().fieldErrors;
       setErrors({
-        email: nextErrors.email?.[0] ?? '',
-        password: nextErrors.password?.[0] ?? '',
+        email: nextErrors.email?.[0] ?? "",
+        password: nextErrors.password?.[0] ?? "",
       });
       return;
     }
@@ -27,8 +32,12 @@ export function LoginForm() {
 
     try {
       await loginMutation.mutateAsync(parsed.data);
+      router.replace("/(tabs)");
     } catch (error) {
-      Alert.alert('Unable to sign in', error instanceof Error ? error.message : 'Try again.');
+      Alert.alert(
+        "Unable to sign in",
+        error instanceof Error ? error.message : "Try again.",
+      );
     }
   };
 
@@ -51,7 +60,11 @@ export function LoginForm() {
         placeholder="••••••••"
         error={errors.password}
       />
-      <PrimaryButton label="Sign In" onPress={handleSubmit} loading={loginMutation.isPending} />
+      <PrimaryButton
+        label="Sign In"
+        onPress={handleSubmit}
+        loading={loginMutation.isPending}
+      />
     </View>
   );
 }

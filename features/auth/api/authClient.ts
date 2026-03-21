@@ -1,15 +1,31 @@
 import { env } from "@/config/env";
 import { supabase } from "@/config/supabase";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
-import { getDatabase } from "@/services/database/sqlite";
 import {
   clearSession,
   readSession,
   writeSession,
 } from "@/services/auth/sessionManager";
+import { getDatabase } from "@/services/database/sqlite";
 import type { AuthResult } from "@/types/api";
 import type { AppUser } from "@/types/models";
 import { logger } from "@/utils/logger";
+
+interface LocalUserRow {
+  id: string;
+  email: string;
+  display_name: string;
+  avatar_url: string | null;
+  role: "user" | "admin";
+  created_at: string;
+  updated_at: string;
+}
+
+interface LocalCredentialRow {
+  user_id: string;
+  email: string;
+  password_hash: string;
+}
 
 function createLocalUser(email: string, displayName?: string): AppUser {
   const now = new Date().toISOString();
@@ -40,6 +56,110 @@ function createSupabaseUser(
     createdAt: now,
     updatedAt: now,
   };
+}
+
+function mapLocalUser(row: LocalUserRow): AppUser {
+  return {
+    id: row.id,
+    email: row.email,
+    displayName: row.display_name,
+    avatarUrl: row.avatar_url,
+    role: row.role,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function fallbackPasswordHash(password: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < password.length; index += 1) {
+    hash ^= password.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return `fnv1a:${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+
+async function hashLocalPassword(password: string) {
+  try {
+    const cryptoModule = await import("expo-crypto");
+    return cryptoModule.digestStringAsync(
+      cryptoModule.CryptoDigestAlgorithm.SHA256,
+      password,
+    );
+  } catch (error) {
+    logger.warn("auth.local_hash_fallback", {
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return fallbackPasswordHash(password);
+  }
+}
+
+async function getLocalCredentialByEmail(email: string) {
+  const database = await getDatabase();
+  return database.getFirstAsync<LocalCredentialRow>(
+    "SELECT * FROM local_auth_credentials WHERE email = ? LIMIT 1;",
+    email,
+  );
+}
+
+async function getLocalUserById(userId: string) {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<LocalUserRow>(
+    "SELECT * FROM users WHERE id = ? LIMIT 1;",
+    userId,
+  );
+
+  return row ? mapLocalUser(row) : null;
+}
+
+async function getLocalUserByEmail(email: string) {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<LocalUserRow>(
+    "SELECT * FROM users WHERE email = ? LIMIT 1;",
+    email,
+  );
+
+  return row ? mapLocalUser(row) : null;
+}
+
+async function createLocalUserAccount(user: AppUser, password: string) {
+  const database = await getDatabase();
+  const existingCredential = await getLocalCredentialByEmail(user.email);
+  const existingUser = await getLocalUserByEmail(user.email);
+
+  if (existingCredential || existingUser) {
+    throw new Error("An account with this email already exists.");
+  }
+
+  const passwordHash = await hashLocalPassword(password);
+
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      `INSERT INTO users (id, email, display_name, avatar_url, role, created_at, updated_at, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+      user.id,
+      user.email,
+      user.displayName,
+      user.avatarUrl ?? null,
+      user.role,
+      user.createdAt,
+      user.updatedAt,
+      user.id,
+    );
+
+    await database.runAsync(
+      `INSERT INTO local_auth_credentials (user_id, email, password_hash, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?);`,
+      user.id,
+      user.email,
+      passwordHash,
+      user.createdAt,
+      user.updatedAt,
+    );
+  });
+
+  await getUserPreferences(user.id);
 }
 
 async function syncRemoteProfile(user: AppUser) {
@@ -151,8 +271,21 @@ export async function login(
   logger.warn(
     "Supabase is not configured. Falling back to local development auth.",
   );
-  const user = createLocalUser(email);
-  await persistLocalUser(user);
+  const credential = await getLocalCredentialByEmail(email);
+  if (!credential) {
+    throw new Error("No local account found for this email.");
+  }
+
+  const passwordHash = await hashLocalPassword(password);
+  if (credential.password_hash !== passwordHash) {
+    throw new Error("Incorrect email or password.");
+  }
+
+  const user = await getLocalUserById(credential.user_id);
+  if (!user) {
+    throw new Error("Local account data is missing. Create the account again.");
+  }
+
   await writeSession(user);
   return { user, requiresEmailVerification: false };
 }
@@ -191,7 +324,7 @@ export async function signup(
     "Supabase is not configured. Falling back to local development signup.",
   );
   const user = createLocalUser(email, displayName);
-  await persistLocalUser(user);
+  await createLocalUserAccount(user, password);
   await writeSession(user);
   return { user, requiresEmailVerification: false };
 }

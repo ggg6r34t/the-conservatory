@@ -1,26 +1,32 @@
-import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Alert, StyleSheet, View } from "react-native";
 
-import { PrimaryButton } from '@/components/common/Buttons/PrimaryButton';
-import { TextInputField } from '@/components/common/Forms/TextInput';
-import { useSignup } from '@/features/auth/hooks/useSignup';
-import { signupSchema } from '@/features/auth/schemas/authValidation';
+import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { TextInputField } from "@/components/common/Forms/TextInput";
+import { useSignup } from "@/features/auth/hooks/useSignup";
+import { signupSchema } from "@/features/auth/schemas/authValidation";
 
 export function SignupForm() {
-  const [displayName, setDisplayName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const router = useRouter();
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const signupMutation = useSignup();
 
   const handleSubmit = async () => {
-    const parsed = signupSchema.safeParse({ displayName, email, password });
+    const parsed = signupSchema.safeParse({
+      displayName: displayName.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+    });
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
       setErrors({
-        displayName: fieldErrors.displayName?.[0] ?? '',
-        email: fieldErrors.email?.[0] ?? '',
-        password: fieldErrors.password?.[0] ?? '',
+        displayName: fieldErrors.displayName?.[0] ?? "",
+        email: fieldErrors.email?.[0] ?? "",
+        password: fieldErrors.password?.[0] ?? "",
       });
       return;
     }
@@ -30,10 +36,19 @@ export function SignupForm() {
     try {
       const result = await signupMutation.mutateAsync(parsed.data);
       if (result.requiresEmailVerification) {
-        Alert.alert('Verify your email', 'Check your inbox to activate your account.');
+        Alert.alert(
+          "Verify your email",
+          "Check your inbox to activate your account.",
+        );
+        return;
       }
+
+      router.replace("/(tabs)");
     } catch (error) {
-      Alert.alert('Unable to create account', error instanceof Error ? error.message : 'Try again.');
+      Alert.alert(
+        "Unable to create account",
+        error instanceof Error ? error.message : "Try again.",
+      );
     }
   };
 

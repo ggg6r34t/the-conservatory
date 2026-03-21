@@ -6,6 +6,7 @@ export const NETWORK_REFRESH_MS = 15000;
 export const queryKeys = {
   auth: ["auth"] as const,
   dashboard: ["dashboard"] as const,
+  graveyard: ["graveyard"] as const,
   plants: ["plants"] as const,
   plant: (id: string) => ["plants", id] as const,
   careLogs: (plantId: string) => ["care-logs", plantId] as const,

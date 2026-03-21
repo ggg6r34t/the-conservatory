@@ -1,8 +1,8 @@
 import { Image } from "expo-image";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import {
-  Alert,
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   Switch,
@@ -15,20 +15,22 @@ import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { TertiaryButton } from "@/components/common/Buttons/TertiaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { CareLogList } from "@/features/care-logs/components/CareLogList";
-import { useDeletePlant } from "@/features/plants/hooks/useDeletePlant";
 import { useSetReminder } from "@/features/notifications/hooks/useSetReminder";
 import { StreakBadge } from "@/features/plants/components/StreakBadge";
+import { useArchivePlant } from "@/features/plants/hooks/useArchivePlant";
+import { useDeletePlant } from "@/features/plants/hooks/useDeletePlant";
 import { calculatePlantStreak } from "@/features/plants/services/streakService";
 import type { PlantWithRelations } from "@/types/models";
-import { formatEditorialDate } from "@/utils/dateFormatter";
 
 interface PlantDetailProps {
   data: PlantWithRelations;
 }
 
 export function PlantDetail({ data }: PlantDetailProps) {
+  const router = useRouter();
   const { colors } = useTheme();
   const deletePlant = useDeletePlant(data.plant.id);
+  const archivePlant = useArchivePlant(data.plant.id);
   const setReminder = useSetReminder();
   const primaryPhoto = data.photos.find((photo) => photo.isPrimary === 1);
   const reminder = data.reminders.find(
@@ -96,91 +98,129 @@ export function PlantDetail({ data }: PlantDetailProps) {
         </Text>
       </View>
       <StreakBadge streak={streak} />
-      <View style={styles.actions}>
-        <PrimaryButton
-          label="Water Now"
-          href={`/care-log/${data.plant.id}` as const}
-        />
-        <SecondaryButton
-          label="Edit Plant"
-          onPress={() =>
-            Alert.alert(
-              "Edit plant",
-              "Editing is available from the add/edit screen next.",
-            )
-          }
-        />
-      </View>
-      <View
-        style={[
-          styles.infoCard,
-          { backgroundColor: colors.surfaceContainerLow },
-        ]}
-      >
-        <Text style={[styles.infoTitle, { color: colors.primary }]}>
-          Next care
-        </Text>
-        <Text style={[styles.infoBody, { color: colors.onSurfaceVariant }]}>
-          {formatEditorialDate(data.plant.nextWaterDueAt)}
-        </Text>
-      </View>
-      <View
-        style={[
-          styles.infoCard,
-          { backgroundColor: colors.surfaceContainerLow },
-        ]}
-      >
-        <View style={styles.reminderHeader}>
-          <Text style={[styles.infoTitle, { color: colors.primary }]}>
-            Reminders
-          </Text>
-          <Switch
-            value={reminderEnabled}
-            onValueChange={(value) => updateReminder(reminderFrequency, value)}
-            trackColor={{
-              true: colors.primaryContainer,
-              false: colors.surfaceContainerHigh,
+      {data.plant.status === "active" ? (
+        <View style={styles.actions}>
+          <PrimaryButton
+            label="Water Now"
+            href={`/care-log/${data.plant.id}` as const}
+          />
+          <SecondaryButton
+            label="Edit Plant"
+            href={`/plant/${data.plant.id}/edit` as const}
+          />
+          <SecondaryButton
+            label="Move to Graveyard"
+            onPress={() => {
+              Alert.alert(
+                "Move to graveyard",
+                "This plant will be archived and reminders will be disabled.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Archive",
+                    style: "destructive",
+                    onPress: () => {
+                      archivePlant
+                        .mutateAsync()
+                        .then(() => {
+                          router.replace("/(tabs)/graveyard");
+                        })
+                        .catch((error) => {
+                          Alert.alert(
+                            "Unable to archive plant",
+                            error instanceof Error
+                              ? error.message
+                              : "Try again.",
+                          );
+                        });
+                    },
+                  },
+                ],
+              );
             }}
-            thumbColor={reminderEnabled ? colors.primary : colors.surfaceBright}
           />
         </View>
-        <Text style={[styles.infoBody, { color: colors.onSurfaceVariant }]}>
-          Water every {reminderFrequency} days.
-        </Text>
-        <View style={styles.frequencyRow}>
-          {[3, 7, 10, 14].map((days) => {
-            const isActive = days === reminderFrequency;
-            return (
-              <Pressable
-                key={days}
-                onPress={() => updateReminder(days, reminderEnabled)}
-                style={[
-                  styles.frequencyChip,
-                  {
-                    backgroundColor: isActive
-                      ? colors.tertiaryContainer
-                      : colors.surfaceContainerHigh,
-                  },
-                ]}
-              >
-                <Text
+      ) : null}
+      {data.plant.status === "active" ? (
+        <View
+          style={[
+            styles.infoCard,
+            { backgroundColor: colors.surfaceContainerLow },
+          ]}
+        >
+          <View style={styles.reminderHeader}>
+            <Text style={[styles.infoTitle, { color: colors.primary }]}>
+              Reminders
+            </Text>
+            <Switch
+              value={reminderEnabled}
+              onValueChange={(value) =>
+                updateReminder(reminderFrequency, value)
+              }
+              trackColor={{
+                true: colors.primaryContainer,
+                false: colors.surfaceContainerHigh,
+              }}
+              thumbColor={
+                reminderEnabled ? colors.primary : colors.surfaceBright
+              }
+            />
+          </View>
+          <Text style={[styles.infoBody, { color: colors.onSurfaceVariant }]}>
+            Water every {reminderFrequency} days.
+          </Text>
+          <View style={styles.frequencyRow}>
+            {[3, 7, 10, 14].map((days) => {
+              const isActive = days === reminderFrequency;
+              return (
+                <Pressable
+                  key={days}
+                  onPress={() => updateReminder(days, reminderEnabled)}
                   style={[
-                    styles.frequencyLabel,
+                    styles.frequencyChip,
                     {
-                      color: isActive ? colors.surfaceBright : colors.onSurface,
+                      backgroundColor: isActive
+                        ? colors.tertiaryContainer
+                        : colors.surfaceContainerHigh,
                     },
                   ]}
                 >
-                  {days}d
-                </Text>
-              </Pressable>
-            );
-          })}
-          {setReminder.isPending ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : null}
+                  <Text
+                    style={[
+                      styles.frequencyLabel,
+                      {
+                        color: isActive
+                          ? colors.surfaceBright
+                          : colors.onSurface,
+                      },
+                    ]}
+                  >
+                    {days}d
+                  </Text>
+                </Pressable>
+              );
+            })}
+            {setReminder.isPending ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : null}
+          </View>
         </View>
-      </View>
+      ) : (
+        <View
+          style={[
+            styles.infoCard,
+            { backgroundColor: colors.surfaceContainerLow },
+          ]}
+        >
+          <Text style={[styles.infoTitle, { color: colors.primary }]}>
+            Memorialized
+          </Text>
+          <Text style={[styles.infoBody, { color: colors.onSurfaceVariant }]}>
+            This plant has been moved to the graveyard archive. Care reminders
+            are disabled.
+          </Text>
+        </View>
+      )}
       <CareLogList logs={data.logs} />
       <TertiaryButton
         label="Delete plant"

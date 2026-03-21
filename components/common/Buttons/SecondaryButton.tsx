@@ -1,32 +1,53 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Link, type Href } from "expo-router";
+import { Pressable, StyleSheet, Text } from "react-native";
 
-import { useTheme } from '@/components/design-system/useTheme';
+import { useTheme } from "@/components/design-system/useTheme";
 
 interface SecondaryButtonProps {
   label: string;
   onPress?: () => void;
+  href?: Href;
 }
 
-export function SecondaryButton({ label, onPress }: SecondaryButtonProps) {
+export function SecondaryButton({
+  label,
+  onPress,
+  href,
+}: SecondaryButtonProps) {
   const { colors } = useTheme();
 
-  return (
-    <Pressable onPress={onPress} style={[styles.button, { backgroundColor: colors.secondaryContainer }]}> 
-      <Text style={[styles.label, { color: colors.secondaryOnContainer }]}>{label}</Text>
+  const content = (
+    <Pressable
+      onPress={onPress}
+      style={[styles.button, { backgroundColor: colors.secondaryContainer }]}
+    >
+      <Text style={[styles.label, { color: colors.secondaryOnContainer }]}>
+        {label}
+      </Text>
     </Pressable>
   );
+
+  if (href) {
+    return (
+      <Link href={href} asChild>
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({
   button: {
     minHeight: 52,
     borderRadius: 999,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   label: {
-    fontFamily: 'Manrope_700Bold',
+    fontFamily: "Manrope_700Bold",
     fontSize: 15,
   },
 });

@@ -30,6 +30,9 @@ export function useUpdatePlant(plantId: string) {
       queryClient
         .invalidateQueries({ queryKey: queryKeys.dashboard })
         .catch(() => undefined);
+      queryClient
+        .invalidateQueries({ queryKey: queryKeys.graveyard })
+        .catch(() => undefined);
       queryClient.setQueryData(queryKeys.plant(plantId), data);
     },
   });

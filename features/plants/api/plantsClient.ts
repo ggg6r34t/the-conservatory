@@ -1,8 +1,14 @@
-import { queryKeys } from "@/config/constants";
+import { STORAGE_BUCKET } from "@/config/constants";
 import { upsertReminder } from "@/features/notifications/api/remindersClient";
+import { cancelReminderNotification } from "@/features/notifications/services/notificationService";
 import { getDatabase } from "@/services/database/sqlite";
 import { enqueueSyncOperation } from "@/services/database/sync";
-import type { Photo, Plant, PlantWithRelations } from "@/types/models";
+import type {
+  GraveyardPlant,
+  Photo,
+  Plant,
+  PlantWithRelations,
+} from "@/types/models";
 import type { PlantLibraryFilter, PlantSortOption } from "@/types/ui";
 import { createId } from "@/utils/id";
 
@@ -94,8 +100,88 @@ function computeNextWaterDueAt(lastWateredAt: string, intervalDays: number) {
   return due.toISOString();
 }
 
+function buildPhotoStoragePath(
+  userId: string,
+  plantId: string,
+  photoId: string,
+  localUri: string,
+) {
+  const normalizedUri = localUri.split("?")[0] ?? localUri;
+  const extension =
+    normalizedUri.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() ?? "jpg";
+  return `${userId}/${plantId}/${photoId}.${extension}`;
+}
+
+export interface GraveyardPlantListItem extends GraveyardPlant {
+  name: string;
+  speciesName: string;
+  nickname?: string | null;
+  plantNotes?: string | null;
+  primaryPhotoUri?: string | null;
+}
+
 export interface PlantListItem extends Plant {
   primaryPhotoUri?: string | null;
+}
+
+export async function listGraveyardPlants(userId: string) {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync<{
+    id: string;
+    user_id: string;
+    plant_id: string;
+    cause_of_passing: string | null;
+    memorial_note: string | null;
+    archived_at: string;
+    created_at: string;
+    updated_at: string;
+    updated_by: string | null;
+    pending: number;
+    synced_at: string | null;
+    sync_error: string | null;
+    name: string;
+    species_name: string;
+    nickname: string | null;
+    notes: string | null;
+  }>(
+    `SELECT gp.*, p.name, p.species_name, p.nickname, p.notes
+     FROM graveyard_plants gp
+     INNER JOIN plants p ON p.id = gp.plant_id
+     WHERE gp.user_id = ?
+     ORDER BY gp.archived_at DESC;`,
+    userId,
+  );
+
+  const photos = await database.getAllAsync<PhotoRow>(
+    "SELECT * FROM photos WHERE user_id = ? AND is_primary = 1;",
+    userId,
+  );
+  const photoByPlantId = new Map(
+    photos.map((photo) => [photo.plant_id, toPhoto(photo)]),
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    plantId: row.plant_id,
+    causeOfPassing: row.cause_of_passing,
+    memorialNote: row.memorial_note,
+    archivedAt: row.archived_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    updatedBy: row.updated_by,
+    pending: row.pending,
+    syncedAt: row.synced_at,
+    syncError: row.sync_error,
+    name: row.name,
+    speciesName: row.species_name,
+    nickname: row.nickname,
+    plantNotes: row.notes,
+    primaryPhotoUri:
+      photoByPlantId.get(row.plant_id)?.localUri ??
+      photoByPlantId.get(row.plant_id)?.remoteUrl ??
+      null,
+  }));
 }
 
 export async function listPlants(input: {
@@ -305,6 +391,12 @@ export async function createPlant(input: {
 
   if (input.photoUri) {
     const photoId = createId("photo");
+    const storagePath = buildPhotoStoragePath(
+      input.userId,
+      plantId,
+      photoId,
+      input.photoUri,
+    );
     await database.runAsync(
       `INSERT INTO photos (
         id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
@@ -315,7 +407,8 @@ export async function createPlant(input: {
       plantId,
       input.photoUri,
       null,
-      null,
+      `${STORAGE_BUCKET}/${storagePath}`,
+      storagePath,
       "image/jpeg",
       null,
       null,
@@ -409,24 +502,53 @@ export async function updatePlant(input: {
   if (input.patch.photoUri) {
     const existingPhoto = current.photos.find((photo) => photo.isPrimary === 1);
     if (existingPhoto) {
+      const storagePath =
+        existingPhoto.storagePath ??
+        buildPhotoStoragePath(
+          input.userId,
+          input.plantId,
+          existingPhoto.id,
+          input.patch.photoUri,
+        );
       await database.runAsync(
-        "UPDATE photos SET local_uri = ?, updated_at = ?, pending = 1 WHERE id = ?;",
+        "UPDATE photos SET local_uri = ?, remote_url = ?, storage_path = ?, mime_type = ?, updated_at = ?, pending = 1 WHERE id = ?;",
         input.patch.photoUri,
+        `${STORAGE_BUCKET}/${storagePath}`,
+        storagePath,
+        "image/jpeg",
         updatedAt,
         existingPhoto.id,
       );
+
+      await enqueueSyncOperation({
+        entity: "photos",
+        entityId: existingPhoto.id,
+        operation: "update",
+        payload: {
+          userId: input.userId,
+          plantId: input.plantId,
+        },
+      });
     } else {
+      const photoId = createId("photo");
+      const storagePath = buildPhotoStoragePath(
+        input.userId,
+        input.plantId,
+        photoId,
+        input.patch.photoUri,
+      );
       await database.runAsync(
         `INSERT INTO photos (
           id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
           taken_at, is_primary, created_at, updated_at, pending, synced_at, sync_error
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-        createId("photo"),
+        photoId,
         input.userId,
         input.plantId,
         input.patch.photoUri,
         null,
-        null,
+        `${STORAGE_BUCKET}/${storagePath}`,
+        storagePath,
         "image/jpeg",
         null,
         null,
@@ -438,6 +560,16 @@ export async function updatePlant(input: {
         null,
         null,
       );
+
+      await enqueueSyncOperation({
+        entity: "photos",
+        entityId: photoId,
+        operation: "insert",
+        payload: {
+          userId: input.userId,
+          plantId: input.plantId,
+        },
+      });
     }
   }
 
@@ -472,6 +604,10 @@ export async function deletePlant(userId: string, plantId: string) {
   await database.withTransactionAsync(async () => {
     await database.runAsync("DELETE FROM photos WHERE plant_id = ?;", plantId);
     await database.runAsync(
+      "DELETE FROM graveyard_plants WHERE plant_id = ?;",
+      plantId,
+    );
+    await database.runAsync(
       "DELETE FROM care_logs WHERE plant_id = ?;",
       plantId,
     );
@@ -492,4 +628,121 @@ export async function deletePlant(userId: string, plantId: string) {
     operation: "delete",
     payload: { userId },
   });
+}
+
+export async function archivePlant(input: {
+  userId: string;
+  plantId: string;
+  causeOfPassing?: string;
+  memorialNote?: string;
+}) {
+  const database = await getDatabase();
+  const plant = await getPlantById(input.userId, input.plantId);
+  if (!plant) {
+    throw new Error("Plant not found.");
+  }
+
+  const now = new Date().toISOString();
+  const existingArchive = await database.getFirstAsync<{ id: string }>(
+    "SELECT id FROM graveyard_plants WHERE plant_id = ? LIMIT 1;",
+    input.plantId,
+  );
+  const reminders = await database.getAllAsync<{
+    id: string;
+    notification_id: string | null;
+  }>(
+    "SELECT id, notification_id FROM care_reminders WHERE plant_id = ?;",
+    input.plantId,
+  );
+  const graveyardId = existingArchive?.id ?? createId("graveyard");
+
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      `UPDATE plants
+       SET status = 'graveyard', updated_at = ?, updated_by = ?, pending = 1
+       WHERE id = ? AND user_id = ?;`,
+      now,
+      input.userId,
+      input.plantId,
+      input.userId,
+    );
+
+    await database.runAsync(
+      `UPDATE care_reminders
+       SET enabled = 0, next_due_at = NULL, notification_id = NULL, updated_at = ?, updated_by = ?, pending = 1
+       WHERE plant_id = ?;`,
+      now,
+      input.userId,
+      input.plantId,
+    );
+
+    if (existingArchive) {
+      await database.runAsync(
+        `UPDATE graveyard_plants
+         SET cause_of_passing = ?, memorial_note = ?, archived_at = ?, updated_at = ?, updated_by = ?, pending = 1
+         WHERE id = ?;`,
+        input.causeOfPassing ?? null,
+        input.memorialNote ?? plant.plant.notes ?? null,
+        now,
+        now,
+        input.userId,
+        graveyardId,
+      );
+    } else {
+      await database.runAsync(
+        `INSERT INTO graveyard_plants (
+          id, user_id, plant_id, cause_of_passing, memorial_note, archived_at, created_at, updated_at, updated_by,
+          pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        graveyardId,
+        input.userId,
+        input.plantId,
+        input.causeOfPassing ?? null,
+        input.memorialNote ?? plant.plant.notes ?? null,
+        now,
+        now,
+        now,
+        input.userId,
+        1,
+        null,
+        null,
+      );
+    }
+  });
+
+  for (const reminder of reminders) {
+    await cancelReminderNotification(reminder.notification_id);
+    await enqueueSyncOperation({
+      entity: "care_reminders",
+      entityId: reminder.id,
+      operation: "update",
+      payload: {
+        userId: input.userId,
+        plantId: input.plantId,
+        enabled: false,
+      },
+    });
+  }
+
+  await enqueueSyncOperation({
+    entity: "plants",
+    entityId: input.plantId,
+    operation: "update",
+    payload: {
+      userId: input.userId,
+      status: "graveyard",
+    },
+  });
+
+  await enqueueSyncOperation({
+    entity: "graveyard_plants",
+    entityId: graveyardId,
+    operation: existingArchive ? "update" : "insert",
+    payload: {
+      userId: input.userId,
+      plantId: input.plantId,
+    },
+  });
+
+  return graveyardId;
 }

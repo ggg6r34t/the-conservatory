@@ -1,9 +1,9 @@
 import { Link } from "expo-router";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { LoginForm } from "@/features/auth/components/LoginForm";
 import { useTheme } from "@/components/design-system/useTheme";
+import { LoginForm } from "@/features/auth/components/LoginForm";
 
 export default function LoginScreen() {
   const { colors, spacing } = useTheme();
@@ -22,12 +22,9 @@ export default function LoginScreen() {
             />
             <View style={styles.heroCopy}>
               <View>
-                <Link
-                  href="/(tabs)"
-                  style={[styles.brand, { color: colors.primary }]}
-                >
+                <Text style={[styles.brand, { color: colors.primary }]}>
                   The Conservatory
-                </Link>
+                </Text>
               </View>
               <View style={{ gap: spacing.md }}>
                 <View>

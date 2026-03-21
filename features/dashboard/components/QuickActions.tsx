@@ -7,7 +7,7 @@ export function QuickActions() {
   return (
     <View style={styles.container}>
       <PrimaryButton label="New Specimen" href="/plant/add" />
-      <SecondaryButton label="Open Library" onPress={() => undefined} />
+      <SecondaryButton label="Open Library" href="/(tabs)/library" />
     </View>
   );
 }

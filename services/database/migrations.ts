@@ -10,6 +10,14 @@ CREATE TABLE IF NOT EXISTS users (
   updated_by TEXT
 );
 
+CREATE TABLE IF NOT EXISTS local_auth_credentials (
+  user_id TEXT PRIMARY KEY NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS user_preferences (
   user_id TEXT PRIMARY KEY NOT NULL,
   reminders_enabled INTEGER NOT NULL DEFAULT 1,
@@ -127,5 +135,6 @@ CREATE INDEX IF NOT EXISTS idx_plants_next_water_due_at ON plants(next_water_due
 CREATE INDEX IF NOT EXISTS idx_care_logs_plant_id ON care_logs(plant_id);
 CREATE INDEX IF NOT EXISTS idx_care_reminders_plant_id ON care_reminders(plant_id);
 CREATE INDEX IF NOT EXISTS idx_photos_plant_id ON photos(plant_id);
+CREATE INDEX IF NOT EXISTS idx_local_auth_credentials_email ON local_auth_credentials(email);
 CREATE INDEX IF NOT EXISTS idx_sync_queue_status_retry ON sync_queue(status, next_retry_at);
 `;

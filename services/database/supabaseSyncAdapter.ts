@@ -1,16 +1,23 @@
+import { STORAGE_BUCKET } from "@/config/constants";
 import { supabase } from "@/config/supabase";
 import { getDatabase } from "@/services/database/sqlite";
 import type { SyncQueueItem } from "@/services/database/sync";
 import { logger } from "@/utils/logger";
 
-type SyncableEntity = "plants" | "care_logs" | "care_reminders" | "photos";
+type SyncableEntity =
+  | "plants"
+  | "care_logs"
+  | "care_reminders"
+  | "photos"
+  | "graveyard_plants";
 
 function canTrackLocalSync(entity: string): entity is SyncableEntity {
   return (
     entity === "plants" ||
     entity === "care_logs" ||
     entity === "care_reminders" ||
-    entity === "photos"
+    entity === "photos" ||
+    entity === "graveyard_plants"
   );
 }
 
@@ -154,6 +161,8 @@ async function loadPhotoRecord(entityId: string) {
     id: string;
     user_id: string;
     plant_id: string;
+    local_uri: string | null;
+    remote_url: string | null;
     storage_path: string | null;
     mime_type: string | null;
     width: number | null;
@@ -177,6 +186,8 @@ async function loadPhotoRecord(entityId: string) {
     id: row.id,
     user_id: row.user_id,
     plant_id: row.plant_id,
+    local_uri: row.local_uri,
+    remote_url: row.remote_url,
     storage_path: row.storage_path,
     mime_type: row.mime_type,
     width: row.width,
@@ -187,6 +198,72 @@ async function loadPhotoRecord(entityId: string) {
     updated_at: row.updated_at,
     updated_by: row.user_id,
   };
+}
+
+async function loadGraveyardRecord(entityId: string) {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{
+    id: string;
+    user_id: string;
+    plant_id: string;
+    cause_of_passing: string | null;
+    memorial_note: string | null;
+    archived_at: string;
+    created_at: string;
+    updated_at: string;
+    updated_by: string | null;
+  }>("SELECT * FROM graveyard_plants WHERE id = ? LIMIT 1;", entityId);
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    plant_id: row.plant_id,
+    cause_of_passing: row.cause_of_passing,
+    memorial_note: row.memorial_note,
+    archived_at: row.archived_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    updated_by: row.updated_by ?? row.user_id,
+  };
+}
+
+async function uploadPhotoAsset(
+  row: Awaited<ReturnType<typeof loadPhotoRecord>>,
+) {
+  if (!supabase || !row || !row.storage_path || !row.local_uri) {
+    return row;
+  }
+
+  const response = await fetch(row.local_uri);
+  if (!response.ok) {
+    throw new Error("Unable to read local photo for upload.");
+  }
+
+  const blob = await response.blob();
+  const { error } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(row.storage_path, blob, {
+      contentType: row.mime_type,
+      upsert: true,
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const database = await getDatabase();
+  await database.runAsync(
+    "UPDATE photos SET remote_url = ?, updated_at = ? WHERE id = ?;",
+    `${STORAGE_BUCKET}/${row.storage_path}`,
+    new Date().toISOString(),
+    row.id,
+  );
+
+  return row;
 }
 
 function parsePayload(item: SyncQueueItem): Record<string, unknown> {
@@ -270,12 +347,41 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
   }
 
   if (item.entity === "photos") {
-    const row = await loadPhotoRecord(item.entityId);
+    const localRow = await loadPhotoRecord(item.entityId);
+    const row = await uploadPhotoAsset(localRow);
+    if (!row) {
+      return;
+    }
+    const { error } = await supabase.from("photos").upsert(
+      {
+        id: row.id,
+        user_id: row.user_id,
+        plant_id: row.plant_id,
+        storage_path: row.storage_path,
+        mime_type: row.mime_type,
+        width: row.width,
+        height: row.height,
+        taken_at: row.taken_at,
+        is_primary: row.is_primary,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        updated_by: row.updated_by,
+      },
+      { onConflict: "id" },
+    );
+    if (error) {
+      throw new Error(error.message);
+    }
+    return;
+  }
+
+  if (item.entity === "graveyard_plants") {
+    const row = await loadGraveyardRecord(item.entityId);
     if (!row) {
       return;
     }
     const { error } = await supabase
-      .from("photos")
+      .from("graveyard_plants")
       .upsert(row, { onConflict: "id" });
     if (error) {
       throw new Error(error.message);
