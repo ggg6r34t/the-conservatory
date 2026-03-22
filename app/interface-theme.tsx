@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useSettings } from "@/features/settings/hooks/useSettings";
@@ -67,11 +66,7 @@ export default function InterfaceThemeScreen() {
             { backgroundColor: colors.primary },
           ]}
         >
-          <MaterialCommunityIcons
-            name="check"
-            size={16}
-            color={colors.surfaceBright}
-          />
+          <Icon name="check" size={16} color={colors.surfaceBright} />
           <Text style={[styles.selectedLabel, { color: colors.surfaceBright }]}>
             {preferredTheme === "linen-light" ? "Selected" : "Active"}
           </Text>

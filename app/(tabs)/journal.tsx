@@ -1,5 +1,4 @@
 import { useQueries } from "@tanstack/react-query";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Link } from "expo-router";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -7,6 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { queryKeys } from "@/config/constants";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
@@ -271,7 +271,7 @@ export default function JournalScreen() {
                               { backgroundColor: colors.surfaceContainerLowest },
                             ]}
                           >
-                            <MaterialCommunityIcons
+                            <Icon
                               name={getLogIconName(log.logType)}
                               size={24}
                               color={getLogIconColor(log.logType, colors)}

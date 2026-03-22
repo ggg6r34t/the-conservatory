@@ -1,8 +1,8 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, type Href } from "expo-router";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 
 interface PrimaryButtonProps {
@@ -11,7 +11,7 @@ interface PrimaryButtonProps {
   href?: Href;
   loading?: boolean;
   disabled?: boolean;
-  icon?: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  icon?: string;
   compact?: boolean;
 }
 
@@ -42,7 +42,7 @@ export function PrimaryButton({
       ) : (
         <View style={styles.content}>
           {icon ? (
-            <MaterialCommunityIcons
+            <Icon
               color={colors.surfaceBright}
               name={icon}
               size={16}

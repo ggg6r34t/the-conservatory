@@ -1,7 +1,7 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 
 interface DashboardHeaderProps {
@@ -21,11 +21,7 @@ export function DashboardHeader({ isOffline }: DashboardHeaderProps) {
               { backgroundColor: colors.secondaryContainer },
             ]}
           >
-            <MaterialCommunityIcons
-              name="sprout"
-              size={16}
-              color={colors.primary}
-            />
+            <Icon name="sprout" size={16} color={colors.primary} />
           </View>
           <Text style={[styles.brand, { color: colors.primary }]}>
             The Conservatory

@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useQueries } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import {
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { queryKeys } from "@/config/constants";
@@ -24,7 +24,7 @@ import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 
 type ProfileRowProps = {
-  icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  icon: string;
   label: string;
   value?: string;
   onPress?: () => void;
@@ -136,7 +136,7 @@ function ProfileRow({
       disabled={!onPress}
     >
       <View style={styles.rowLead}>
-        <MaterialCommunityIcons
+        <Icon
           name={icon}
           size={24}
           color={colors.primary}
@@ -154,7 +154,7 @@ function ProfileRow({
           </Text>
         ) : null}
         {trailing ?? (
-          <MaterialCommunityIcons
+          <Icon
             name="chevron-right"
             size={24}
             color={colors.surfaceContainerHigh}
@@ -251,7 +251,7 @@ export default function ProfileScreen() {
                 },
               ]}
             >
-              <MaterialCommunityIcons
+              <Icon
                 name="pencil"
                 size={16}
                 color={colors.surfaceBright}
@@ -346,6 +346,11 @@ export default function ProfileScreen() {
             ]}
           >
             <ProfileRow
+              icon="bell-cog-outline"
+              label="Care Reminders"
+              onPress={() => router.push("/care-reminders")}
+            />
+            <ProfileRow
               icon="bell-ring-outline"
               label="Watering Alerts"
               onPress={() => {
@@ -418,7 +423,7 @@ export default function ProfileScreen() {
           onPress={signOut}
           style={styles.signOutRow}
         >
-          <MaterialCommunityIcons
+          <Icon
             name="logout"
             size={22}
             color={colors.secondary}

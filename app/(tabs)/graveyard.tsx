@@ -1,4 +1,3 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Pressable,
@@ -11,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
@@ -172,11 +172,7 @@ export default function GraveyardScreen() {
             </View>
 
             <View style={styles.featuredFooter}>
-              <MaterialCommunityIcons
-                name="heart"
-                size={11}
-                color={colors.onSurface}
-              />
+              <Icon name="heart" size={11} color={colors.onSurface} />
               <Text
                 style={[
                   styles.featuredFooterLabel,
@@ -328,7 +324,7 @@ export default function GraveyardScreen() {
             { backgroundColor: colors.tertiaryContainer },
           ]}
         >
-          <MaterialCommunityIcons
+          <Icon
             name="format-quote-open"
             size={40}
             color={colors.primaryFixed}

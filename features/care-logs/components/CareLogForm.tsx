@@ -1,4 +1,3 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -12,6 +11,7 @@ import {
 } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAddLog } from "@/features/care-logs/hooks/useAddLog";
 
@@ -22,7 +22,7 @@ interface CareLogFormProps {
 const logTypes: {
   key: "water" | "feed" | "prune" | "pest" | "note";
   label: string;
-  icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  icon: string;
 }[] = [
   { key: "water", label: "WATER", icon: "water-outline" },
   { key: "feed", label: "FERTILIZE", icon: "white-balance-sunny" },
@@ -93,7 +93,7 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
                     },
                   ]}
                 >
-                  <MaterialCommunityIcons
+                  <Icon
                     name={type.icon}
                     size={24}
                     color={
@@ -140,7 +140,7 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
         ]}
       >
         <View style={styles.timeLeft}>
-          <MaterialCommunityIcons
+          <Icon
             name="calendar-blank-outline"
             size={22}
             color={colors.onSurface}
@@ -149,7 +149,7 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
             {nowLabel}
           </Text>
         </View>
-        <MaterialCommunityIcons
+        <Icon
           name="chevron-right"
           size={22}
           color={colors.onSurfaceVariant}

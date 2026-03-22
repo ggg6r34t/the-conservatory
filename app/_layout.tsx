@@ -52,6 +52,7 @@ function RootNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
+      <Stack.Screen name="care-reminders" options={{ headerShown: false }} />
       <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
       <Stack.Screen name="archive-gallery" options={{ headerShown: false }} />
       <Stack.Screen name="specimen-tags" options={{ headerShown: false }} />

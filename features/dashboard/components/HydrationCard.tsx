@@ -1,6 +1,6 @@
-import { MaterialIcons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
 
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 
 interface HydrationCardProps {
@@ -27,7 +27,12 @@ export function HydrationCard({ dueToday }: HydrationCardProps) {
     >
       <View style={styles.header}>
         <View style={styles.iconWrap}>
-          <MaterialIcons color={colors.primary} name="water-drop" size={18} />
+          <Icon
+            family="MaterialIcons"
+            color={colors.primary}
+            name="water-drop"
+            size={18}
+          />
         </View>
         <Text style={[styles.title, { color: colors.onSurface }]}>
           Hydration

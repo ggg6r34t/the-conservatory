@@ -1,7 +1,7 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 
 interface AppHeaderProps {
@@ -27,15 +27,11 @@ export function AppHeader({
           <Pressable
             accessibilityLabel="Go back"
             accessibilityRole="button"
-            hitSlop={10}
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <MaterialCommunityIcons
-              color={colors.primary}
-              name="arrow-left"
-              size={20}
-            />
+          hitSlop={10}
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+            <Icon color={colors.primary} name="arrow-left" size={20} />
           </Pressable>
         ) : (
           <View
@@ -44,11 +40,7 @@ export function AppHeader({
               { backgroundColor: colors.secondaryContainer },
             ]}
           >
-            <MaterialCommunityIcons
-              name="sprout"
-              size={16}
-              color={colors.primary}
-            />
+            <Icon name="sprout" size={16} color={colors.primary} />
           </View>
         )}
         <Text style={[styles.brand, { color: colors.primary }]}>

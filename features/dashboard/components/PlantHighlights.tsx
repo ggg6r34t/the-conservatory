@@ -1,9 +1,9 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { formatDueLabel, formatEditorialDate } from "@/utils/dateFormatter";
@@ -48,11 +48,7 @@ function PlantImage({ plant, style }: { plant: PlantListItem; style: object }) {
       end={{ x: 0.85, y: 1 }}
       style={style}
     >
-      <MaterialCommunityIcons
-        color={colors.primaryFixed}
-        name="sprout"
-        size={44}
-      />
+      <Icon color={colors.primaryFixed} name="sprout" size={44} />
     </LinearGradient>
   );
 }

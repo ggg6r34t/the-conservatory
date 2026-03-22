@@ -1,9 +1,9 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 
 const tabTitles: Record<string, string> = {
@@ -15,7 +15,7 @@ const tabTitles: Record<string, string> = {
 
 const tabIcons: Record<
   string,
-  React.ComponentProps<typeof MaterialCommunityIcons>["name"]
+  string
 > = {
   index: "sprout",
   library: "magnify",
@@ -82,7 +82,7 @@ export function ConservatoryTabBar({ state, navigation }: BottomTabBarProps) {
                     ],
                   ]}
                 >
-                  <MaterialCommunityIcons
+                  <Icon
                     color={isFocused ? colors.primary : colors.outline}
                     name={iconName}
                     size={20}
