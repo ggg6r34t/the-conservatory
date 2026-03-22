@@ -284,6 +284,7 @@ export async function listPlants(input: {
     })),
   );
   const lowerQuery = input.query.trim().toLowerCase();
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
   const filtered = rows
     .map((row) => {
@@ -304,6 +305,20 @@ export async function listPlants(input: {
         return plant.nextWaterDueAt
           ? new Date(plant.nextWaterDueAt).getTime() > Date.now()
           : true;
+      }
+
+      if (input.filter === "recently-watered") {
+        return plant.lastWateredAt
+          ? new Date(plant.lastWateredAt).getTime() >= sevenDaysAgo
+          : false;
+      }
+
+      if (input.filter === "with-notes") {
+        return Boolean(plant.notes?.trim());
+      }
+
+      if (input.filter === "unplaced") {
+        return !plant.location?.trim();
       }
 
       return true;
