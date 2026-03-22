@@ -1,15 +1,24 @@
 import { useQueries } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Link } from "expo-router";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
-import { queryKeys } from "@/config/constants";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
+import { queryKeys } from "@/config/constants";
 import { listCareLogs } from "@/features/care-logs/api/careLogsClient";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { usePlants } from "@/features/plants/hooks/usePlants";
@@ -37,8 +46,16 @@ function formatHighlightDate(value: string) {
 
 function formatSectionLabel(value: Date) {
   const today = new Date();
-  const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const targetDay = new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  const currentDay = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const targetDay = new Date(
+    value.getFullYear(),
+    value.getMonth(),
+    value.getDate(),
+  );
   const differenceInDays = Math.round(
     (currentDay.getTime() - targetDay.getTime()) / (24 * 60 * 60 * 1000),
   );
@@ -89,7 +106,7 @@ function formatEntryCopy(log: CareLog, plantName: string) {
 function getLogIconName(logType: CareLog["logType"]) {
   switch (logType) {
     case "water":
-      return "water";
+      return "water-drop";
     case "mist":
       return "water-outline";
     case "feed":
@@ -104,7 +121,10 @@ function getLogIconName(logType: CareLog["logType"]) {
   }
 }
 
-function getLogIconColor(logType: CareLog["logType"], colors: ReturnType<typeof useTheme>["colors"]) {
+function getLogIconColor(
+  logType: CareLog["logType"],
+  colors: ReturnType<typeof useTheme>["colors"],
+) {
   switch (logType) {
     case "prune":
       return colors.secondaryOnContainer;
@@ -169,7 +189,9 @@ export default function JournalScreen() {
     .filter((plant) => plant.primaryPhotoUri)
     .slice(0, 6)
     .map((plant) => {
-      const latestLog = entries.find((entry) => entry.plant.id === plant.id)?.log;
+      const latestLog = entries.find(
+        (entry) => entry.plant.id === plant.id,
+      )?.log;
 
       return {
         id: plant.id,
@@ -211,10 +233,14 @@ export default function JournalScreen() {
         {featuredPlant ? (
           <>
             <View style={styles.highlightsHeader}>
-              <Text style={[styles.highlightsTitle, { color: colors.onSurface }]}>
+              <Text
+                style={[styles.highlightsTitle, { color: colors.onSurface }]}
+              >
                 Monthly Highlights
               </Text>
-              <Text style={[styles.viewAll, { color: colors.secondaryOnContainer }]}>
+              <Text
+                style={[styles.viewAll, { color: colors.secondaryOnContainer }]}
+              >
                 VIEW ALL
               </Text>
             </View>
@@ -225,7 +251,11 @@ export default function JournalScreen() {
               contentContainerStyle={styles.highlightsRow}
             >
               {monthlyHighlights.map((highlight) => (
-                <Link href={`/plant/${highlight.id}` as const} key={highlight.id} asChild>
+                <Link
+                  href={`/plant/${highlight.id}` as const}
+                  key={highlight.id}
+                  asChild
+                >
                   <View style={styles.highlightCard}>
                     <Image
                       source={{ uri: highlight.imageUri }}
@@ -233,7 +263,9 @@ export default function JournalScreen() {
                       contentFit="cover"
                     />
                     <View style={styles.highlightDateWrap}>
-                      <Text style={styles.highlightDate}>{highlight.dateLabel.toUpperCase()}</Text>
+                      <Text style={styles.highlightDate}>
+                        {highlight.dateLabel.toUpperCase()}
+                      </Text>
                     </View>
                   </View>
                 </Link>
@@ -245,7 +277,9 @@ export default function JournalScreen() {
                 {sections.map((section) => (
                   <View key={section.title} style={styles.sectionBlock}>
                     <View style={styles.sectionHeader}>
-                      <Text style={[styles.sectionTitle, { color: colors.primary }]}>
+                      <Text
+                        style={[styles.sectionTitle, { color: colors.primary }]}
+                      >
                         {section.title}
                       </Text>
                       <View
@@ -268,10 +302,17 @@ export default function JournalScreen() {
                           <View
                             style={[
                               styles.iconTile,
-                              { backgroundColor: colors.surfaceContainerLowest },
+                              {
+                                backgroundColor: colors.surfaceContainerLowest,
+                              },
                             ]}
                           >
                             <Icon
+                              family={
+                                log.logType === "water"
+                                  ? "MaterialIcons"
+                                  : "MaterialCommunityIcons"
+                              }
                               name={getLogIconName(log.logType)}
                               size={24}
                               color={getLogIconColor(log.logType, colors)}
@@ -279,17 +320,28 @@ export default function JournalScreen() {
                           </View>
 
                           <View style={styles.entryCopy}>
-                            <Text style={[styles.entryPlant, { color: colors.primary }]}>
+                            <Text
+                              style={[
+                                styles.entryPlant,
+                                { color: colors.primary },
+                              ]}
+                            >
                               {plant.name}
                             </Text>
                             <Text
-                              style={[styles.entryNote, { color: colors.onSurfaceVariant }]}
+                              style={[
+                                styles.entryNote,
+                                { color: colors.onSurfaceVariant },
+                              ]}
                               numberOfLines={2}
                             >
                               {formatEntryCopy(log, plant.name)}
                             </Text>
                             <Text
-                              style={[styles.entryTime, { color: colors.onSurfaceVariant }]}
+                              style={[
+                                styles.entryTime,
+                                { color: colors.onSurfaceVariant },
+                              ]}
                             >
                               {formatTime(log.loggedAt)}
                             </Text>
@@ -305,7 +357,9 @@ export default function JournalScreen() {
                             <View
                               style={[
                                 styles.entryThumb,
-                                { backgroundColor: colors.surfaceContainerHigh },
+                                {
+                                  backgroundColor: colors.surfaceContainerHigh,
+                                },
                               ]}
                             />
                           )}
@@ -325,8 +379,11 @@ export default function JournalScreen() {
                 <Text style={[styles.emptyTitle, { color: colors.primary }]}>
                   No field notes yet
                 </Text>
-                <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
-                  Start logging care moments to build a journal of your collection.
+                <Text
+                  style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}
+                >
+                  Start logging care moments to build a journal of your
+                  collection.
                 </Text>
               </View>
             )}
@@ -341,8 +398,11 @@ export default function JournalScreen() {
             <Text style={[styles.emptyTitle, { color: colors.primary }]}>
               Journal coming to life
             </Text>
-            <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
-              Add your first plant to start a care journal and preserve each ritual.
+            <Text
+              style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}
+            >
+              Add your first plant to start a care journal and preserve each
+              ritual.
             </Text>
             <PrimaryButton href="/plant/add" icon="plus" label="Add Plant" />
           </View>
@@ -445,8 +505,8 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   iconTile: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
