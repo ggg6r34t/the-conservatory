@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
   Animated,
   PanResponder,
@@ -28,7 +28,7 @@ export default function CareLogRoute() {
     primaryPhoto?.localUri ?? primaryPhoto?.remoteUrl ?? undefined;
   const translateY = useRef(new Animated.Value(0)).current;
 
-  const closeSheet = () => {
+  const closeSheet = useCallback(() => {
     Animated.timing(translateY, {
       toValue: 900,
       duration: 220,
@@ -36,16 +36,16 @@ export default function CareLogRoute() {
     }).start(() => {
       router.back();
     });
-  };
+  }, [router, translateY]);
 
-  const resetSheetPosition = () => {
+  const resetSheetPosition = useCallback(() => {
     Animated.spring(translateY, {
       toValue: 0,
       useNativeDriver: true,
       bounciness: 6,
       speed: 18,
     }).start();
-  };
+  }, [translateY]);
 
   const panResponder = useMemo(
     () =>
@@ -90,13 +90,14 @@ export default function CareLogRoute() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: spacing.xl }}
         >
-          <View
-            style={[
-              styles.handle,
-              { backgroundColor: colors.surfaceContainerHigh },
-            ]}
-            {...panResponder.panHandlers}
-          />
+          <View style={styles.dragRegion} {...panResponder.panHandlers}>
+            <View
+              style={[
+                styles.handle,
+                { backgroundColor: colors.surfaceContainerHigh },
+              ]}
+            />
+          </View>
 
           <View style={styles.content}>
             <Text style={[styles.title, { color: colors.primary }]}>
@@ -171,6 +172,12 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 26,
+  },
+  dragRegion: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 2,
+    paddingBottom: 14,
   },
   handle: {
     width: 74,
