@@ -12,6 +12,7 @@ interface PrimaryButtonProps {
   loading?: boolean;
   disabled?: boolean;
   icon?: string;
+  iconFamily?: React.ComponentProps<typeof Icon>["family"];
   compact?: boolean;
 }
 
@@ -22,6 +23,7 @@ export function PrimaryButton({
   loading = false,
   disabled = false,
   icon,
+  iconFamily,
   compact = false,
 }: PrimaryButtonProps) {
   const { colors } = useTheme();
@@ -43,9 +45,10 @@ export function PrimaryButton({
         <View style={styles.content}>
           {icon ? (
             <Icon
+              family={iconFamily}
               color={colors.surfaceBright}
               name={icon}
-              size={16}
+              size={18}
             />
           ) : null}
           <Text style={styles.label}>{label}</Text>
@@ -107,6 +110,7 @@ const styles = StyleSheet.create({
   label: {
     color: "#ffffff",
     fontFamily: "Manrope_700Bold",
-    fontSize: 15,
+    fontSize: 16,
+    lineHeight: 20,
   },
 });

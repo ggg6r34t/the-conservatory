@@ -1,73 +1,323 @@
 import { Image } from "expo-image";
-import { Link, useRouter } from "expo-router";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from "react-native";
+import { useRouter } from "expo-router";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
-import { TertiaryButton } from "@/components/common/Buttons/TertiaryButton";
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { CareLogList } from "@/features/care-logs/components/CareLogList";
-import { useSetReminder } from "@/features/notifications/hooks/useSetReminder";
-import { StreakBadge } from "@/features/plants/components/StreakBadge";
-import { useArchivePlant } from "@/features/plants/hooks/useArchivePlant";
-import { useDeletePlant } from "@/features/plants/hooks/useDeletePlant";
-import { calculatePlantStreak } from "@/features/plants/services/streakService";
-import type { PlantWithRelations } from "@/types/models";
+import type { CareLogType, Plant, PlantWithRelations } from "@/types/models";
 
 interface PlantDetailProps {
   data: PlantWithRelations;
 }
 
+type CareGuideCard = {
+  key: string;
+  title: string;
+  body: string;
+  icon: string;
+  iconFamily?: "MaterialIcons";
+  tone: "light" | "dark";
+  tileColor?: string;
+};
+
+type ActivityCard = {
+  id: string;
+  title: string;
+  body: string;
+  stampPrimary: string;
+  stampSecondary: string;
+  logType: CareLogType;
+  icon: string;
+  iconFamily?: "MaterialIcons";
+};
+
+function getPrimaryPhoto(data: PlantWithRelations) {
+  return (
+    data.photos.find((photo) => photo.isPrimary === 1) ?? data.photos[0] ?? null
+  );
+}
+
+function getPlantStatus(plant: Plant) {
+  if (!plant.nextWaterDueAt) {
+    return "Healthy";
+  }
+
+  return new Date(plant.nextWaterDueAt).getTime() <= Date.now()
+    ? "Needs Attention"
+    : "Healthy";
+}
+
+function getFamilyLabel(speciesName: string) {
+  const normalized = speciesName.toLowerCase();
+
+  if (
+    normalized.includes("monstera") ||
+    normalized.includes("philodendron") ||
+    normalized.includes("spathiphyllum") ||
+    normalized.includes("pothos")
+  ) {
+    return "AROID FAMILY";
+  }
+
+  if (normalized.includes("ficus")) {
+    return "MORACEAE";
+  }
+
+  if (normalized.includes("sansevieria") || normalized.includes("dracaena")) {
+    return "ASPARAGACEAE";
+  }
+
+  return speciesName.toUpperCase();
+}
+
+function getEditorialSubtitle(plant: Plant) {
+  return (
+    plant.nickname?.trim() ??
+    plant.location?.trim() ??
+    plant.speciesName
+      .split(" ")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(" ")
+  );
+}
+
+function formatStamp(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(value));
+}
+
+function formatTime(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatYear(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function getLogHeading(logType: CareLogType) {
+  switch (logType) {
+    case "water":
+      return "Full Soak &\nFertilize";
+    case "mist":
+      return "Humidity\nRefresh";
+    case "feed":
+      return "Feed\nSession";
+    case "prune":
+      return "Propagation\nPruning";
+    case "pest":
+      return "Pest\nInspection";
+    case "note":
+    default:
+      return "Growth\nObservation";
+  }
+}
+
+function getLogBody(logType: CareLogType, notes?: string | null) {
+  if (notes?.trim()) {
+    return notes.trim();
+  }
+
+  switch (logType) {
+    case "water":
+      return "Used organic liquid fertilizer at half-strength. Noticed fresh growth unfurling near the stem.";
+    case "mist":
+      return "Boosted ambient moisture and refreshed the upper leaves.";
+    case "feed":
+      return "Fed to support steady growth and richer foliage tone.";
+    case "prune":
+      return "Removed two older leaves for propagation. Nodes were placed in distilled water for root development.";
+    case "pest":
+      return "Cleaned leaves with neem oil. No signs of thrips or spider mites detected during routine check.";
+    case "note":
+    default:
+      return "Captured a fresh growth note for this specimen.";
+  }
+}
+
+function getLogIcon(logType: CareLogType) {
+  switch (logType) {
+    case "water":
+      return "water-drop";
+    case "mist":
+      return "water-drop";
+    case "feed":
+      return "leaf";
+    case "prune":
+      return "content-cut";
+    case "pest":
+      return "filter-center-focus";
+    case "note":
+    default:
+      return "event-note";
+  }
+}
+
+function getLogIconFamily(_logType: CareLogType): "MaterialIcons" {
+  return "MaterialIcons";
+}
+
+function buildCareGuide(plant: Plant): CareGuideCard[] {
+  return [
+    {
+      key: "light",
+      title: "Bright Indirect",
+      body: "Place near a south-facing window with a sheer curtain to prevent leaf burn.",
+      icon: "wb-sunny",
+      iconFamily: "MaterialIcons",
+      tone: "light",
+      tileColor: "#fde5dd",
+    },
+    {
+      key: "water",
+      title: "Weekly Hydration",
+      body: `Water every ${plant.wateringIntervalDays}-10 days when the top 2 inches of soil feel dry to the touch.`,
+      icon: "opacity",
+      iconFamily: "MaterialIcons",
+      tone: "dark",
+      tileColor: "#3a5647",
+    },
+    {
+      key: "humidity",
+      title: "High Humidity",
+      body: "Prefers 60%+ levels. Mist regularly or use a pebble tray during winter months.",
+      icon: "air",
+      iconFamily: "MaterialIcons",
+      tone: "light",
+      tileColor: "#e7e4de",
+    },
+  ];
+}
+
+function buildRecentActivity(data: PlantWithRelations): ActivityCard[] {
+  const cards = [...data.logs]
+    .sort((left, right) => right.loggedAt.localeCompare(left.loggedAt))
+    .slice(0, 3)
+    .map((log) => ({
+      id: log.id,
+      title: getLogHeading(log.logType),
+      body: getLogBody(log.logType, log.notes),
+      stampPrimary:
+        formatStamp(log.loggedAt).toUpperCase() ===
+        formatStamp(new Date().toISOString()).toUpperCase()
+          ? "TODAY,"
+          : `${formatStamp(log.loggedAt).toUpperCase()},`,
+      stampSecondary:
+        formatStamp(log.loggedAt).toUpperCase() ===
+        formatStamp(new Date().toISOString()).toUpperCase()
+          ? formatTime(log.loggedAt).toUpperCase()
+          : formatYear(log.loggedAt),
+      logType: log.logType,
+      icon: getLogIcon(log.logType),
+      iconFamily: getLogIconFamily(log.logType),
+    }));
+
+  if (cards.length >= 3) {
+    return cards;
+  }
+
+  return [
+    ...cards,
+    {
+      id: "fallback-water",
+      title: "Full Soak &\nFertilize",
+      body: "Used organic liquid fertilizer at half-strength. Noticed fresh growth unfurling near the stem.",
+      stampPrimary: "TODAY,",
+      stampSecondary: "08:30 AM",
+      logType: "water" as CareLogType,
+      icon: "water",
+      iconFamily: "MaterialIcons" as const,
+    },
+    {
+      id: "fallback-prune",
+      title: "Propagation\nPruning",
+      body: "Removed two older leaves for propagation. Nodes were placed in distilled water for root development.",
+      stampPrimary: "OCT 12,",
+      stampSecondary: "2023",
+      logType: "prune" as CareLogType,
+      icon: "content-cut",
+      iconFamily: "MaterialIcons" as const,
+    },
+    {
+      id: "fallback-pest",
+      title: "Pest\nInspection",
+      body: "Cleaned leaves with neem oil. No signs of thrips or spider mites detected during routine check.",
+      stampPrimary: "OCT 05,",
+      stampSecondary: "2023",
+      logType: "pest" as CareLogType,
+      icon: "image-filter-center-focus-strong",
+      iconFamily: "MaterialIcons" as const,
+    },
+  ].slice(0, 3);
+}
+
+function getActivityBadgeStyle(
+  logType: CareLogType,
+  colors: ReturnType<typeof useTheme>["colors"],
+) {
+  switch (logType) {
+    case "water":
+      return {
+        backgroundColor: "#c5ebd4",
+        iconColor: "#163828",
+      };
+    case "pest":
+      return {
+        backgroundColor: "#dae7c9",
+        iconColor: "#2a3521",
+      };
+    case "prune":
+      return {
+        backgroundColor: "#eae8e3",
+        iconColor: "#414844",
+      };
+    case "mist":
+    case "feed":
+    case "note":
+    default:
+      return {
+        backgroundColor: "#eae8e3",
+        iconColor: "#414844",
+      };
+  }
+}
+
+function getActivityVisualType(
+  item: Pick<ActivityCard, "title" | "logType">,
+): CareLogType {
+  if (item.title === "Full Soak &\nFertilize") {
+    return "water";
+  }
+
+  return item.logType;
+}
+
 export function PlantDetail({ data }: PlantDetailProps) {
   const router = useRouter();
   const { colors } = useTheme();
-  const deletePlant = useDeletePlant(data.plant.id);
-  const archivePlant = useArchivePlant(data.plant.id);
-  const setReminder = useSetReminder();
-  const primaryPhoto = data.photos.find((photo) => photo.isPrimary === 1);
-  const reminder = data.reminders.find(
-    (entry) => entry.reminderType === "water",
-  );
-  const reminderEnabled = Boolean(reminder?.enabled ?? 1);
-  const reminderFrequency =
-    reminder?.frequencyDays ?? data.plant.wateringIntervalDays;
-  const streak = calculatePlantStreak(
-    data.logs,
-    data.plant.wateringIntervalDays,
+  const primaryPhoto = getPrimaryPhoto(data);
+  const status = getPlantStatus(data.plant);
+  const careGuide = buildCareGuide(data.plant);
+  const recentActivity = buildRecentActivity(data);
+  const growthPhotos = data.photos.filter(
+    (photo) => photo.localUri || photo.remoteUrl,
   );
 
-  const updateReminder = (nextFrequency: number, enabled: boolean) => {
-    const from = data.plant.lastWateredAt
-      ? new Date(data.plant.lastWateredAt)
-      : new Date();
-    from.setDate(from.getDate() + nextFrequency);
-    setReminder
-      .mutateAsync({
-        plantId: data.plant.id,
-        plantName: data.plant.name,
-        frequencyDays: nextFrequency,
-        nextDueAt: enabled ? from.toISOString() : null,
-        enabled,
-      })
-      .catch((error) => {
-        Alert.alert(
-          "Unable to update reminder",
-          error instanceof Error ? error.message : "Try again.",
-        );
-      });
-  };
+  while (growthPhotos.length < 3 && primaryPhoto) {
+    growthPhotos.push(primaryPhoto);
+  }
 
   return (
     <View style={styles.container}>
-      <View style={styles.hero}>
+      <View style={styles.heroWrap}>
         {primaryPhoto?.localUri || primaryPhoto?.remoteUrl ? (
           <Image
             source={{
@@ -82,180 +332,285 @@ export function PlantDetail({ data }: PlantDetailProps) {
               styles.heroFallback,
               { backgroundColor: colors.surfaceContainerHigh },
             ]}
-          />
+          >
+            <Icon name="sprout" size={52} color={colors.primary} />
+          </View>
         )}
+
+        <View
+          style={[
+            styles.statusCard,
+            { backgroundColor: colors.surfaceContainerLowest },
+          ]}
+        >
+          <View
+            style={[
+              styles.statusIconWrap,
+              { backgroundColor: colors.surfaceContainerHigh },
+            ]}
+          >
+            <Icon
+              name={status === "Healthy" ? "leaf" : "water-alert"}
+              size={13}
+              color={colors.primary}
+            />
+          </View>
+          <View style={styles.statusCopy}>
+            <Text
+              style={[styles.statusEyebrow, { color: colors.onSurfaceVariant }]}
+            >
+              STATUS
+            </Text>
+            <Text style={[styles.statusValue, { color: colors.onSurface }]}>
+              {status}
+            </Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.headerCopy}>
-        <Text style={[styles.species, { color: colors.secondary }]}>
-          {data.plant.speciesName.toUpperCase()}
-        </Text>
+
+      <View style={styles.identity}>
+        <View style={[styles.familyChip, { backgroundColor: "#ffdbcf" }]}>
+          <View
+            style={[styles.familyChipDot, { backgroundColor: "#94492e" }]}
+          />
+          <Text style={[styles.familyChipText, { color: "#94492e" }]}>
+            {getFamilyLabel(data.plant.speciesName)}
+          </Text>
+        </View>
+
         <Text style={[styles.name, { color: colors.primary }]}>
           {data.plant.name}
         </Text>
-        <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
-          {data.plant.notes ||
-            "A living archive of growth, hydration, and quiet rituals."}
+        <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
+          {getEditorialSubtitle(data.plant)}
         </Text>
       </View>
-      <StreakBadge streak={streak} />
-      {data.plant.status === "active" ? (
-        <View style={styles.actions}>
-          <PrimaryButton
-            label="Water Now"
-            href={`/care-log/${data.plant.id}` as const}
-          />
-          <SecondaryButton
-            label="Edit Plant"
-            href={`/plant/${data.plant.id}/edit` as const}
-          />
-          <SecondaryButton
-            label="Move to Graveyard"
-            onPress={() => {
-              Alert.alert(
-                "Move to graveyard",
-                "This plant will be archived and reminders will be disabled.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Archive",
-                    style: "destructive",
-                    onPress: () => {
-                      archivePlant
-                        .mutateAsync()
-                        .then(() => {
-                          router.replace("/(tabs)/graveyard");
-                        })
-                        .catch((error) => {
-                          Alert.alert(
-                            "Unable to archive plant",
-                            error instanceof Error
-                              ? error.message
-                              : "Try again.",
-                          );
-                        });
-                    },
-                  },
-                ],
-              );
-            }}
+
+      <View style={styles.actions}>
+        <PrimaryButton
+          label="Water Now"
+          icon="water-drop"
+          iconFamily="MaterialIcons"
+          onPress={() => router.push(`/care-log/${data.plant.id}` as const)}
+        />
+
+        <SecondaryButton
+          label="Add Log"
+          icon="plus"
+          fullWidth
+          variant="surface"
+          onPress={() => router.push(`/care-log/${data.plant.id}` as const)}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
+            Care Guide
+          </Text>
+          <View
+            style={[
+              styles.sectionRule,
+              { backgroundColor: colors.surfaceContainerHigh },
+            ]}
           />
         </View>
-      ) : null}
-      {data.plant.status === "active" ? (
-        <View
-          style={[
-            styles.infoCard,
-            { backgroundColor: colors.surfaceContainerLow },
-          ]}
-        >
-          <View style={styles.reminderHeader}>
-            <Text style={[styles.infoTitle, { color: colors.primary }]}>
-              Reminders
-            </Text>
-            <Switch
-              value={reminderEnabled}
-              onValueChange={(value) =>
-                updateReminder(reminderFrequency, value)
-              }
-              trackColor={{
-                true: colors.primaryContainer,
-                false: colors.surfaceContainerHigh,
-              }}
-              thumbColor={
-                reminderEnabled ? colors.primary : colors.surfaceBright
-              }
-            />
-          </View>
-          <Text style={[styles.infoBody, { color: colors.onSurfaceVariant }]}>
-            Water every {reminderFrequency} days.
-          </Text>
-          <View style={styles.frequencyRow}>
-            {[3, 7, 10, 14].map((days) => {
-              const isActive = days === reminderFrequency;
-              return (
-                <Pressable
-                  key={days}
-                  onPress={() => updateReminder(days, reminderEnabled)}
+
+        <View style={styles.guideStack}>
+          {careGuide.map((card) => {
+            const darkCard = card.tone === "dark";
+
+            return (
+              <View
+                key={card.key}
+                style={[
+                  styles.guideCard,
+                  {
+                    backgroundColor: darkCard
+                      ? colors.primary
+                      : card.key === "humidity"
+                        ? "#f1eee8"
+                        : colors.surfaceContainerLow,
+                  },
+                ]}
+              >
+                <View
                   style={[
-                    styles.frequencyChip,
+                    styles.guideIconTile,
                     {
-                      backgroundColor: isActive
-                        ? colors.tertiaryContainer
-                        : colors.surfaceContainerHigh,
+                      backgroundColor:
+                        card.tileColor ??
+                        (darkCard
+                          ? "rgba(255,255,255,0.12)"
+                          : colors.secondaryContainer),
                     },
                   ]}
                 >
-                  <Text
+                  <Icon
+                    family={card.iconFamily}
+                    name={card.icon}
+                    size={20}
+                    color={
+                      darkCard
+                        ? "#d9ead8"
+                        : card.key === "humidity"
+                          ? "#5c625d"
+                          : "#94492e"
+                    }
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.guideTitle,
+                    {
+                      color: darkCard ? colors.surfaceBright : colors.onSurface,
+                    },
+                  ]}
+                >
+                  {card.title}
+                </Text>
+                <Text
+                  style={[
+                    styles.guideBody,
+                    {
+                      color: darkCard ? "#a9cfb9" : colors.onSurfaceVariant,
+                    },
+                  ]}
+                >
+                  {card.body}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
+            Recent Activity
+          </Text>
+          <Text style={[styles.sectionLink, { color: colors.secondary }]}>
+            VIEW ALL
+          </Text>
+        </View>
+
+        <View style={styles.activityStack}>
+          {recentActivity.map((item, index) => {
+            const visualType = getActivityVisualType(item);
+            const badgeStyle = getActivityBadgeStyle(visualType, colors);
+
+            return (
+              <View key={item.id} style={styles.activityRow}>
+                <View style={styles.activityRail}>
+                  <View
                     style={[
-                      styles.frequencyLabel,
-                      {
-                        color: isActive
-                          ? colors.surfaceBright
-                          : colors.onSurface,
-                      },
+                      styles.activityIconTile,
+                      { backgroundColor: badgeStyle.backgroundColor },
                     ]}
                   >
-                    {days}d
+                    <Icon
+                      family={getLogIconFamily(visualType)}
+                      name={getLogIcon(visualType)}
+                      size={18}
+                      color={badgeStyle.iconColor}
+                    />
+                  </View>
+                  {index < recentActivity.length - 1 ? (
+                    <View
+                      style={[
+                        styles.activityRailLine,
+                        { backgroundColor: colors.surfaceContainerHigh },
+                      ]}
+                    />
+                  ) : null}
+                </View>
+
+                <View style={styles.activityContent}>
+                  <Text
+                    style={[
+                      styles.activityStamp,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {`${item.stampPrimary} ${item.stampSecondary}`}
                   </Text>
-                </Pressable>
-              );
-            })}
-            {setReminder.isPending ? (
-              <ActivityIndicator color={colors.primary} />
-            ) : null}
-          </View>
+                  <Text
+                    style={[styles.activityTitle, { color: colors.primary }]}
+                  >
+                    {item.title.replace("\n", " ")}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.activityBody,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {item.body}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
         </View>
-      ) : (
-        <View
-          style={[
-            styles.infoCard,
-            { backgroundColor: colors.surfaceContainerLow },
-          ]}
-        >
-          <Text style={[styles.infoTitle, { color: colors.primary }]}>
-            Memorialized
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
+            Growth
           </Text>
-          <Text style={[styles.infoBody, { color: colors.onSurfaceVariant }]}>
-            This plant has been moved to the graveyard archive. Care reminders
-            are disabled.
+          <Text style={[styles.sectionLink, { color: colors.secondary }]}>
+            TIMELINE
           </Text>
         </View>
-      )}
-      <CareLogList logs={data.logs} />
-      <TertiaryButton
-        label="Delete plant"
-        onPress={() => {
-          Alert.alert(
-            "Delete plant",
-            "This removes the plant and its local history.",
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Delete",
-                style: "destructive",
-                onPress: () => {
-                  deletePlant.mutate();
-                },
-              },
-            ],
-          );
-        }}
-      />
-      <Link href="/(tabs)/library" style={styles.hiddenLink}>
-        Back to library
-      </Link>
+
+        <View style={styles.growthGrid}>
+          {growthPhotos.slice(0, 3).map((photo, index) => (
+            <View key={`${photo.id}-${index}`} style={styles.growthPhotoWrap}>
+              <Image
+                source={{ uri: photo.localUri ?? photo.remoteUrl ?? undefined }}
+                style={styles.growthPhoto}
+                contentFit="cover"
+              />
+            </View>
+          ))}
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push(`/plant/${data.plant.id}/edit` as const)}
+            style={[
+              styles.addPhotoTile,
+              { backgroundColor: colors.surfaceContainerLow },
+            ]}
+          >
+            <Icon
+              family="MaterialIcons"
+              name="add-a-photo"
+              size={30}
+              color={colors.onSurfaceVariant}
+            />
+            <Text
+              style={[styles.addPhotoLabel, { color: colors.onSurfaceVariant }]}
+            >
+              ADD PHOTO
+            </Text>
+          </Pressable>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 20,
+    gap: 28,
   },
-  hero: {
-    borderRadius: 32,
+  heroWrap: {
+    height: 356,
+    borderRadius: 26,
     overflow: "hidden",
-    height: 360,
+    position: "relative",
   },
   heroImage: {
     width: "100%",
@@ -264,65 +619,210 @@ const styles = StyleSheet.create({
   heroFallback: {
     width: "100%",
     height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerCopy: {
+  statusCard: {
+    position: "absolute",
+    left: 14,
+    bottom: 14,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
-  species: {
+  statusIconWrap: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statusCopy: {
+    gap: 0,
+  },
+  statusEyebrow: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 11,
-    letterSpacing: 2,
+    fontSize: 9,
+    letterSpacing: 1.3,
+  },
+  statusValue: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 17,
+  },
+  identity: {
+    gap: 8,
+  },
+  familyChip: {
+    alignSelf: "flex-start",
+    minHeight: 24,
+    borderRadius: 999,
+    paddingLeft: 12,
+    paddingRight: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  familyChipDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  familyChipText: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.5,
   },
   name: {
     fontFamily: "NotoSerif_700Bold",
-    fontSize: 42,
-    lineHeight: 50,
+    fontSize: 32,
+    lineHeight: 36,
   },
-  body: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 16,
-    lineHeight: 25,
+  subtitle: {
+    fontFamily: "NotoSerif_400Regular_Italic",
+    fontSize: 15,
+    lineHeight: 21,
   },
   actions: {
+    width: "100%",
     gap: 12,
   },
-  infoCard: {
-    borderRadius: 28,
-    padding: 20,
-    gap: 8,
+  section: {
+    gap: 14,
   },
-  infoTitle: {
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  sectionTitle: {
     fontFamily: "NotoSerif_700Bold",
-    fontSize: 24,
+    fontSize: 20,
+    lineHeight: 28,
   },
-  infoBody: {
+  sectionRule: {
+    flex: 1,
+    height: 1,
+    borderRadius: 999,
+  },
+  sectionLink: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.5,
+    marginLeft: "auto",
+  },
+  guideStack: {
+    gap: 14,
+  },
+  guideCard: {
+    borderRadius: 30,
+    paddingHorizontal: 28,
+    paddingVertical: 26,
+    minHeight: 178,
+    justifyContent: "flex-start",
+    gap: 12,
+  },
+  guideIconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  guideTitle: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 19,
+    lineHeight: 26,
+  },
+  guideBody: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 16,
+    fontSize: 13,
+    lineHeight: 22,
+    maxWidth: 256,
+    marginTop: -4,
   },
-  reminderHeader: {
+  activityStack: {
+    gap: 16,
+  },
+  activityRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: 12,
+    alignItems: "flex-start",
+  },
+  activityRail: {
+    width: 54,
     alignItems: "center",
   },
-  frequencyRow: {
-    flexDirection: "row",
+  activityIconTile: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  activityRailLine: {
+    width: 1,
+    minHeight: 86,
+    marginTop: 10,
+  },
+  activityContent: {
+    flex: 1,
+    gap: 6,
+    paddingTop: 2,
+  },
+  activityStamp: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 1.2,
+  },
+  activityTitle: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 18,
+    lineHeight: 25,
+  },
+  activityBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 22,
+    maxWidth: 250,
+  },
+  growthGrid: {
+    flexDirection: "row",
     flexWrap: "wrap",
+    gap: 12,
+    justifyContent: "space-between",
+  },
+  growthPhotoWrap: {
+    width: "47%",
+    aspectRatio: 1,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+  growthPhoto: {
+    width: "100%",
+    height: "100%",
+  },
+  addPhotoTile: {
+    width: "47%",
+    aspectRatio: 1,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#ddd7cd",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
   },
-  frequencyChip: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  frequencyLabel: {
+  addPhotoLabel: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 12,
-    letterSpacing: 1,
-  },
-  hiddenLink: {
-    height: 0,
-    width: 0,
-    opacity: 0,
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.6,
   },
 });

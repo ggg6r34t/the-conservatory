@@ -1,41 +1,84 @@
 import { Link, type Href } from "expo-router";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 
 interface SecondaryButtonProps {
   label: string;
   onPress?: () => void;
   href?: Href;
+  icon?: string;
+  fullWidth?: boolean;
+  variant?: "filled" | "surface";
 }
 
 export function SecondaryButton({
   label,
   onPress,
   href,
+  icon,
+  fullWidth = false,
+  variant = "filled",
 }: SecondaryButtonProps) {
   const { colors } = useTheme();
+  const surfaceVariant = variant === "surface";
 
   const content = (
-    <Pressable
-      onPress={onPress}
-      style={[styles.button, { backgroundColor: colors.secondaryContainer }]}
+    <View
+      style={[
+        styles.button,
+        fullWidth && styles.fullWidth,
+        surfaceVariant
+          ? [
+              styles.surfaceButton,
+              {
+                backgroundColor: colors.surfaceContainerLowest,
+                borderColor: "rgba(193, 200, 194, 0.35)",
+              },
+            ]
+          : { backgroundColor: colors.secondaryContainer },
+      ]}
     >
-      <Text style={[styles.label, { color: colors.secondaryOnContainer }]}>
-        {label}
-      </Text>
-    </Pressable>
+      <View style={styles.content}>
+        {icon ? (
+          <Icon
+            name={icon}
+            size={18}
+            color={surfaceVariant ? colors.onSurface : colors.secondaryOnContainer}
+          />
+        ) : null}
+        <Text
+          style={[
+            styles.label,
+            {
+              color: surfaceVariant
+                ? colors.onSurface
+                : colors.secondaryOnContainer,
+            },
+          ]}
+        >
+          {label}
+        </Text>
+      </View>
+    </View>
   );
 
   if (href) {
     return (
       <Link href={href} asChild>
-        {content}
+        <Pressable accessibilityRole="button" onPress={onPress}>
+          {content}
+        </Pressable>
       </Link>
     );
   }
 
-  return content;
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress}>
+      {content}
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -46,8 +89,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
   },
+  fullWidth: {
+    width: "100%",
+  },
+  surfaceButton: {
+    borderWidth: 1,
+    shadowColor: "rgba(27, 28, 25, 0.03)",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 18,
+  },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
   label: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 15,
+    fontFamily: "Manrope_500Medium",
+    fontSize: 16,
+    lineHeight: 20,
   },
 });

@@ -1,14 +1,21 @@
-import { useLocalSearchParams } from "expo-router";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { TertiaryButton } from "@/components/common/Buttons/TertiaryButton";
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { PlantDetail } from "@/features/plants/components/PlantDetail";
 import { usePlant } from "@/features/plants/hooks/usePlant";
 
 export default function PlantDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { colors, spacing } = useTheme();
   const plantQuery = usePlant(id ?? "");
 
@@ -17,9 +24,29 @@ export default function PlantDetailRoute() {
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
       <ScrollView
-        contentContainerStyle={[styles.content, { padding: spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.lg,
+            paddingBottom: 96,
+          },
+        ]}
       >
-        <TertiaryButton label="Back" href="/(tabs)/library" />
+        <View style={styles.topBar}>
+          <Pressable
+            accessibilityRole="button"
+            style={styles.iconButton}
+            onPress={() => router.back()}
+          >
+            <Icon name="arrow-left" size={20} color={colors.primary} />
+          </Pressable>
+          <Text style={[styles.brand, { color: colors.primary }]}>
+            The Conservatory
+          </Text>
+        </View>
+
         {plantQuery.data ? (
           <PlantDetail data={plantQuery.data} />
         ) : (
@@ -39,7 +66,24 @@ export default function PlantDetailRoute() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  content: { gap: 20 },
+  content: { gap: 24 },
+  topBar: {
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  brand: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 22,
+    lineHeight: 28,
+  },
   title: {
     fontFamily: "NotoSerif_700Bold",
     fontSize: 42,
