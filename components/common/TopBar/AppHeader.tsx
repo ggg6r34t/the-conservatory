@@ -6,7 +6,7 @@ import { useTheme } from "@/components/design-system/useTheme";
 
 interface AppHeaderProps {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   showBackButton?: boolean;
   aside?: string;
 }
@@ -57,13 +57,17 @@ export function AppHeader({
       </View>
       <View style={[styles.copy, aside ? styles.copyWithAside : undefined]}>
         <View style={styles.copyMain}>
-          <Text style={[styles.subtitle, { color: colors.secondary }]}>
-            {subtitle.toUpperCase()}
-          </Text>
+          {subtitle ? (
+            <Text style={[styles.subtitle, { color: colors.secondary }]}>
+              {subtitle.toUpperCase()}
+            </Text>
+          ) : null}
           <Text style={[styles.title, { color: colors.primary }]}>{title}</Text>
         </View>
         {aside ? (
-          <Text style={[styles.aside, { color: colors.onSurface }]}>{aside}</Text>
+          <Text style={[styles.aside, { color: colors.onSurface }]}>
+            {aside}
+          </Text>
         ) : null}
       </View>
     </View>
@@ -76,15 +80,15 @@ const styles = StyleSheet.create({
   },
   brandRow: {
     flexDirection: "row",
-    alignItems: 'center',
+    alignItems: "center",
     gap: 12,
   },
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   backButton: {
     width: 32,
