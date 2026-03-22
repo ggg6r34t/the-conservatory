@@ -1,4 +1,11 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
@@ -8,10 +15,12 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { PlantList } from "@/features/plants/components/PlantList";
 import { usePlants } from "@/features/plants/hooks/usePlants";
 import { usePlantStore } from "@/features/plants/stores/usePlantStore";
+import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 
 export default function LibraryScreen() {
   const { colors, spacing } = useTheme();
   const plantsQuery = usePlants();
+  const { onRefresh, refreshing } = usePullToRefreshSync();
   const filter = usePlantStore((state) => state.filter);
   const query = usePlantStore((state) => state.query);
   const setFilter = usePlantStore((state) => state.setFilter);
@@ -22,6 +31,13 @@ export default function LibraryScreen() {
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
       <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
         contentContainerStyle={[styles.content, { padding: spacing.lg }]}
       >
         <AppHeader title="Living Gallery" subtitle="Your collection" />

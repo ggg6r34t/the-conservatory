@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Link } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
@@ -10,6 +10,7 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { useLogs } from "@/features/care-logs/hooks/useLogs";
 import { usePlant } from "@/features/plants/hooks/usePlant";
 import { usePlants } from "@/features/plants/hooks/usePlants";
+import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import type { CareLog } from "@/types/models";
 
 function formatJournalDate(value: string) {
@@ -62,6 +63,7 @@ function formatJournalBody(log: CareLog, plantName: string) {
 
 export default function JournalScreen() {
   const { colors, spacing } = useTheme();
+  const { onRefresh, refreshing } = usePullToRefreshSync();
   const plantsQuery = usePlants();
   const plants = plantsQuery.data ?? [];
   const featuredPlant = plants[0];
@@ -85,6 +87,13 @@ export default function JournalScreen() {
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
         contentContainerStyle={[styles.content, { padding: spacing.lg }]}
       >
         <AppHeader title="Journal" subtitle="Growth timeline" />

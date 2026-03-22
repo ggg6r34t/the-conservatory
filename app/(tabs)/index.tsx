@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { FAB } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -10,11 +10,13 @@ import { HydrationCard } from "@/features/dashboard/components/HydrationCard";
 import { StreakSummary } from "@/features/dashboard/components/StreakSummary";
 import { UpcomingCare } from "@/features/dashboard/components/UpcomingCare";
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
+import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { colors, spacing } = useTheme();
   const dashboard = useDashboard();
+  const { onRefresh, refreshing } = usePullToRefreshSync();
   const plantPhotoUris = dashboard.plants
     .map((plant) => plant.primaryPhotoUri)
     .filter((uri): uri is string => Boolean(uri));
@@ -26,6 +28,13 @@ export default function HomeScreen() {
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
         contentContainerStyle={[
           styles.content,
           {

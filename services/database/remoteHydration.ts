@@ -100,14 +100,20 @@ async function fetchRemoteRowsSafe<T>(
   userId: string,
 ) {
   try {
-    return await fetchRemoteRows<T>(table, columns, userId);
+    return {
+      ok: true,
+      rows: await fetchRemoteRows<T>(table, columns, userId),
+    };
   } catch (error) {
     logger.warn("sync.remote_hydration.fetch_failed", {
       table,
       userId,
       message: error instanceof Error ? error.message : "Unknown error",
     });
-    return [] as T[];
+    return {
+      ok: false,
+      rows: [] as T[],
+    };
   }
 }
 
@@ -149,12 +155,39 @@ async function shouldReplaceLocalRow(table: string, row: MergeableRemoteRow) {
   return new Date(row.updated_at).getTime() >= new Date(localRow.updated_at).getTime();
 }
 
+async function reconcileRemoteDeletions(params: {
+  table: string;
+  userId: string;
+  remoteIds: string[];
+}) {
+  const database = await getDatabase();
+  const { table, userId, remoteIds } = params;
+
+  if (remoteIds.length === 0) {
+    await database.runAsync(
+      `DELETE FROM ${table} WHERE user_id = ? AND pending = 0;`,
+      userId,
+    );
+    return;
+  }
+
+  const placeholders = remoteIds.map(() => "?").join(", ");
+  await database.runAsync(
+    `DELETE FROM ${table}
+     WHERE user_id = ?
+       AND pending = 0
+       AND id NOT IN (${placeholders});`,
+    userId,
+    ...remoteIds,
+  );
+}
+
 export async function hydrateRemoteUserData(userId: string) {
   if (!supabase) {
     return;
   }
 
-  const [plants, photos, careLogs, reminders, graveyardPlants] =
+  const [plantsResult, photosResult, careLogsResult, remindersResult, graveyardResult] =
     await Promise.all([
       fetchRemoteRowsSafe<RemotePlantRow>(
         "plants",
@@ -225,6 +258,12 @@ export async function hydrateRemoteUserData(userId: string) {
         userId,
       ),
     ]);
+
+  const plants = plantsResult.rows;
+  const photos = photosResult.rows;
+  const careLogs = careLogsResult.rows;
+  const reminders = remindersResult.rows;
+  const graveyardPlants = graveyardResult.rows;
 
   const hydratedPhotos = await Promise.all(
     photos.map(async (row) => {
@@ -404,7 +443,47 @@ export async function hydrateRemoteUserData(userId: string) {
         0,
         syncedAt,
         null,
-      );
+        );
+      }
+
+    if (photosResult.ok) {
+      await reconcileRemoteDeletions({
+        table: "photos",
+        userId,
+        remoteIds: hydratedPhotos.map((row) => row.id),
+      });
+    }
+
+    if (careLogsResult.ok) {
+      await reconcileRemoteDeletions({
+        table: "care_logs",
+        userId,
+        remoteIds: careLogs.map((row) => row.id),
+      });
+    }
+
+    if (remindersResult.ok) {
+      await reconcileRemoteDeletions({
+        table: "care_reminders",
+        userId,
+        remoteIds: reminders.map((row) => row.id),
+      });
+    }
+
+    if (graveyardResult.ok) {
+      await reconcileRemoteDeletions({
+        table: "graveyard_plants",
+        userId,
+        remoteIds: graveyardPlants.map((row) => row.id),
+      });
+    }
+
+    if (plantsResult.ok) {
+      await reconcileRemoteDeletions({
+        table: "plants",
+        userId,
+        remoteIds: plants.map((row) => row.id),
+      });
     }
   });
 }

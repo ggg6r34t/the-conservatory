@@ -1,15 +1,17 @@
 import { Image } from "expo-image";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
+import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 
 export default function GraveyardScreen() {
   const { colors, spacing } = useTheme();
   const graveyardQuery = useGraveyard();
+  const { onRefresh, refreshing } = usePullToRefreshSync();
   const memorials = graveyardQuery.data ?? [];
 
   return (
@@ -17,6 +19,13 @@ export default function GraveyardScreen() {
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
       <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
         contentContainerStyle={[styles.content, { padding: spacing.lg }]}
       >
         <AppHeader title="Graveyard" subtitle="Memorial garden" />
