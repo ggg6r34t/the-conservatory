@@ -1,58 +1,95 @@
-import { Link } from "expo-router";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { useRouter } from "expo-router";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { FAB } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
-import { QuickActions } from "@/features/dashboard/components/QuickActions";
+import { HydrationCard } from "@/features/dashboard/components/HydrationCard";
 import { StreakSummary } from "@/features/dashboard/components/StreakSummary";
 import { UpcomingCare } from "@/features/dashboard/components/UpcomingCare";
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { colors, spacing } = useTheme();
   const dashboard = useDashboard();
+  const plantPhotoUris = dashboard.plants
+    .map((plant) => plant.primaryPhotoUri)
+    .filter((uri): uri is string => Boolean(uri));
 
   return (
     <SafeAreaView
+      edges={["top"]}
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
       <ScrollView
-        contentContainerStyle={[styles.content, { padding: spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.lg,
+            paddingBottom: 144,
+          },
+        ]}
       >
         <DashboardHeader isOffline={dashboard.isOffline} />
+
         <View style={styles.heroBlock}>
           <View style={styles.copyColumn}>
-            <Link
-              href="/(tabs)"
-              style={[styles.eyebrow, { color: colors.secondary }]}
-            >
+            <Text style={[styles.eyebrow, { color: colors.secondary }]}>
               YOUR LIVING GALLERY
-            </Link>
-            <Link
-              href="/(tabs)"
-              style={[styles.title, { color: colors.primary }]}
-            >
-              Nature is thriving.
-            </Link>
-            <Link
-              href="/(tabs)"
-              style={[styles.body, { color: colors.onSurfaceVariant }]}
-            >
+            </Text>
+            <View style={styles.titleBlock}>
+              <Text style={[styles.title, { color: colors.primary }]}>
+                Nature is
+              </Text>
+              <Text
+                style={[
+                  styles.title,
+                  { color: colors.primary, lineHeight: 72 },
+                ]}
+              >
+                thriving.
+              </Text>
+            </View>
+            <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
               Welcome back. Your indoor sanctuary is looking lush today. Three
               specimens are currently ready for hydration.
-            </Link>
+            </Text>
           </View>
-          <PrimaryButton label="New Specimen" href="/plant/add" />
+          <PrimaryButton
+            compact
+            href="/plant/add"
+            icon="plus"
+            label="New Specimen"
+          />
         </View>
+
+        <HydrationCard dueToday={dashboard.dueToday.length} />
+
         <StreakSummary
           activePlants={dashboard.plants.length}
-          dueToday={dashboard.dueToday.length}
+          plantPhotoUris={plantPhotoUris}
         />
-        <QuickActions />
-        <UpcomingCare plants={dashboard.dueToday} />
+
+        <UpcomingCare plants={dashboard.plants} />
       </ScrollView>
+
+      <FAB
+        icon="camera-outline"
+        style={[
+          styles.fab,
+          {
+            backgroundColor: colors.primaryContainer,
+          },
+        ]}
+        color={colors.surfaceBright}
+        onPress={() => router.push("/plant/add")}
+        accessibilityLabel="Add specimen"
+      />
     </SafeAreaView>
   );
 }
@@ -62,28 +99,38 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    gap: 28,
+    gap: 24,
   },
   heroBlock: {
     gap: 24,
-    paddingVertical: 12,
   },
   copyColumn: {
     gap: 16,
+    paddingRight: 18,
+  },
+  titleBlock: {
+    gap: 0,
   },
   eyebrow: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 11,
-    letterSpacing: 3,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 2.4,
   },
   title: {
     fontFamily: "NotoSerif_700Bold",
-    fontSize: 52,
-    lineHeight: 58,
+    fontSize: 56,
+    lineHeight: 64,
   },
   body: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 17,
-    lineHeight: 28,
+    fontSize: 16,
+    lineHeight: 24,
+    maxWidth: 300,
+  },
+  fab: {
+    position: "absolute",
+    right: 18,
+    bottom: 104,
   },
 });

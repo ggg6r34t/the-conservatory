@@ -3,6 +3,7 @@ import { upsertReminder } from "@/features/notifications/api/remindersClient";
 import { cancelReminderNotification } from "@/features/notifications/services/notificationService";
 import { getDatabase } from "@/services/database/sqlite";
 import { enqueueSyncOperation } from "@/services/database/sync";
+import { getStorageAssetUrl } from "@/services/supabase/storage";
 import type {
   GraveyardPlant,
   Photo,
@@ -94,6 +95,48 @@ function toPhoto(row: PhotoRow): Photo {
   };
 }
 
+function resolveRenderablePhotoUri(photo: Photo | undefined) {
+  if (!photo) {
+    return null;
+  }
+
+  if (photo.remoteUrl) {
+    return photo.remoteUrl;
+  }
+
+  if (photo.localUri) {
+    return photo.localUri;
+  }
+
+  return null;
+}
+
+function buildPhotoByPlantIdMap(rows: PhotoRow[]) {
+  const photoByPlantId = new Map<string, Photo>();
+
+  for (const row of rows) {
+    if (!photoByPlantId.has(row.plant_id)) {
+      photoByPlantId.set(row.plant_id, toPhoto(row));
+    }
+  }
+
+  return photoByPlantId;
+}
+
+async function hydratePhotosForDisplay(rows: PhotoRow[]) {
+  return Promise.all(
+    rows.map(async (row) => {
+      const resolvedRemoteUrl =
+        row.remote_url ?? (await getStorageAssetUrl(row.storage_path)) ?? null;
+
+      return toPhoto({
+        ...row,
+        remote_url: resolvedRemoteUrl,
+      });
+    }),
+  );
+}
+
 function computeNextWaterDueAt(lastWateredAt: string, intervalDays: number) {
   const due = new Date(lastWateredAt);
   due.setDate(due.getDate() + intervalDays);
@@ -153,11 +196,31 @@ export async function listGraveyardPlants(userId: string) {
   );
 
   const photos = await database.getAllAsync<PhotoRow>(
-    "SELECT * FROM photos WHERE user_id = ? AND is_primary = 1;",
+    `SELECT * FROM photos
+     WHERE user_id = ?
+     ORDER BY is_primary DESC, updated_at DESC, created_at DESC;`,
     userId,
   );
-  const photoByPlantId = new Map(
-    photos.map((photo) => [photo.plant_id, toPhoto(photo)]),
+  const hydratedPhotos = await hydratePhotosForDisplay(photos);
+  const photoByPlantId = buildPhotoByPlantIdMap(
+    hydratedPhotos.map((photo) => ({
+      id: photo.id,
+      user_id: photo.userId,
+      plant_id: photo.plantId,
+      local_uri: photo.localUri ?? null,
+      remote_url: photo.remoteUrl ?? null,
+      storage_path: photo.storagePath ?? null,
+      mime_type: photo.mimeType ?? null,
+      width: photo.width ?? null,
+      height: photo.height ?? null,
+      taken_at: photo.takenAt ?? null,
+      is_primary: photo.isPrimary,
+      created_at: photo.createdAt,
+      updated_at: photo.updatedAt,
+      pending: photo.pending,
+      synced_at: photo.syncedAt ?? null,
+      sync_error: photo.syncError ?? null,
+    })),
   );
 
   return rows.map((row) => ({
@@ -177,10 +240,7 @@ export async function listGraveyardPlants(userId: string) {
     speciesName: row.species_name,
     nickname: row.nickname,
     plantNotes: row.notes,
-    primaryPhotoUri:
-      photoByPlantId.get(row.plant_id)?.localUri ??
-      photoByPlantId.get(row.plant_id)?.remoteUrl ??
-      null,
+    primaryPhotoUri: resolveRenderablePhotoUri(photoByPlantId.get(row.plant_id)),
   }));
 }
 
@@ -197,25 +257,41 @@ export async function listPlants(input: {
     "active",
   );
   const photos = await database.getAllAsync<PhotoRow>(
-    "SELECT * FROM photos WHERE user_id = ? AND is_primary = 1;",
+    `SELECT * FROM photos
+     WHERE user_id = ?
+     ORDER BY is_primary DESC, updated_at DESC, created_at DESC;`,
     input.userId,
   );
-
-  const photoByPlantId = new Map(
-    photos.map((photo) => [photo.plant_id, toPhoto(photo)]),
+  const hydratedPhotos = await hydratePhotosForDisplay(photos);
+  const photoByPlantId = buildPhotoByPlantIdMap(
+    hydratedPhotos.map((photo) => ({
+      id: photo.id,
+      user_id: photo.userId,
+      plant_id: photo.plantId,
+      local_uri: photo.localUri ?? null,
+      remote_url: photo.remoteUrl ?? null,
+      storage_path: photo.storagePath ?? null,
+      mime_type: photo.mimeType ?? null,
+      width: photo.width ?? null,
+      height: photo.height ?? null,
+      taken_at: photo.takenAt ?? null,
+      is_primary: photo.isPrimary,
+      created_at: photo.createdAt,
+      updated_at: photo.updatedAt,
+      pending: photo.pending,
+      synced_at: photo.syncedAt ?? null,
+      sync_error: photo.syncError ?? null,
+    })),
   );
   const lowerQuery = input.query.trim().toLowerCase();
 
   const filtered = rows
     .map((row) => {
       const plant = toPlant(row);
-      return {
-        ...plant,
-        primaryPhotoUri:
-          photoByPlantId.get(plant.id)?.localUri ??
-          photoByPlantId.get(plant.id)?.remoteUrl ??
-          null,
-      } satisfies PlantListItem;
+        return {
+          ...plant,
+          primaryPhotoUri: resolveRenderablePhotoUri(photoByPlantId.get(plant.id)),
+        } satisfies PlantListItem;
     })
     .filter((plant) => {
       if (input.filter === "needs-water") {
@@ -271,9 +347,12 @@ export async function getPlantById(
   }
 
   const photos = await database.getAllAsync<PhotoRow>(
-    "SELECT * FROM photos WHERE plant_id = ? ORDER BY created_at DESC;",
+    `SELECT * FROM photos
+     WHERE plant_id = ?
+     ORDER BY is_primary DESC, updated_at DESC, created_at DESC;`,
     plantId,
   );
+  const hydratedPhotos = await hydratePhotosForDisplay(photos);
   const reminders = await database.getAllAsync<{
     id: string;
     user_id: string;
@@ -314,7 +393,7 @@ export async function getPlantById(
 
   return {
     plant: toPlant(plantRow),
-    photos: photos.map(toPhoto),
+    photos: hydratedPhotos,
     reminders: reminders.map((row) => ({
       id: row.id,
       userId: row.user_id,
@@ -407,7 +486,6 @@ export async function createPlant(input: {
       plantId,
       input.photoUri,
       null,
-      `${STORAGE_BUCKET}/${storagePath}`,
       storagePath,
       "image/jpeg",
       null,
@@ -513,7 +591,7 @@ export async function updatePlant(input: {
       await database.runAsync(
         "UPDATE photos SET local_uri = ?, remote_url = ?, storage_path = ?, mime_type = ?, updated_at = ?, pending = 1 WHERE id = ?;",
         input.patch.photoUri,
-        `${STORAGE_BUCKET}/${storagePath}`,
+        null,
         storagePath,
         "image/jpeg",
         updatedAt,
@@ -547,7 +625,6 @@ export async function updatePlant(input: {
         input.plantId,
         input.patch.photoUri,
         null,
-        `${STORAGE_BUCKET}/${storagePath}`,
         storagePath,
         "image/jpeg",
         null,

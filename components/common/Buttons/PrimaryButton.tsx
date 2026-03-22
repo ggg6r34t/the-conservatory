@@ -1,6 +1,7 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, type Href } from "expo-router";
-import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
 
@@ -10,6 +11,8 @@ interface PrimaryButtonProps {
   href?: Href;
   loading?: boolean;
   disabled?: boolean;
+  icon?: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  compact?: boolean;
 }
 
 export function PrimaryButton({
@@ -18,20 +21,35 @@ export function PrimaryButton({
   href,
   loading = false,
   disabled = false,
+  icon,
+  compact = false,
 }: PrimaryButtonProps) {
   const { colors } = useTheme();
 
   const content = (
     <LinearGradient
       colors={[colors.primary, colors.primaryContainer]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.gradient, disabled && styles.disabled]}
+      start={{ x: 0.12, y: 0.08 }}
+      end={{ x: 0.88, y: 0.92 }}
+      style={[
+        styles.gradient,
+        compact && styles.compact,
+        disabled && styles.disabled,
+      ]}
     >
       {loading ? (
         <ActivityIndicator color={colors.surfaceBright} />
       ) : (
-        <Text style={styles.label}>{label}</Text>
+        <View style={styles.content}>
+          {icon ? (
+            <MaterialCommunityIcons
+              color={colors.surfaceBright}
+              name={icon}
+              size={16}
+            />
+          ) : null}
+          <Text style={styles.label}>{label}</Text>
+        </View>
       )}
     </LinearGradient>
   );
@@ -39,7 +57,9 @@ export function PrimaryButton({
   if (href) {
     return (
       <Link href={href} asChild>
-        <Pressable disabled={disabled}>{content}</Pressable>
+        <Pressable disabled={disabled} style={compact && styles.inlinePressable}>
+          {content}
+        </Pressable>
       </Link>
     );
   }
@@ -49,6 +69,7 @@ export function PrimaryButton({
       accessibilityRole="button"
       onPress={onPress}
       disabled={disabled || loading}
+      style={compact && styles.inlinePressable}
     >
       {content}
     </Pressable>
@@ -56,6 +77,9 @@ export function PrimaryButton({
 }
 
 const styles = StyleSheet.create({
+  inlinePressable: {
+    alignSelf: "flex-start",
+  },
   gradient: {
     minHeight: 58,
     borderRadius: 999,
@@ -67,12 +91,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 32,
   },
+  compact: {
+    minHeight: 56,
+    paddingHorizontal: 20,
+  },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
   disabled: {
     opacity: 0.4,
   },
   label: {
     color: "#ffffff",
     fontFamily: "Manrope_700Bold",
-    fontSize: 16,
+    fontSize: 15,
   },
 });

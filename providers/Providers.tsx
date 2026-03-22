@@ -14,6 +14,7 @@ import {
 
 import { BotanicalThemeProvider } from "@/components/design-system/Theme";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
 import { initializeDatabase } from "@/services/database/sqlite";
 
 export function Providers({ children }: PropsWithChildren) {
@@ -39,7 +40,9 @@ export function Providers({ children }: PropsWithChildren) {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <BotanicalThemeProvider>
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <SyncBootstrapProvider>{children}</SyncBootstrapProvider>
+          </QueryProvider>
         </BotanicalThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

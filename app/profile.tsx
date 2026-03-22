@@ -1,8 +1,8 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { SettingsForm } from "@/features/settings/components/SettingsForm";
@@ -18,7 +18,11 @@ export default function ProfileScreen() {
       <ScrollView
         contentContainerStyle={[styles.content, { padding: spacing.lg }]}
       >
-        <AppHeader title="Profile" subtitle="Account & preferences" />
+        <AppHeader
+          title="Profile"
+          subtitle="Account & preferences"
+          showBackButton
+        />
         <View
           style={[
             styles.profileCard,

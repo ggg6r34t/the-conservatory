@@ -1,6 +1,10 @@
 import { STORAGE_BUCKET } from "@/config/constants";
 import { supabase } from "@/config/supabase";
 import { getDatabase } from "@/services/database/sqlite";
+import {
+  getStorageAssetUrl,
+  normalizeStoragePath,
+} from "@/services/supabase/storage";
 import type { SyncQueueItem } from "@/services/database/sync";
 import { logger } from "@/utils/logger";
 
@@ -140,19 +144,19 @@ async function loadReminderRecord(entityId: string) {
     return null;
   }
 
-  return {
-    id: row.id,
-    user_id: row.user_id,
-    plant_id: row.plant_id,
-    reminder_type: row.reminder_type,
-    frequency_days: row.frequency_days,
-    enabled: Boolean(row.enabled),
-    next_due_at: row.next_due_at,
-    last_triggered_at: row.last_triggered_at,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-    updated_by: row.updated_by ?? row.user_id,
-  };
+      return {
+        id: row.id,
+        user_id: row.user_id,
+        plant_id: row.plant_id,
+        reminder_type: row.reminder_type,
+        frequency_days: row.frequency_days,
+        enabled: Boolean(row.enabled),
+        next_due_at: row.next_due_at,
+        last_triggered_at: row.last_triggered_at,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        updated_by: row.updated_by ?? row.user_id,
+      };
 }
 
 async function loadPhotoRecord(entityId: string) {
@@ -177,7 +181,9 @@ async function loadPhotoRecord(entityId: string) {
     return null;
   }
 
-  if (!row.storage_path || !row.mime_type) {
+  const normalizedStoragePath = normalizeStoragePath(row.storage_path);
+
+  if (!normalizedStoragePath || !row.mime_type) {
     logger.warn("sync.photo_missing_storage_path", { entityId });
     return null;
   }
@@ -188,7 +194,7 @@ async function loadPhotoRecord(entityId: string) {
     plant_id: row.plant_id,
     local_uri: row.local_uri,
     remote_url: row.remote_url,
-    storage_path: row.storage_path,
+    storage_path: normalizedStoragePath,
     mime_type: row.mime_type,
     width: row.width,
     height: row.height,
@@ -256,14 +262,18 @@ async function uploadPhotoAsset(
   }
 
   const database = await getDatabase();
+  const remoteUrl = await getStorageAssetUrl(row.storage_path);
   await database.runAsync(
     "UPDATE photos SET remote_url = ?, updated_at = ? WHERE id = ?;",
-    `${STORAGE_BUCKET}/${row.storage_path}`,
+    remoteUrl ?? null,
     new Date().toISOString(),
     row.id,
   );
 
-  return row;
+  return {
+    ...row,
+    remote_url: remoteUrl,
+  };
 }
 
 function parsePayload(item: SyncQueueItem): Record<string, unknown> {
