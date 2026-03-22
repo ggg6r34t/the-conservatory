@@ -101,8 +101,11 @@ export default function CareRemindersScreen() {
   const updateSettings = useUpdateSettings();
   const setReminder = useSetReminder();
 
-  const plants = plantsQuery.data ?? [];
-  const reminders = remindersQuery.data ?? [];
+  const plants = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
+  const reminders = useMemo(
+    () => remindersQuery.data ?? [],
+    [remindersQuery.data],
+  );
   const remindersByPlantId = useMemo(() => {
     const map = new Map<string, CareReminder>();
 
