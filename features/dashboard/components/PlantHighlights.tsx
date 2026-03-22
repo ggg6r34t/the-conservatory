@@ -2,13 +2,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link } from "expo-router";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
@@ -34,18 +28,16 @@ function toTitleCase(value: string) {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-function PlantImage({
-  plant,
-  style,
-}: {
-  plant: PlantListItem;
-  style: object;
-}) {
+function PlantImage({ plant, style }: { plant: PlantListItem; style: object }) {
   const { colors } = useTheme();
 
   if (plant.primaryPhotoUri) {
     return (
-      <Image source={{ uri: plant.primaryPhotoUri }} style={style} contentFit="cover" />
+      <Image
+        source={{ uri: plant.primaryPhotoUri }}
+        style={style}
+        contentFit="cover"
+      />
     );
   }
 
@@ -107,17 +99,27 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
             </View>
             <View style={styles.featuredCopyRow}>
               <View style={styles.featuredCopy}>
-                <Text style={[styles.featuredName, { color: colors.onSurface }]}>
+                <Text
+                  style={[styles.featuredName, { color: colors.onSurface }]}
+                >
                   {featuredPlant.name}
                 </Text>
                 <Text
-                  style={[styles.featuredSpecies, { color: colors.onSurfaceVariant }]}
+                  style={[
+                    styles.featuredSpecies,
+                    { color: colors.onSurfaceVariant },
+                  ]}
                 >
                   {featuredPlant.speciesName}
                 </Text>
               </View>
               <View style={styles.featuredMeta}>
-                <Text style={[styles.metaEyebrow, { color: colors.onSurfaceVariant }]}>
+                <Text
+                  style={[
+                    styles.metaEyebrow,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
                   WATER IN
                 </Text>
                 <Text style={[styles.metaValue, { color: colors.onSurface }]}>
@@ -135,7 +137,10 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
             <Link href={`/plant/${leftSecondaryPlant.id}` as const} asChild>
               <Pressable style={styles.secondaryCard}>
                 <View
-                  style={[styles.secondaryMedia, styles.secondaryCardCompactMedia]}
+                  style={[
+                    styles.secondaryMedia,
+                    styles.secondaryCardCompactMedia,
+                  ]}
                 >
                   <PlantImage
                     plant={leftSecondaryPlant}
@@ -148,7 +153,10 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
                     ]}
                   >
                     <Text
-                      style={[styles.statusLabel, { color: colors.onSurfaceVariant }]}
+                      style={[
+                        styles.statusLabel,
+                        { color: colors.onSurfaceVariant },
+                      ]}
                     >
                       STATUS
                     </Text>
@@ -161,13 +169,20 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
                   </View>
                 </View>
                 <View style={styles.secondaryCopy}>
-                  <Text style={[styles.secondaryName, { color: colors.onSurface }]}>
+                  <Text
+                    style={[styles.secondaryName, { color: colors.onSurface }]}
+                  >
                     {leftSecondaryPlant.name}
                   </Text>
                   <Text
-                    style={[styles.secondaryMeta, { color: colors.onSurfaceVariant }]}
+                    style={[
+                      styles.secondaryMeta,
+                      { color: colors.onSurfaceVariant },
+                    ]}
                   >
-                    {formatDueLabel(leftSecondaryPlant.nextWaterDueAt).toUpperCase()}
+                    {formatDueLabel(
+                      leftSecondaryPlant.nextWaterDueAt,
+                    ).toUpperCase()}
                   </Text>
                 </View>
               </Pressable>
@@ -201,13 +216,20 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
                   </View>
                 </View>
                 <View style={styles.secondaryCopy}>
-                  <Text style={[styles.secondaryName, { color: colors.onSurface }]}>
+                  <Text
+                    style={[styles.secondaryName, { color: colors.onSurface }]}
+                  >
                     {rightSecondaryPlant.name}
                   </Text>
                   <Text
-                    style={[styles.secondaryMeta, { color: colors.onSurfaceVariant }]}
+                    style={[
+                      styles.secondaryMeta,
+                      { color: colors.onSurfaceVariant },
+                    ]}
                   >
-                    {formatDueLabel(rightSecondaryPlant.nextWaterDueAt).toUpperCase()}
+                    {formatDueLabel(
+                      rightSecondaryPlant.nextWaterDueAt,
+                    ).toUpperCase()}
                   </Text>
                 </View>
               </Pressable>
@@ -250,7 +272,10 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
             <Pressable style={styles.timelineCard}>
               <PlantImage plant={plant} style={styles.timelineImage} />
               <Text
-                style={[styles.timelineDate, { color: colors.onSurfaceVariant }]}
+                style={[
+                  styles.timelineDate,
+                  { color: colors.onSurfaceVariant },
+                ]}
               >
                 {formatEditorialDate(plant.updatedAt).toUpperCase()}
               </Text>

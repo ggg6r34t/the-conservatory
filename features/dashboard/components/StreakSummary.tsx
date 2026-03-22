@@ -16,7 +16,9 @@ export function StreakSummary({
   const thumbnails = plantPhotoUris.slice(0, 3);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.tertiaryContainer }]}>
+    <View
+      style={[styles.container, { backgroundColor: colors.tertiaryContainer }]}
+    >
       <View style={styles.metric}>
         <Text style={[styles.count, { color: colors.primaryFixed }]}>
           {activePlants}
@@ -47,8 +49,8 @@ const styles = StyleSheet.create({
   container: {
     minHeight: 118,
     borderRadius: 28,
-    paddingHorizontal: 18,
-    paddingVertical: 22,
+    paddingHorizontal: 22,
+    paddingVertical: 26,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

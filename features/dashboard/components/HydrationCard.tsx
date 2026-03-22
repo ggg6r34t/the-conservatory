@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
@@ -27,7 +27,7 @@ export function HydrationCard({ dueToday }: HydrationCardProps) {
     >
       <View style={styles.header}>
         <View style={styles.iconWrap}>
-          <MaterialCommunityIcons color={colors.primary} name="water" size={18} />
+          <MaterialIcons color={colors.primary} name="water-drop" size={18} />
         </View>
         <Text style={[styles.title, { color: colors.onSurface }]}>
           Hydration
@@ -47,8 +47,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 28,
     minHeight: 114,
-    paddingHorizontal: 18,
-    paddingVertical: 22,
+    paddingHorizontal: 22,
+    paddingVertical: 26,
     gap: 10,
     justifyContent: "center",
   },

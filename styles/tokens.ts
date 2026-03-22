@@ -2,7 +2,7 @@ export const tokens = {
   colors: {
     primary: "#163828",
     primaryContainer: "#2d4f3e",
-    primaryFixed: "#c5ebd4",
+    primaryFixed: "#afbca0",
     secondary: "#fd9e7c",
     secondaryContainer: "#ffe0d4",
     secondaryOnContainer: "#77331a",
