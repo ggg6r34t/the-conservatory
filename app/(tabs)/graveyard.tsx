@@ -1,10 +1,9 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Image as ExpoImage } from "expo-image";
 import {
-  Image as RNImage,
   Pressable,
   RefreshControl,
+  Image as RNImage,
   ScrollView,
   StyleSheet,
   Text,
@@ -32,9 +31,14 @@ function buildMemorialNote(memorial: GraveyardPlantListItem) {
   );
 }
 
-function buildShortReflection(memorial: GraveyardPlantListItem, maxLength = 92) {
+function buildShortReflection(
+  memorial: GraveyardPlantListItem,
+  maxLength = 92,
+) {
   const note = buildMemorialNote(memorial);
-  return note.length > maxLength ? `${note.slice(0, maxLength - 3).trimEnd()}...` : note;
+  return note.length > maxLength
+    ? `${note.slice(0, maxLength - 3).trimEnd()}...`
+    : note;
 }
 
 function buildCauseLabel(memorial: GraveyardPlantListItem) {
@@ -53,7 +57,9 @@ function getMemorialAt(
     return null;
   }
 
-  return memorials[index] ?? memorials[index % memorials.length] ?? memorials[0];
+  return (
+    memorials[index] ?? memorials[index % memorials.length] ?? memorials[0]
+  );
 }
 
 function GrayscaleImage({
@@ -71,31 +77,11 @@ function GrayscaleImage({
 
   return (
     <View style={style}>
-      <RNImage
-        source={{ uri }}
-        style={styles.nativeImage}
-        resizeMode="cover"
-      />
+      <RNImage source={{ uri }} style={styles.nativeImage} resizeMode="cover" />
       <View style={styles.grayscaleOverlay} />
       {tintOverlay ? <View style={styles.darkImageOverlay} /> : null}
     </View>
   );
-}
-
-function PlainImage({
-  uri,
-  style,
-  contentFit = "cover",
-}: {
-  uri?: string | null;
-  style: object;
-  contentFit?: "cover" | "contain";
-}) {
-  if (!uri) {
-    return <View style={[style, styles.imageFallback]} />;
-  }
-
-  return <ExpoImage source={{ uri }} style={style} contentFit={contentFit} />;
 }
 
 export default function GraveyardScreen() {
@@ -108,10 +94,13 @@ export default function GraveyardScreen() {
   const reflectionMemorial = getMemorialAt(memorials, 1);
   const tributeMemorial = getMemorialAt(memorials, 0);
   const tributeCompanion = getMemorialAt(memorials, 1);
-  const compactMemorial = getMemorialAt(memorials, 1) ?? getMemorialAt(memorials, 0);
+  const compactMemorial =
+    getMemorialAt(memorials, 1) ?? getMemorialAt(memorials, 0);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.surface }]}
+    >
       <ScrollView
         refreshControl={
           <RefreshControl
@@ -150,12 +139,6 @@ export default function GraveyardScreen() {
                 style={styles.featuredImage}
                 tintOverlay
               />
-              <View
-                style={[
-                  styles.featuredAccent,
-                  { backgroundColor: colors.secondaryContainer },
-                ]}
-              />
             </View>
 
             <Text style={[styles.featuredLabel, { color: colors.secondary }]}>
@@ -176,10 +159,14 @@ export default function GraveyardScreen() {
                 { backgroundColor: colors.surfaceContainerLowest },
               ]}
             >
-              <Text style={[styles.noteTitle, { color: colors.onSurfaceVariant }]}>
+              <Text
+                style={[styles.noteTitle, { color: colors.onSurfaceVariant }]}
+              >
                 WHAT I LEARNED
               </Text>
-              <Text style={[styles.noteBody, { color: colors.onSurfaceVariant }]}>
+              <Text
+                style={[styles.noteBody, { color: colors.onSurfaceVariant }]}
+              >
                 {buildShortReflection(featuredMemorial, 112)}
               </Text>
             </View>
@@ -187,11 +174,14 @@ export default function GraveyardScreen() {
             <View style={styles.featuredFooter}>
               <MaterialCommunityIcons
                 name="heart"
-                size={10}
+                size={11}
                 color={colors.onSurface}
               />
               <Text
-                style={[styles.featuredFooterLabel, { color: colors.onSurface }]}
+                style={[
+                  styles.featuredFooterLabel,
+                  { color: colors.onSurface },
+                ]}
               >
                 Gently Remembered
               </Text>
@@ -203,7 +193,10 @@ export default function GraveyardScreen() {
           <View
             style={[
               styles.reflectionCard,
-              { backgroundColor: "#fde8de" },
+              {
+                backgroundColor: "#fde8de",
+                borderColor: "rgba(148, 73, 46, 0.12)",
+              },
             ]}
           >
             <View
@@ -220,7 +213,12 @@ export default function GraveyardScreen() {
             <Text style={[styles.reflectionName, { color: colors.primary }]}>
               {reflectionMemorial.name}
             </Text>
-            <Text style={[styles.reflectionBody, { color: colors.onSurfaceVariant }]}>
+            <Text
+              style={[
+                styles.reflectionBody,
+                { color: colors.onSurfaceVariant },
+              ]}
+            >
               {buildShortReflection(reflectionMemorial, 98)}
             </Text>
           </View>
@@ -259,11 +257,16 @@ export default function GraveyardScreen() {
             <Text style={[styles.tributeName, { color: colors.primary }]}>
               {tributeMemorial.name}
             </Text>
-            <Text style={[styles.tributeQuote, { color: colors.onSurfaceVariant }]}>
-              "{buildShortReflection(tributeMemorial, 64)}"
+            <Text
+              style={[styles.tributeQuote, { color: colors.onSurfaceVariant }]}
+            >
+              &quot;{buildShortReflection(tributeMemorial, 64)}&quot;
             </Text>
 
-            <Pressable accessibilityRole="button" style={styles.memorialButtonPressable}>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.memorialButtonPressable}
+            >
               <LinearGradient
                 colors={[colors.primary, colors.primaryContainer]}
                 start={{ x: 0.12, y: 0.08 }}
@@ -283,12 +286,12 @@ export default function GraveyardScreen() {
               { backgroundColor: colors.surfaceContainerLow },
             ]}
           >
-            <GrayscaleImage
-              uri={compactMemorial.primaryPhotoUri}
-              style={styles.compactImage}
-            />
+            <View style={styles.compactTopRow}>
+              <GrayscaleImage
+                uri={compactMemorial.primaryPhotoUri}
+                style={styles.compactImage}
+              />
 
-            <View style={styles.compactCopy}>
               <View style={styles.compactHeader}>
                 <Text style={[styles.compactName, { color: colors.onSurface }]}>
                   {compactMemorial.name}
@@ -299,19 +302,22 @@ export default function GraveyardScreen() {
                   {buildCauseLabel(compactMemorial).toUpperCase()}
                 </Text>
               </View>
+            </View>
 
-              <View
+            <View
+              style={[
+                styles.compactNote,
+                { backgroundColor: colors.surfaceContainerLowest },
+              ]}
+            >
+              <Text
                 style={[
-                  styles.compactNote,
-                  { backgroundColor: colors.surfaceContainerLowest },
+                  styles.compactNoteText,
+                  { color: colors.onSurfaceVariant },
                 ]}
               >
-                <Text
-                  style={[styles.compactNoteText, { color: colors.onSurfaceVariant }]}
-                >
-                  "{buildShortReflection(compactMemorial, 82)}"
-                </Text>
-              </View>
+                &quot;{buildShortReflection(compactMemorial, 112)}&quot;
+              </Text>
             </View>
           </View>
         ) : null}
@@ -322,11 +328,16 @@ export default function GraveyardScreen() {
             { backgroundColor: colors.tertiaryContainer },
           ]}
         >
-          <Text style={[styles.quoteMark, { color: colors.primaryFixed }]}>”</Text>
+          <MaterialCommunityIcons
+            name="format-quote-open"
+            size={40}
+            color={colors.primaryFixed}
+            style={styles.quoteIcon}
+          />
           <Text style={[styles.quoteText, { color: colors.primaryFixed }]}>
-            "A garden is a grand teacher. It teaches patience and careful
+            &quot;A garden is a grand teacher. It teaches patience and careful
             watchfulness; it teaches industry and thrift; above all it teaches
-            entire trust."
+            entire trust.&quot;
           </Text>
           <Text style={[styles.quoteAuthor, { color: colors.primaryFixed }]}>
             — GERTRUDE JEKYLL
@@ -334,12 +345,20 @@ export default function GraveyardScreen() {
         </View>
 
         <View style={styles.closingBlock}>
+          <View
+            style={[
+              styles.closingRule,
+              { backgroundColor: colors.surfaceContainerHigh },
+            ]}
+          />
           <Text style={[styles.closingTitle, { color: colors.onSurface }]}>
             Don&apos;t be discouraged, gardener.
           </Text>
-          <Text style={[styles.closingBody, { color: colors.onSurfaceVariant }]}>
-            Every master gardener has a secret graveyard. It&apos;s the soil from
-            which expertise grows.
+          <Text
+            style={[styles.closingBody, { color: colors.onSurfaceVariant }]}
+          >
+            Every master gardener has a secret graveyard. It&apos;s the soil
+            from which expertise grows.
           </Text>
         </View>
       </ScrollView>
@@ -356,9 +375,9 @@ const styles = StyleSheet.create({
   },
   intro: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 16,
+    fontSize: 17,
     lineHeight: 31,
-    maxWidth: 324,
+    maxWidth: 320,
   },
   nativeImage: {
     width: "100%",
@@ -394,29 +413,20 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  featuredAccent: {
-    position: "absolute",
-    top: -10,
-    right: -12,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    opacity: 0.72,
-  },
   featuredLabel: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 10,
-    letterSpacing: 1.9,
+    fontSize: 11,
+    letterSpacing: 1.8,
   },
   featuredName: {
     fontFamily: "NotoSerif_400Regular",
-    fontSize: 18,
-    lineHeight: 26,
+    fontSize: 20,
+    lineHeight: 28,
   },
   featuredMeta: {
     fontFamily: "NotoSerif_400Regular_Italic",
-    fontSize: 11,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 20,
   },
   noteCard: {
     borderRadius: 12,
@@ -426,13 +436,13 @@ const styles = StyleSheet.create({
   },
   noteTitle: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 9,
-    letterSpacing: 1.2,
+    fontSize: 11,
+    letterSpacing: 1.25,
   },
   noteBody: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 20,
   },
   featuredFooter: {
     flexDirection: "row",
@@ -441,17 +451,19 @@ const styles = StyleSheet.create({
   },
   featuredFooterLabel: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
   },
   reflectionCard: {
     borderRadius: 28,
     paddingHorizontal: 16,
     paddingVertical: 18,
     gap: 14,
+    borderWidth: 1,
+    minHeight: 394,
   },
   reflectionImageWrap: {
-    height: 188,
+    height: 252,
     borderRadius: 16,
     overflow: "hidden",
     alignItems: "center",
@@ -463,20 +475,20 @@ const styles = StyleSheet.create({
   },
   reflectionName: {
     fontFamily: "NotoSerif_400Regular",
-    fontSize: 31,
-    lineHeight: 38,
+    fontSize: 20,
+    lineHeight: 28,
   },
   reflectionBody: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 20,
   },
   tributeCard: {
     borderRadius: 28,
     paddingHorizontal: 20,
     paddingVertical: 24,
     alignItems: "center",
-    gap: 12,
+    gap: 14,
   },
   avatarCluster: {
     height: 56,
@@ -504,8 +516,8 @@ const styles = StyleSheet.create({
   },
   tributeName: {
     fontFamily: "NotoSerif_400Regular",
-    fontSize: 18,
-    lineHeight: 25,
+    fontSize: 20,
+    lineHeight: 28,
     textAlign: "center",
   },
   tributeQuote: {
@@ -517,10 +529,12 @@ const styles = StyleSheet.create({
   },
   memorialButtonPressable: {
     alignSelf: "center",
+    minWidth: 136,
+    marginTop: 2,
   },
   memorialButton: {
-    minHeight: 42,
-    paddingHorizontal: 24,
+    minHeight: 46,
+    paddingHorizontal: 32,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
@@ -532,55 +546,62 @@ const styles = StyleSheet.create({
   memorialButtonLabel: {
     color: "#ffffff",
     fontFamily: "Manrope_700Bold",
-    fontSize: 14,
+    fontSize: 15,
   },
   compactCard: {
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    gap: 14,
+    minHeight: 180,
+  },
+  compactTopRow: {
     flexDirection: "row",
-    gap: 12,
     alignItems: "flex-start",
-    minHeight: 108,
+    justifyContent: "space-between",
+    gap: 18,
   },
   compactImage: {
-    width: 66,
-    height: 66,
-    borderRadius: 12,
+    width: 88,
+    height: 88,
+    borderRadius: 18,
+    overflow: "hidden",
   },
   compactCopy: {
     flex: 1,
     gap: 6,
   },
   compactHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 10,
-    alignItems: "flex-start",
+    flex: 1,
+    gap: 2,
+    alignItems: "flex-end",
+    justifyContent: "flex-start",
+    paddingTop: 6,
   },
   compactName: {
     fontFamily: "NotoSerif_400Regular",
-    fontSize: 16,
-    lineHeight: 22,
-    flex: 1,
+    fontSize: 20,
+    lineHeight: 28,
+    textAlign: "right",
+    maxWidth: 160,
   },
   compactSpecies: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 9,
-    lineHeight: 14,
-    letterSpacing: 1.2,
-    maxWidth: 86,
+    fontSize: 11,
+    lineHeight: 16,
+    letterSpacing: 1.35,
+    maxWidth: 110,
     textAlign: "right",
   },
   compactNote: {
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   compactNoteText: {
     fontFamily: "NotoSerif_400Regular_Italic",
-    fontSize: 11,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 22,
   },
   quoteCard: {
     borderRadius: 18,
@@ -589,38 +610,42 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  quoteMark: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 32,
-    lineHeight: 34,
+  quoteIcon: {
+    opacity: 0.6,
   },
   quoteText: {
     fontFamily: "NotoSerif_400Regular",
-    fontSize: 17,
-    lineHeight: 29,
+    fontSize: 22,
+    lineHeight: 36,
     textAlign: "center",
   },
   quoteAuthor: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 10,
-    letterSpacing: 1.2,
+    fontSize: 12,
+    letterSpacing: 1.25,
   },
   closingBlock: {
-    paddingTop: 18,
-    gap: 10,
+    paddingTop: 20,
+    gap: 12,
     alignItems: "center",
+  },
+  closingRule: {
+    width: "100%",
+    height: 1,
+    opacity: 0.55,
+    marginBottom: 18,
   },
   closingTitle: {
     fontFamily: "NotoSerif_400Regular",
-    fontSize: 18,
-    lineHeight: 28,
+    fontSize: 20,
+    lineHeight: 30,
     textAlign: "center",
     maxWidth: 220,
   },
   closingBody: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 13,
-    lineHeight: 21,
+    fontSize: 14,
+    lineHeight: 22,
     textAlign: "center",
     maxWidth: 300,
   },
