@@ -202,24 +202,14 @@ export default function JournalScreen() {
           },
         ]}
       >
-        <AppHeader title="Journal" subtitle="Growth timeline" />
+        <AppHeader
+          title={"Your Field\nNotes"}
+          subtitle="Care Journal"
+          aside={monthLabel.replace(" ", "\n")}
+        />
 
         {featuredPlant ? (
           <>
-            <View style={styles.hero}>
-              <View style={styles.heroCopy}>
-                <Text style={[styles.eyebrow, { color: colors.secondary }]}>
-                  CARE JOURNAL
-                </Text>
-                <Text style={[styles.heroTitle, { color: colors.primary }]}>
-                  Your Field{"\n"}Notes
-                </Text>
-              </View>
-              <Text style={[styles.monthStamp, { color: colors.onSurface }]}>
-                {monthLabel.replace(" ", "\n")}
-              </Text>
-            </View>
-
             <View style={styles.highlightsHeader}>
               <Text style={[styles.highlightsTitle, { color: colors.onSurface }]}>
                 Monthly Highlights
@@ -380,34 +370,6 @@ const styles = StyleSheet.create({
   content: {
     gap: 32,
   },
-  hero: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 16,
-  },
-  heroCopy: {
-    flex: 1,
-    gap: 10,
-  },
-  eyebrow: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 2.6,
-  },
-  heroTitle: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 56,
-    lineHeight: 60,
-  },
-  monthStamp: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 18,
-    lineHeight: 26,
-    textAlign: "right",
-    marginTop: 54,
-  },
   highlightsHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -417,6 +379,7 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSerif_400Regular_Italic",
     fontSize: 22,
     lineHeight: 30,
+    fontStyle: "italic",
   },
   viewAll: {
     fontFamily: "Manrope_700Bold",

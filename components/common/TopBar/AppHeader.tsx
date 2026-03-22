@@ -8,12 +8,14 @@ interface AppHeaderProps {
   title: string;
   subtitle: string;
   showBackButton?: boolean;
+  aside?: string;
 }
 
 export function AppHeader({
   title,
   subtitle,
   showBackButton = false,
+  aside,
 }: AppHeaderProps) {
   const router = useRouter();
   const { colors } = useTheme();
@@ -53,11 +55,16 @@ export function AppHeader({
           The Conservatory
         </Text>
       </View>
-      <View style={styles.copy}>
-        <Text style={[styles.subtitle, { color: colors.secondary }]}>
-          {subtitle.toUpperCase()}
-        </Text>
-        <Text style={[styles.title, { color: colors.primary }]}>{title}</Text>
+      <View style={[styles.copy, aside ? styles.copyWithAside : undefined]}>
+        <View style={styles.copyMain}>
+          <Text style={[styles.subtitle, { color: colors.secondary }]}>
+            {subtitle.toUpperCase()}
+          </Text>
+          <Text style={[styles.title, { color: colors.primary }]}>{title}</Text>
+        </View>
+        {aside ? (
+          <Text style={[styles.aside, { color: colors.onSurface }]}>{aside}</Text>
+        ) : null}
       </View>
     </View>
   );
@@ -92,6 +99,16 @@ const styles = StyleSheet.create({
   copy: {
     gap: 10,
   },
+  copyWithAside: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 16,
+  },
+  copyMain: {
+    flex: 1,
+    gap: 10,
+  },
   subtitle: {
     fontFamily: "Manrope_700Bold",
     fontSize: 11,
@@ -100,5 +117,12 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: "NotoSerif_700Bold",
     fontSize: 40,
+  },
+  aside: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 18,
+    lineHeight: 26,
+    textAlign: "right",
+    marginTop: 54,
   },
 });
