@@ -1,9 +1,17 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
-import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAddLog } from "@/features/care-logs/hooks/useAddLog";
 
@@ -11,23 +19,36 @@ interface CareLogFormProps {
   plantId: string;
 }
 
-const logTypes: Array<"water" | "mist" | "feed" | "prune" | "pest" | "note"> = [
-  "water",
-  "mist",
-  "feed",
-  "prune",
-  "pest",
-  "note",
+const logTypes: {
+  key: "water" | "feed" | "prune" | "pest" | "note";
+  label: string;
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+}[] = [
+  { key: "water", label: "WATER", icon: "water-outline" },
+  { key: "feed", label: "FERTILIZE", icon: "white-balance-sunny" },
+  { key: "prune", label: "PRUNE", icon: "content-cut" },
+  { key: "pest", label: "PESTS", icon: "bug-outline" },
+  { key: "note", label: "PHOTO", icon: "camera-outline" },
 ];
+
+const conditionOptions = ["Healthy", "Needs Attention", "Declining"] as const;
 
 export function CareLogForm({ plantId }: CareLogFormProps) {
   const router = useRouter();
   const { colors } = useTheme();
   const [notes, setNotes] = useState("");
   const [logType, setLogType] = useState<
-    "water" | "mist" | "feed" | "prune" | "pest" | "note"
+    "water" | "feed" | "prune" | "pest" | "note"
   >("water");
+  const [condition, setCondition] =
+    useState<(typeof conditionOptions)[number]>("Healthy");
   const addLog = useAddLog(plantId);
+  const now = new Date();
+  const timeLabel = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(now);
+  const nowLabel = `Today, ${timeLabel}`;
 
   const handleSubmit = async () => {
     try {
@@ -43,41 +64,136 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.chips}>
-        {logTypes.map((type) => {
-          const isActive = type === logType;
-          return (
-            <Pressable
-              key={type}
-              onPress={() => setLogType(type)}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: isActive
-                    ? colors.tertiaryContainer
-                    : colors.surfaceContainerHigh,
-                },
-              ]}
-            >
-              <Text
+      <View style={styles.section}>
+        <Text
+          style={[styles.sectionLabel, { color: colors.secondaryOnContainer }]}
+        >
+          CARE TYPE
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.typeRow}
+        >
+          {logTypes.map((type) => {
+            const isActive = type.key === logType;
+            return (
+              <Pressable
+                key={type.key}
+                onPress={() => setLogType(type.key)}
+                style={styles.typeOption}
+              >
+                <View
+                  style={[
+                    styles.typeTile,
+                    {
+                      backgroundColor: isActive
+                        ? colors.tertiaryContainer
+                        : colors.surfaceContainerHigh,
+                    },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name={type.icon}
+                    size={24}
+                    color={
+                      isActive ? colors.surfaceBright : colors.onSurfaceVariant
+                    }
+                  />
+                </View>
+                <Text style={[styles.typeLabel, { color: colors.onSurface }]}>
+                  {type.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      <View style={styles.section}>
+        <Text
+          style={[styles.sectionLabel, { color: colors.secondaryOnContainer }]}
+        >
+          CARE NOTES
+        </Text>
+        <TextInput
+          multiline
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="How is your plant doing today?"
+          placeholderTextColor="#c6cbc5"
+          textAlignVertical="top"
+          style={[
+            styles.notesInput,
+            {
+              backgroundColor: colors.surfaceContainerLow,
+              color: colors.onSurface,
+            },
+          ]}
+        />
+      </View>
+
+      <View
+        style={[
+          styles.timeRow,
+          { backgroundColor: colors.surfaceContainerLow },
+        ]}
+      >
+        <View style={styles.timeLeft}>
+          <MaterialCommunityIcons
+            name="calendar-blank-outline"
+            size={22}
+            color={colors.onSurface}
+          />
+          <Text style={[styles.timeLabel, { color: colors.onSurface }]}>
+            {nowLabel}
+          </Text>
+        </View>
+        <MaterialCommunityIcons
+          name="chevron-right"
+          size={22}
+          color={colors.onSurfaceVariant}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text
+          style={[styles.sectionLabel, { color: colors.secondaryOnContainer }]}
+        >
+          CURRENT CONDITION
+        </Text>
+        <View style={styles.conditionWrap}>
+          {conditionOptions.map((option) => {
+            const isActive = option === condition;
+            return (
+              <Pressable
+                key={option}
+                onPress={() => setCondition(option)}
                 style={[
-                  styles.chipLabel,
-                  { color: isActive ? colors.surfaceBright : colors.onSurface },
+                  styles.conditionChip,
+                  {
+                    backgroundColor: isActive
+                      ? colors.tertiaryContainer
+                      : colors.surfaceContainerHigh,
+                  },
                 ]}
               >
-                {type.toUpperCase()}
-              </Text>
-            </Pressable>
-          );
-        })}
+                <Text
+                  style={[
+                    styles.conditionLabel,
+                    {
+                      color: isActive ? colors.surfaceBright : colors.onSurface,
+                    },
+                  ]}
+                >
+                  {option}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
-      <TextInputField
-        label="Care notes"
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="How is your plant doing today?"
-        multiline
-      />
+
       <PrimaryButton
         label="Save Care Log"
         onPress={handleSubmit}
@@ -89,21 +205,80 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 18,
+    gap: 30,
   },
-  chips: {
+  section: {
+    gap: 12,
+  },
+  sectionLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 12,
+    letterSpacing: 2.6,
+  },
+  typeRow: {
+    gap: 16,
+    paddingRight: 24,
+  },
+  typeOption: {
+    width: 64,
+    gap: 6,
+    alignItems: "center",
+  },
+  typeTile: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  typeLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 13,
+    textAlign: "center",
+  },
+  notesInput: {
+    minHeight: 210,
+    borderRadius: 28,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    fontFamily: "Manrope_500Medium",
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  timeRow: {
+    borderRadius: 26,
+    minHeight: 64,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  timeLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  timeLabel: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  conditionWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
   },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  conditionChip: {
+    minHeight: 46,
     borderRadius: 999,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  chipLabel: {
+  conditionLabel: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 11,
-    letterSpacing: 1,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });

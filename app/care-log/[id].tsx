@@ -1,30 +1,158 @@
-import { useLocalSearchParams } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo, useRef } from "react";
+import {
+  Animated,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
 import { CareLogForm } from "@/features/care-logs/components/CareLogForm";
+import { usePlant } from "@/features/plants/hooks/usePlant";
 
 export default function CareLogRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { colors, spacing } = useTheme();
+  const plantQuery = usePlant(id ?? "");
+  const plant = plantQuery.data?.plant;
+  const primaryPhoto = plantQuery.data?.photos.find(
+    (photo) => photo.isPrimary === 1,
+  );
+  const plantImageUri =
+    primaryPhoto?.localUri ?? primaryPhoto?.remoteUrl ?? undefined;
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const closeSheet = () => {
+    Animated.timing(translateY, {
+      toValue: 900,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => {
+      router.back();
+    });
+  };
+
+  const resetSheetPosition = () => {
+    Animated.spring(translateY, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 6,
+      speed: 18,
+    }).start();
+  };
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          gestureState.dy > 6 &&
+          Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+        onPanResponderMove: (_, gestureState) => {
+          translateY.setValue(Math.max(0, gestureState.dy));
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dy > 120 || gestureState.vy > 1) {
+            closeSheet();
+            return;
+          }
+
+          resetSheetPosition();
+        },
+        onPanResponderTerminate: resetSheetPosition,
+      }),
+    [closeSheet, resetSheetPosition, translateY],
+  );
 
   return (
     <View style={[styles.overlay, { backgroundColor: colors.backdrop }]}>
-      <View
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={() => router.back()}
+      />
+      <Animated.View
         style={[
           styles.sheet,
           {
-            backgroundColor: colors.surfaceContainerLowest,
-            padding: spacing.lg,
+            backgroundColor: colors.surface,
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.md,
+            transform: [{ translateY }],
           },
         ]}
       >
-        <Text style={[styles.title, { color: colors.primary }]}>Log Care</Text>
-        <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
-          Capture today&apos;s ritual for specimen {id}.
-        </Text>
-        <CareLogForm plantId={id ?? ""} />
-      </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: spacing.xl }}
+        >
+          <View
+            style={[
+              styles.handle,
+              { backgroundColor: colors.surfaceContainerHigh },
+            ]}
+            {...panResponder.panHandlers}
+          />
+
+          <View style={styles.content}>
+            <Text style={[styles.title, { color: colors.primary }]}>
+              Log Care
+            </Text>
+
+            {plant ? (
+              <View
+                style={[
+                  styles.plantCard,
+                  { backgroundColor: colors.surfaceContainerLowest },
+                ]}
+              >
+                {plantImageUri ? (
+                  <Image
+                    source={{ uri: plantImageUri }}
+                    style={styles.plantImage}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.plantImage,
+                      { backgroundColor: colors.surfaceContainerHigh },
+                    ]}
+                  />
+                )}
+
+                <View style={styles.plantCopy}>
+                  <Text style={[styles.plantName, { color: colors.onSurface }]}>
+                    {plant.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.plantLocation,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {(plant.location ?? "Unplaced").toUpperCase()}
+                  </Text>
+                </View>
+
+                <Text style={[styles.changeText, { color: colors.primary }]}>
+                  change
+                </Text>
+              </View>
+            ) : (
+              <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
+                Capture today&apos;s ritual for this specimen.
+              </Text>
+            )}
+
+            <CareLogForm plantId={id ?? ""} />
+          </View>
+        </ScrollView>
+      </Animated.View>
     </View>
   );
 }
@@ -35,18 +163,63 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    gap: 12,
-    minHeight: 260,
+    borderTopLeftRadius: 34,
+    borderTopRightRadius: 34,
+    minHeight: "88%",
+    maxHeight: "88%",
+    overflow: "hidden",
+  },
+  content: {
+    gap: 26,
+  },
+  handle: {
+    width: 74,
+    height: 8,
+    borderRadius: 999,
+    alignSelf: "center",
   },
   title: {
     fontFamily: "NotoSerif_700Bold",
-    fontSize: 36,
+    fontSize: 35,
+    lineHeight: 45,
   },
   body: {
     fontFamily: "Manrope_500Medium",
     fontSize: 16,
     lineHeight: 24,
+  },
+  plantCard: {
+    borderRadius: 28,
+    minHeight: 112,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  plantImage: {
+    width: 76,
+    height: 76,
+    borderRadius: 22,
+  },
+  plantCopy: {
+    flex: 1,
+    gap: 8,
+  },
+  plantName: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 23,
+    lineHeight: 28,
+  },
+  plantLocation: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 14,
+    letterSpacing: 1.6,
+  },
+  changeText: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 16,
+    textDecorationLine: "underline",
+    textDecorationColor: "#c5ebd4",
   },
 });

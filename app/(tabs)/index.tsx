@@ -1,10 +1,20 @@
 import { useRouter } from "expo-router";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { FAB } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
+import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
 import { HydrationCard } from "@/features/dashboard/components/HydrationCard";
 import { StreakSummary } from "@/features/dashboard/components/StreakSummary";
@@ -15,8 +25,10 @@ import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 export default function HomeScreen() {
   const router = useRouter();
   const { colors, spacing } = useTheme();
+  const insets = useSafeAreaInsets();
   const dashboard = useDashboard();
   const { onRefresh, refreshing } = usePullToRefreshSync();
+  const fabBottomOffset = getFloatingActionBottomOffset(insets.bottom);
   const plantPhotoUris = dashboard.plants
     .map((plant) => plant.primaryPhotoUri)
     .filter((uri): uri is string => Boolean(uri));
@@ -40,7 +52,7 @@ export default function HomeScreen() {
           {
             paddingHorizontal: spacing.lg,
             paddingTop: spacing.lg,
-            paddingBottom: 144,
+            paddingBottom: fabBottomOffset + 84,
           },
         ]}
       >
@@ -93,6 +105,7 @@ export default function HomeScreen() {
           styles.fab,
           {
             backgroundColor: colors.primaryContainer,
+            bottom: fabBottomOffset,
           },
         ]}
         color={colors.surfaceBright}
@@ -140,6 +153,5 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 18,
-    bottom: 104,
   },
 });
