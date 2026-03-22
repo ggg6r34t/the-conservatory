@@ -247,7 +247,7 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
             Growth{"\n"}Timeline
           </Text>
         </View>
-        <Link href="/journal" asChild>
+        <Link href="/archive-gallery" asChild>
           <Pressable style={styles.timelineLinkWrap}>
             <Text style={[styles.timelineLink, { color: colors.onSurface }]}>
               VIEW ARCHIVE

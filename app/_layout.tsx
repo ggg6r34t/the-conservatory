@@ -52,6 +52,12 @@ function RootNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
+      <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
+      <Stack.Screen name="archive-gallery" options={{ headerShown: false }} />
+      <Stack.Screen name="specimen-tags" options={{ headerShown: false }} />
+      <Stack.Screen name="privacy-security" options={{ headerShown: false }} />
+      <Stack.Screen name="data-backup" options={{ headerShown: false }} />
+      <Stack.Screen name="interface-theme" options={{ headerShown: false }} />
       <Stack.Screen
         name="plant/add"
         options={{ headerShown: false, presentation: "card" }}

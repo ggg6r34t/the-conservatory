@@ -343,6 +343,55 @@ export async function requestPasswordReset(email: string) {
   );
 }
 
+export async function updateProfileIdentity(
+  currentUser: AppUser,
+  patch: {
+    displayName: string;
+    avatarUrl?: string | null;
+  },
+) {
+  const nextUser: AppUser = {
+    ...currentUser,
+    displayName: patch.displayName.trim(),
+    avatarUrl: patch.avatarUrl ?? currentUser.avatarUrl ?? null,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (env.isSupabaseConfigured && supabase) {
+    const { error: authError } = await supabase.auth.updateUser({
+      data: {
+        display_name: nextUser.displayName,
+        avatar_url: nextUser.avatarUrl,
+      },
+    });
+
+    if (authError) {
+      logger.warn("profile.auth_update_failed", { message: authError.message });
+    }
+
+    const { error: upsertError } = await supabase.from("users").upsert(
+      {
+        id: nextUser.id,
+        email: nextUser.email,
+        display_name: nextUser.displayName,
+        avatar_url: nextUser.avatarUrl,
+        role: nextUser.role,
+        updated_by: nextUser.id,
+      },
+      { onConflict: "id" },
+    );
+
+    if (upsertError) {
+      logger.warn("profile.upsert_failed", { message: upsertError.message });
+    }
+  }
+
+  await persistLocalUser(nextUser);
+  await writeSession(nextUser);
+
+  return nextUser;
+}
+
 export async function logout() {
   if (env.isSupabaseConfigured && supabase) {
     await supabase.auth.signOut();

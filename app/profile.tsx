@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useQueries } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import {
   Image,
   Pressable,
@@ -167,6 +168,7 @@ function ProfileRow({
 export default function ProfileScreen() {
   const { colors, spacing } = useTheme();
   const { user, signOut } = useAuth();
+  const router = useRouter();
   const plantsQuery = usePlants();
   const graveyardQuery = useGraveyard();
   const settingsQuery = useSettings();
@@ -267,6 +269,7 @@ export default function ProfileScreen() {
           <Pressable
             accessibilityRole="button"
             style={styles.editProfilePressable}
+            onPress={() => router.push("/profile-edit")}
           >
             <Text
               style={[styles.editProfileLabel, { color: colors.secondary }]}
@@ -317,8 +320,16 @@ export default function ProfileScreen() {
               { backgroundColor: colors.surfaceContainerLowest },
             ]}
           >
-            <ProfileRow icon="archive-arrow-down" label="Archive Gallery" />
-            <ProfileRow icon="qrcode-scan" label="Specimen Tags" />
+            <ProfileRow
+              icon="archive-arrow-down"
+              label="Archive Gallery"
+              onPress={() => router.push("/archive-gallery")}
+            />
+            <ProfileRow
+              icon="qrcode-scan"
+              label="Specimen Tags"
+              onPress={() => router.push("/specimen-tags")}
+            />
           </View>
         </View>
 
@@ -372,6 +383,7 @@ export default function ProfileScreen() {
               icon="weather-night"
               label="Interface Theme"
               value={themeLabel}
+              onPress={() => router.push("/interface-theme")}
             />
           </View>
         </View>
@@ -388,8 +400,16 @@ export default function ProfileScreen() {
               { backgroundColor: colors.surfaceContainerLowest },
             ]}
           >
-            <ProfileRow icon="shield-check" label="Privacy & Security" />
-            <ProfileRow icon="cloud-check" label="Data Backup" />
+            <ProfileRow
+              icon="shield-check"
+              label="Privacy & Security"
+              onPress={() => router.push("/privacy-security")}
+            />
+            <ProfileRow
+              icon="cloud-check"
+              label="Data Backup"
+              onPress={() => router.push("/data-backup")}
+            />
           </View>
         </View>
 
