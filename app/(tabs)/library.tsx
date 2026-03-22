@@ -10,9 +10,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
+import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { usePlants } from "@/features/plants/hooks/usePlants";
@@ -73,7 +73,7 @@ export default function LibraryScreen() {
           {
             paddingHorizontal: spacing.lg,
             paddingTop: spacing.lg,
-            paddingBottom: 96,
+            paddingBottom: 113,
           },
         ]}
       >
@@ -136,7 +136,11 @@ export default function LibraryScreen() {
                   const isThriving = status === "THRIVING";
 
                   return (
-                    <Link href={`/plant/${plant.id}` as const} key={plant.id} asChild>
+                    <Link
+                      href={`/plant/${plant.id}` as const}
+                      key={plant.id}
+                      asChild
+                    >
                       <Pressable style={styles.card}>
                         <View
                           style={[
@@ -189,14 +193,18 @@ export default function LibraryScreen() {
                         </View>
 
                         <View style={styles.copy}>
-                          <Text style={[styles.name, { color: colors.onSurface }]}>
+                          <Text
+                            style={[styles.name, { color: colors.onSurface }]}
+                          >
                             {plant.name}
                           </Text>
                           <Text
                             style={[
                               styles.meta,
                               {
-                                color: isThriving ? colors.onSurfaceVariant : colors.error,
+                                color: isThriving
+                                  ? colors.onSurfaceVariant
+                                  : colors.error,
                               },
                             ]}
                           >

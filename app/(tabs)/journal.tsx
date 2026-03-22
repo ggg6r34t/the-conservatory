@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    gap: 32,
+    gap: 24,
   },
   highlightsHeader: {
     flexDirection: "row",
@@ -413,10 +413,10 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   sections: {
-    gap: 34,
+    gap: 24,
   },
   sectionBlock: {
-    gap: 16,
+    gap: 14,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   entries: {
-    gap: 18,
+    gap: 16,
   },
   entryCard: {
     borderRadius: 24,
