@@ -65,11 +65,9 @@ function getMemorialAt(
 function GrayscaleImage({
   uri,
   style,
-  tintOverlay = false,
 }: {
   uri?: string | null;
   style: object;
-  tintOverlay?: boolean;
 }) {
   if (!uri) {
     return <View style={[style, styles.imageFallback]} />;
@@ -78,8 +76,6 @@ function GrayscaleImage({
   return (
     <View style={style}>
       <RNImage source={{ uri }} style={styles.nativeImage} resizeMode="cover" />
-      <View style={styles.grayscaleOverlay} />
-      {tintOverlay ? <View style={styles.darkImageOverlay} /> : null}
     </View>
   );
 }
@@ -137,7 +133,6 @@ export default function GraveyardScreen() {
               <GrayscaleImage
                 uri={featuredMemorial.primaryPhotoUri}
                 style={styles.featuredImage}
-                tintOverlay
               />
             </View>
 
@@ -378,30 +373,22 @@ const styles = StyleSheet.create({
   nativeImage: {
     width: "100%",
     height: "100%",
-    filter: [{ grayscale: 1 }],
-  },
-  grayscaleOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
-  },
-  darkImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(16, 16, 16, 0.32)",
+    filter: [{ grayscale: 1 }, { sepia: 0.2 }, { brightness: 0.62 }],
   },
   imageFallback: {
     backgroundColor: "#e9e6df",
   },
   featuredCard: {
     borderRadius: 28,
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 16,
-    gap: 10,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 24,
+    gap: 14,
   },
   featuredImageWrap: {
     borderRadius: 18,
     overflow: "hidden",
-    height: 248,
+    height: 336,
     position: "relative",
     backgroundColor: "#20201d",
   },
@@ -425,10 +412,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   noteCard: {
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 5,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 8,
   },
   noteTitle: {
     fontFamily: "Manrope_700Bold",
@@ -452,8 +439,8 @@ const styles = StyleSheet.create({
   },
   reflectionCard: {
     borderRadius: 28,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
     gap: 14,
     borderWidth: 1,
     minHeight: 394,
@@ -546,8 +533,8 @@ const styles = StyleSheet.create({
   },
   compactCard: {
     borderRadius: 28,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
     gap: 14,
     minHeight: 180,
   },
@@ -591,8 +578,8 @@ const styles = StyleSheet.create({
   },
   compactNote: {
     borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   compactNoteText: {
     fontFamily: "NotoSerif_400Regular_Italic",
