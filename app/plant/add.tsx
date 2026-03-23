@@ -1,28 +1,43 @@
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { useRouter } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { TertiaryButton } from "@/components/common/Buttons/TertiaryButton";
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { PlantForm } from "@/features/plants/components/PlantForm";
 
 export default function AddPlantScreen() {
+  const router = useRouter();
   const { colors, spacing } = useTheme();
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.surface }]}
-    >
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
       <ScrollView
-        contentContainerStyle={[styles.content, { padding: spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.md,
+            paddingBottom: 96,
+          },
+        ]}
       >
-        <TertiaryButton label="Back" href="/(tabs)" />
-        <Text style={[styles.title, { color: colors.primary }]}>
-          New Specimen
-        </Text>
-        <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
-          Document a new specimen with a photograph, rhythm, and a place in your
-          conservatory.
-        </Text>
+        <View style={styles.topBar}>
+          <View style={styles.topBarLeft}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.back()}
+              style={styles.closeButton}
+            >
+              <Icon family="MaterialIcons" name="close" size={22} color={colors.onSurface} />
+            </Pressable>
+            <Text style={[styles.topBarTitle, { color: colors.primary }]}>
+              New Specimen
+            </Text>
+          </View>
+        </View>
+
         <PlantForm mode="create" />
       </ScrollView>
     </SafeAreaView>
@@ -30,15 +45,31 @@ export default function AddPlantScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  content: { gap: 20 },
-  title: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 42,
+  safeArea: {
+    flex: 1,
   },
-  body: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 16,
-    lineHeight: 25,
+  content: {
+    gap: 28,
+  },
+  topBar: {
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  topBarLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topBarTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 22,
+    lineHeight: 28,
   },
 });

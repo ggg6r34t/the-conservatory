@@ -1,16 +1,28 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  LayoutChangeEvent,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
-import { TextInputField } from "@/components/common/Forms/TextInput";
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAddPlant } from "@/features/plants/hooks/useAddPlant";
 import { useUpdatePlant } from "@/features/plants/hooks/useUpdatePlant";
 import type { PlantFormInput } from "@/features/plants/schemas/plantValidation";
 import { plantSchema } from "@/features/plants/schemas/plantValidation";
 import { pickPlantImage } from "@/features/plants/services/photoService";
+import { useSettings } from "@/features/settings/hooks/useSettings";
+import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 
 interface PlantFormProps {
   mode: "create" | "edit";
@@ -18,23 +30,164 @@ interface PlantFormProps {
   initialValues?: Partial<PlantFormInput>;
 }
 
+const DRAFT_KEY = "plant-form-draft";
+const LOCATION_OPTIONS = ["East Conservatory", "Sunroom", "Studio Shelf", "Office"];
+const SPECIES_SUGGESTIONS = ["Swiss Cheese Plant", "Fiddle Leaf", "Pothos"];
+const HYDRATION_MIN = 3;
+const HYDRATION_MAX = 21;
+
+function clampHydration(value: number) {
+  return Math.min(HYDRATION_MAX, Math.max(HYDRATION_MIN, Math.round(value)));
+}
+
+function PlantInput({
+  label,
+  value,
+  placeholder,
+  onChangeText,
+  icon,
+  multiline = false,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  onChangeText: (text: string) => void;
+  icon?: string;
+  multiline?: boolean;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={styles.fieldBlock}>
+      <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>
+        {label}
+      </Text>
+      <View
+        style={[
+          styles.inputWrap,
+          multiline && styles.inputWrapMultiline,
+          { backgroundColor: colors.surfaceContainerLow },
+        ]}
+      >
+        {icon ? (
+          <Icon
+            family="MaterialIcons"
+            name={icon}
+            size={20}
+            color={colors.onSurfaceVariant}
+          />
+        ) : null}
+        <TextInput
+          multiline={multiline}
+          placeholder={placeholder}
+          placeholderTextColor="#c6cbc5"
+          style={[
+            styles.input,
+            multiline && styles.inputMultiline,
+            { color: colors.onSurface },
+          ]}
+          value={value}
+          onChangeText={onChangeText}
+        />
+      </View>
+    </View>
+  );
+}
+
+function NotificationToggle({
+  value,
+  onPress,
+}: {
+  value: boolean;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+      onPress={onPress}
+      style={[
+        styles.toggleTrack,
+        { backgroundColor: value ? colors.primary : colors.surfaceContainerHigh },
+      ]}
+    >
+      <View
+        style={[
+          styles.toggleThumb,
+          value && styles.toggleThumbActive,
+          { backgroundColor: colors.surfaceBright },
+        ]}
+      />
+    </Pressable>
+  );
+}
+
 export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   const router = useRouter();
   const { colors } = useTheme();
   const addPlant = useAddPlant();
   const updatePlant = useUpdatePlant(plantId ?? "");
+  const settingsQuery = useSettings();
+  const updateSettings = useUpdateSettings();
+  const mutation = mode === "create" ? addPlant : updatePlant;
+  const [draftLoaded, setDraftLoaded] = useState(mode === "edit");
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [sliderWidth, setSliderWidth] = useState(0);
+
   const [values, setValues] = useState<PlantFormInput>({
     name: initialValues?.name ?? "",
     speciesName: initialValues?.speciesName ?? "",
     nickname: initialValues?.nickname ?? "",
-    location: initialValues?.location ?? "",
+    location: initialValues?.location ?? "East Conservatory",
     wateringIntervalDays: initialValues?.wateringIntervalDays ?? 7,
-    notes: initialValues?.notes ?? "",
+    notes: initialValues?.notes ?? "Bright indirect light",
     photoUri: initialValues?.photoUri,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const mutation = mode === "create" ? addPlant : updatePlant;
+  useEffect(() => {
+    if (mode !== "create") {
+      return;
+    }
+
+    let active = true;
+    AsyncStorage.getItem(DRAFT_KEY)
+      .then((saved) => {
+        if (!saved || !active) {
+          return;
+        }
+
+        const parsed = JSON.parse(saved) as Partial<PlantFormInput>;
+        setValues((current) => ({
+          ...current,
+          ...parsed,
+          location: parsed.location ?? current.location,
+          wateringIntervalDays: parsed.wateringIntervalDays ?? current.wateringIntervalDays,
+        }));
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) {
+          setDraftLoaded(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "create" || !draftLoaded) {
+      return;
+    }
+
+    AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(values)).catch(() => undefined);
+  }, [draftLoaded, mode, values]);
+
+  const remindersEnabled = settingsQuery.data?.remindersEnabled ?? true;
 
   const handlePickImage = async () => {
     try {
@@ -52,8 +205,19 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
     }
   };
 
+  const handleSaveDraft = async () => {
+    await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(values));
+    Alert.alert("Draft saved", "Your specimen draft is saved on this device.");
+  };
+
   const handleSubmit = async () => {
-    const parsed = plantSchema.safeParse(values);
+    const payload = {
+      ...values,
+      name: values.name.trim() || values.speciesName.trim(),
+      speciesName: values.speciesName.trim() || values.name.trim(),
+    };
+
+    const parsed = plantSchema.safeParse(payload);
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
       setErrors({
@@ -67,6 +231,9 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
 
     try {
       const result = await mutation.mutateAsync(parsed.data);
+      if (mode === "create") {
+        await AsyncStorage.removeItem(DRAFT_KEY).catch(() => undefined);
+      }
       router.replace(`/plant/${result.plant.id}` as const);
     } catch (error) {
       Alert.alert(
@@ -76,13 +243,53 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
     }
   };
 
+  const setHydrationValueFromPosition = (positionX: number) => {
+    if (sliderWidth <= 0) {
+      return;
+    }
+
+    const ratio = Math.min(1, Math.max(0, positionX / sliderWidth));
+    const value = HYDRATION_MIN + ratio * (HYDRATION_MAX - HYDRATION_MIN);
+    setValues((current) => ({
+      ...current,
+      wateringIntervalDays: clampHydration(value),
+    }));
+  };
+
+  const sliderResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (event) => {
+          setHydrationValueFromPosition(event.nativeEvent.locationX);
+        },
+        onPanResponderMove: (event) => {
+          setHydrationValueFromPosition(event.nativeEvent.locationX);
+        },
+      }),
+    [sliderWidth],
+  );
+
+  const sliderRatio =
+    (clampHydration(values.wateringIntervalDays) - HYDRATION_MIN) /
+    (HYDRATION_MAX - HYDRATION_MIN);
+
+  const handleSliderLayout = (event: LayoutChangeEvent) => {
+    setSliderWidth(event.nativeEvent.layout.width);
+  };
+
   return (
     <View style={styles.container}>
       <Pressable
+        accessibilityRole="button"
         onPress={handlePickImage}
         style={[
           styles.imagePicker,
-          { backgroundColor: colors.surfaceContainerLow },
+          {
+            backgroundColor: colors.surface,
+            borderColor: "#d8d4cb",
+          },
         ]}
       >
         {values.photoUri ? (
@@ -92,92 +299,548 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
             contentFit="cover"
           />
         ) : (
-          <Text style={[styles.imageLabel, { color: colors.primary }]}>
-            Capture Growth
-          </Text>
+          <>
+            <Image
+              source={require("@/assets/images/abstract-botanical-background.png")}
+              style={styles.placeholderImage}
+              contentFit="cover"
+            />
+            <View style={styles.imagePlaceholderContent}>
+              <Icon
+                family="MaterialIcons"
+                name="add-a-photo"
+                size={32}
+                color={colors.onSurface}
+              />
+              <Text style={[styles.imagePlaceholderLabel, { color: colors.onSurface }]}>
+                CAPTURE GROWTH
+              </Text>
+            </View>
+          </>
         )}
       </Pressable>
-      <TextInputField
-        label="Plant name"
-        value={values.name}
-        onChangeText={(text) =>
-          setValues((current) => ({ ...current, name: text }))
-        }
-        placeholder="Monstera Deliciosa"
-        error={errors.name}
-      />
-      <TextInputField
-        label="Species or common name"
+
+      <View style={[styles.editorialHeader, styles.identityHeader]}>
+        <Text style={[styles.eyebrow, { color: colors.secondary }]}>DOCUMENTATION</Text>
+        <Text style={[styles.editorialTitle, { color: colors.onSurface }]}>
+          Visual Identity
+        </Text>
+        <Text style={[styles.editorialBody, { color: colors.onSurfaceVariant }]}>
+          Start your journal with a high-fidelity image. This helps our botanical
+          engine monitor health changes over time.
+        </Text>
+      </View>
+
+      <PlantInput
+        label="Scientific or common name"
         value={values.speciesName}
+        placeholder="e.g. Monstera Deliciosa"
+        icon="search"
         onChangeText={(text) =>
-          setValues((current) => ({ ...current, speciesName: text }))
+          setValues((current) => ({ ...current, speciesName: text, name: text }))
         }
-        placeholder="Swiss Cheese Plant"
-        error={errors.speciesName}
       />
-      <TextInputField
+
+      <View style={styles.suggestionRow}>
+        {SPECIES_SUGGESTIONS.map((suggestion) => (
+          <Pressable
+            key={suggestion}
+            accessibilityRole="button"
+            onPress={() =>
+              setValues((current) => ({
+                ...current,
+                speciesName: suggestion,
+                name: suggestion,
+              }))
+            }
+            style={[
+              styles.suggestionChip,
+              {
+                backgroundColor:
+                  values.speciesName === suggestion
+                    ? colors.tertiaryContainer
+                    : colors.surfaceContainerHigh,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.suggestionChipText,
+                {
+                  color:
+                    values.speciesName === suggestion
+                      ? colors.surfaceBright
+                      : colors.onSurfaceVariant,
+                },
+              ]}
+            >
+              {suggestion.toUpperCase()}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <PlantInput
         label="Nickname"
         value={values.nickname ?? ""}
+        placeholder="Monty"
         onChangeText={(text) =>
           setValues((current) => ({ ...current, nickname: text }))
         }
-        placeholder="Monty"
       />
-      <TextInputField
-        label="Location"
-        value={values.location ?? ""}
-        onChangeText={(text) =>
-          setValues((current) => ({ ...current, location: text }))
-        }
-        placeholder="Sunroom"
-      />
-      <TextInputField
-        label="Water every (days)"
-        value={String(values.wateringIntervalDays)}
-        onChangeText={(text) =>
-          setValues((current) => ({
-            ...current,
-            wateringIntervalDays: Number(text.replace(/[^0-9]/g, "") || 0),
-          }))
-        }
-        keyboardType="number-pad"
-        placeholder="7"
-      />
-      <TextInputField
-        label="Care notes"
-        value={values.notes ?? ""}
-        onChangeText={(text) =>
-          setValues((current) => ({ ...current, notes: text }))
-        }
-        placeholder="Bright indirect light, likes humidity."
-        multiline
-      />
+
+      <View style={styles.fieldBlock}>
+        <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>
+          LOCATION
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setLocationOpen((current) => !current)}
+          style={[
+            styles.selectWrap,
+            { backgroundColor: colors.surfaceContainerLow },
+          ]}
+        >
+          <Text style={[styles.selectValue, { color: colors.onSurface }]}>
+            {values.location || "Select location"}
+          </Text>
+          <Icon name="chevron-down" size={20} color={colors.onSurfaceVariant} />
+        </Pressable>
+        {locationOpen ? (
+          <View
+            style={[
+              styles.locationMenu,
+              { backgroundColor: colors.surfaceContainerLowest },
+            ]}
+          >
+            {LOCATION_OPTIONS.map((option) => (
+              <Pressable
+                key={option}
+                accessibilityRole="button"
+                onPress={() => {
+                  setValues((current) => ({ ...current, location: option }));
+                  setLocationOpen(false);
+                }}
+                style={styles.locationOption}
+              >
+                <Text
+                  style={[
+                    styles.locationOptionLabel,
+                    {
+                      color:
+                        values.location === option
+                          ? colors.primary
+                          : colors.onSurface,
+                    },
+                  ]}
+                >
+                  {option}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+      </View>
+
+      <View style={[styles.editorialHeader, styles.protocolHeader]}>
+        <Text style={[styles.eyebrow, { color: colors.secondary }]}>RHYTHM & CARE</Text>
+        <Text style={[styles.editorialTitle, { color: colors.onSurface }]}>
+          Maintenance Protocol
+        </Text>
+      </View>
+
+      <View style={[styles.protocolCard, { backgroundColor: colors.surfaceContainerLowest }]}>
+        <View style={styles.protocolCardTop}>
+          <View style={[styles.protocolIconTile, { backgroundColor: "#ccefd8" }]}>
+            <Icon family="MaterialIcons" name="water-drop" size={18} color="#163828" />
+          </View>
+          <View style={[styles.protocolTag, { backgroundColor: colors.surfaceContainerHigh }]}>
+            <Text style={[styles.protocolTagText, { color: colors.onSurfaceVariant }]}>
+              HYDRATION
+            </Text>
+          </View>
+        </View>
+        <Text style={[styles.protocolLabel, { color: colors.onSurfaceVariant }]}>
+          FREQUENCY
+        </Text>
+        <View style={styles.frequencyRow}>
+          <Text style={[styles.frequencyNumber, { color: colors.onSurface }]}>
+            Every {clampHydration(values.wateringIntervalDays)}
+          </Text>
+          <Text style={[styles.frequencyUnit, { color: colors.onSurface }]}>Days</Text>
+        </View>
+
+        <View
+          style={styles.sliderTrackWrap}
+          onLayout={handleSliderLayout}
+          {...sliderResponder.panHandlers}
+        >
+          <View
+            style={[styles.sliderTrack, { backgroundColor: colors.surfaceContainerHigh }]}
+          />
+          <View
+            style={[
+              styles.sliderThumb,
+              {
+                backgroundColor: colors.primary,
+                left: sliderWidth ? sliderRatio * sliderWidth - 6 : 0,
+              },
+            ]}
+          />
+        </View>
+      </View>
+
+      <View style={[styles.protocolCard, styles.exposureCard, { backgroundColor: colors.surfaceContainerLowest }]}>
+        <View style={styles.protocolCardTop}>
+          <View style={[styles.protocolIconTile, { backgroundColor: "#ffdbcf" }]}>
+            <Icon family="MaterialIcons" name="wb-sunny" size={18} color="#94492e" />
+          </View>
+          <View style={[styles.protocolTag, { backgroundColor: "#fff3ec" }]}>
+            <Text style={[styles.protocolTagText, { color: colors.secondary }]}>
+              EXPOSURE
+            </Text>
+          </View>
+        </View>
+        <View style={styles.exposureRow}>
+          <View style={[styles.exposureDot, { backgroundColor: colors.secondary }]} />
+          <Text style={[styles.exposureTitle, { color: colors.onSurface }]}>
+            Bright Indirect Light
+          </Text>
+        </View>
+        <Text style={[styles.exposureBody, { color: colors.onSurfaceVariant }]}>
+          Place within 3-5 feet of a window with sheer curtains.
+        </Text>
+      </View>
+
+      <View style={[styles.notificationCard, { backgroundColor: colors.surfaceContainerLow }]}>
+        <View style={[styles.notificationIconTile, { backgroundColor: colors.surfaceContainerHigh }]}>
+          <Icon family="MaterialIcons" name="notifications" size={18} color={colors.onSurfaceVariant} />
+        </View>
+        <View style={styles.notificationCopy}>
+          <Text style={[styles.notificationTitle, { color: colors.onSurface }]}>
+            Push Notifications
+          </Text>
+          <Text style={[styles.notificationBody, { color: colors.onSurfaceVariant }]}>
+            Smart alerts based on local humidity
+          </Text>
+        </View>
+        <NotificationToggle
+          value={remindersEnabled}
+          onPress={() => updateSettings.mutate({ remindersEnabled: !remindersEnabled })}
+        />
+      </View>
+
+      {(errors.name || errors.speciesName) ? (
+        <Text style={[styles.errorText, { color: colors.error }]}>
+          {errors.name || errors.speciesName}
+        </Text>
+      ) : null}
+
       <PrimaryButton
         label={mode === "create" ? "Register Specimen" : "Save Changes"}
         onPress={handleSubmit}
         loading={mutation.isPending}
       />
+
+      <Pressable accessibilityRole="button" onPress={handleSaveDraft} style={styles.draftAction}>
+        <Text style={[styles.draftLabel, { color: colors.onSurface }]}>SAVE AS DRAFT</Text>
+        <View style={[styles.draftUnderline, { backgroundColor: colors.primaryFixed }]} />
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 18,
+    gap: 28,
   },
   imagePicker: {
-    minHeight: 280,
-    borderRadius: 32,
-    justifyContent: "center",
-    alignItems: "center",
+    minHeight: 334,
+    borderRadius: 30,
     overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderStyle: "dashed",
   },
   image: {
     width: "100%",
     height: "100%",
   },
-  imageLabel: {
+  placeholderImage: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.16,
+  },
+  imagePlaceholderContent: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  imagePlaceholderLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.5,
+  },
+  editorialHeader: {
+    gap: 8,
+    marginTop: 2,
+  },
+  identityHeader: {
+    marginBottom: -8,
+  },
+  protocolHeader: {
+    marginBottom: -8,
+  },
+  eyebrow: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 2.2,
+  },
+  editorialTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 25,
+    lineHeight: 31,
+  },
+  editorialBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 15,
+    lineHeight: 21,
+    maxWidth: 320,
+  },
+  fieldBlock: {
+    gap: 8,
+  },
+  fieldLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 2.4,
+  },
+  inputWrap: {
+    minHeight: 56,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  inputWrapMultiline: {
+    alignItems: "flex-start",
+    minHeight: 92,
+    paddingVertical: 16,
+  },
+  input: {
+    flex: 1,
+    fontFamily: "Manrope_500Medium",
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  inputMultiline: {
+    minHeight: 60,
+    textAlignVertical: "top",
+  },
+  suggestionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: -8,
+  },
+  suggestionChip: {
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  suggestionChipText: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.2,
+  },
+  selectWrap: {
+    minHeight: 56,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  selectValue: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  locationMenu: {
+    marginTop: 8,
+    borderRadius: 18,
+    paddingVertical: 8,
+  },
+  locationOption: {
+    minHeight: 46,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  locationOptionLabel: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  protocolCard: {
+    borderRadius: 30,
+    paddingHorizontal: 28,
+    paddingVertical: 26,
+    gap: 12,
+  },
+  protocolCardTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  protocolIconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  protocolTag: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  protocolTagText: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 9,
+    lineHeight: 12,
+    letterSpacing: 0.9,
+  },
+  protocolLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 2.1,
+  },
+  frequencyRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 4,
+  },
+  frequencyNumber: {
     fontFamily: "NotoSerif_700Bold",
     fontSize: 32,
+    lineHeight: 36,
+  },
+  frequencyUnit: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 15,
+    lineHeight: 20,
+    marginBottom: 3,
+  },
+  sliderTrackWrap: {
+    position: "relative",
+    height: 24,
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  sliderTrack: {
+    height: 3,
+    borderRadius: 999,
+  },
+  sliderThumb: {
+    position: "absolute",
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    top: 6,
+  },
+  exposureCard: {
+    gap: 12,
+  },
+  exposureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  exposureDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  exposureTitle: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 19,
+    lineHeight: 26,
+  },
+  exposureBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 22,
+  },
+  notificationCard: {
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  notificationIconTile: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notificationCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  notificationTitle: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 16,
+    lineHeight: 21,
+  },
+  notificationBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  toggleTrack: {
+    width: 42,
+    height: 24,
+    borderRadius: 999,
+    paddingHorizontal: 2,
+    justifyContent: "center",
+  },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
+  toggleThumbActive: {
+    alignSelf: "flex-end",
+  },
+  errorText: {
+    fontFamily: "Manrope_600SemiBold",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  draftAction: {
+    alignItems: "center",
+    gap: 8,
+    marginTop: -6,
+  },
+  draftLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 2.4,
+  },
+  draftUnderline: {
+    width: 28,
+    height: 3,
+    borderRadius: 999,
   },
 });
