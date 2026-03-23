@@ -285,8 +285,8 @@ function getActivityBadgeStyle(
   switch (logType) {
     case "water":
       return {
-        backgroundColor: "#c5ebd4",
-        iconColor: "#163828",
+        backgroundColor: colors.primaryFixed,
+        iconColor: colors.primary,
       };
     case "pest":
       return {
@@ -300,21 +300,21 @@ function getActivityBadgeStyle(
       };
     case "repot":
       return {
-        backgroundColor: "#ffdbcf",
-        iconColor: "#94492e",
+        backgroundColor: colors.secondaryFixed,
+        iconColor: colors.secondary,
       };
     case "prune":
       return {
-        backgroundColor: "#eae8e3",
-        iconColor: "#414844",
+        backgroundColor: colors.surfaceContainerHigh,
+        iconColor: colors.onSurfaceVariant,
       };
     case "mist":
     case "feed":
     case "note":
     default:
       return {
-        backgroundColor: "#eae8e3",
-        iconColor: "#414844",
+        backgroundColor: colors.surfaceContainerHigh,
+        iconColor: colors.onSurfaceVariant,
       };
   }
 }
@@ -575,11 +575,13 @@ export function PlantDetail({ data }: PlantDetailProps) {
       </View>
 
       <View style={styles.identity}>
-        <View style={[styles.familyChip, { backgroundColor: "#ffdbcf" }]}>
+        <View
+          style={[styles.familyChip, { backgroundColor: colors.secondaryFixed }]}
+        >
           <View
-            style={[styles.familyChipDot, { backgroundColor: "#94492e" }]}
+            style={[styles.familyChipDot, { backgroundColor: colors.secondary }]}
           />
-          <Text style={[styles.familyChipText, { color: "#94492e" }]}>
+          <Text style={[styles.familyChipText, { color: colors.secondary }]}>
             {getFamilyLabel(data.plant.speciesName)}
           </Text>
         </View>
@@ -662,7 +664,7 @@ export function PlantDetail({ data }: PlantDetailProps) {
                         ? "#d9ead8"
                         : card.key === "humidity"
                           ? "#5c625d"
-                          : "#94492e"
+                          : colors.secondary
                     }
                   />
                 </View>

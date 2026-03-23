@@ -40,12 +40,13 @@ interface MoveToGraveyardSheetProps {
   }) => Promise<void> | void;
 }
 
-function buildMemorialDescription(name: string) {
+function buildMemorialDescription(name: string, emphasisColor: string) {
   return (
     <>
-      Once archived, <Text style={styles.bodyEmphasis}>{name}</Text> will rest
-      in the Memorial Garden. We acknowledge the journey and the lessons
-      learned.
+      Once archived,{" "}
+      <Text style={[styles.bodyEmphasis, { color: emphasisColor }]}>{name}</Text>{" "}
+      will rest in the Memorial Garden. We acknowledge the journey and the
+      lessons learned.
     </>
   );
 }
@@ -76,8 +77,8 @@ export function MoveToGraveyardSheet({
   }, [initialMemorialNote, visible]);
 
   const memorialDescription = useMemo(
-    () => buildMemorialDescription(plantName),
-    [plantName],
+    () => buildMemorialDescription(plantName, colors.onSurface),
+    [colors.onSurface, plantName],
   );
 
   const handleConfirm = async () => {
@@ -94,7 +95,7 @@ export function MoveToGraveyardSheet({
       visible={visible}
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { backgroundColor: colors.backdrop }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -291,7 +292,6 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(27, 28, 25, 0.32)",
   },
   keyboardWrap: {
     justifyContent: "flex-end",
@@ -357,7 +357,6 @@ const styles = StyleSheet.create({
   bodyEmphasis: {
     fontFamily: "NotoSerif_400Regular_Italic",
     fontStyle: "italic",
-    color: "#1b1c19",
   },
   formBlock: {
     gap: 18,

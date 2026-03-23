@@ -3,10 +3,12 @@ import { Alert, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
+import { useTheme } from "@/components/design-system/useTheme";
 import { useLogin } from "@/features/auth/hooks/useLogin";
 import { loginSchema } from "@/features/auth/schemas/authValidation";
 
 export function LoginForm() {
+  const { colors } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -82,7 +84,9 @@ export function LoginForm() {
         error={errors.password}
       />
       {submitError ? (
-        <Text style={styles.submitError}>{submitError}</Text>
+        <Text style={[styles.submitError, { color: colors.error }]}>
+          {submitError}
+        </Text>
       ) : null}
       <PrimaryButton
         label="Sign In"
@@ -101,6 +105,5 @@ const styles = StyleSheet.create({
   submitError: {
     fontFamily: "Manrope_600SemiBold",
     fontSize: 13,
-    color: "#ba1a1a",
   },
 });

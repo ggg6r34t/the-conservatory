@@ -500,8 +500,18 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
 
       <View style={[styles.protocolCard, { backgroundColor: colors.surfaceContainerLowest }]}>
         <View style={styles.protocolCardTop}>
-          <View style={[styles.protocolIconTile, { backgroundColor: "#ccefd8" }]}>
-            <Icon family="MaterialIcons" name="water-drop" size={18} color="#163828" />
+          <View
+            style={[
+              styles.protocolIconTile,
+              { backgroundColor: colors.primaryFixed },
+            ]}
+          >
+            <Icon
+              family="MaterialIcons"
+              name="water-drop"
+              size={18}
+              color={colors.primary}
+            />
           </View>
           <View style={[styles.protocolTag, { backgroundColor: colors.surfaceContainerHigh }]}>
             <Text style={[styles.protocolTagText, { color: colors.onSurfaceVariant }]}>
@@ -541,8 +551,18 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
 
       <View style={[styles.protocolCard, styles.exposureCard, { backgroundColor: colors.surfaceContainerLowest }]}>
         <View style={styles.protocolCardTop}>
-          <View style={[styles.protocolIconTile, { backgroundColor: "#ffdbcf" }]}>
-            <Icon family="MaterialIcons" name="wb-sunny" size={18} color="#94492e" />
+          <View
+            style={[
+              styles.protocolIconTile,
+              { backgroundColor: colors.secondaryFixed },
+            ]}
+          >
+            <Icon
+              family="MaterialIcons"
+              name="wb-sunny"
+              size={18}
+              color={colors.secondary}
+            />
           </View>
           <View style={[styles.protocolTag, { backgroundColor: "#fff3ec" }]}>
             <Text style={[styles.protocolTagText, { color: colors.secondary }]}>

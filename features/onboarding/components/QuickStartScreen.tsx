@@ -31,36 +31,6 @@ import { trackEvent } from "@/services/analytics/analyticsService";
 
 type LightCondition = "low" | "indirect" | "direct";
 
-const LIGHT_OPTIONS: {
-  key: LightCondition;
-  label: string;
-  icon: string;
-  iconColor: string;
-  backgroundColor: string;
-}[] = [
-  {
-    key: "low",
-    label: "LOW",
-    icon: "cloud",
-    iconColor: "#1b1c19",
-    backgroundColor: "#eae8e3",
-  },
-  {
-    key: "indirect",
-    label: "INDIRECT",
-    icon: "wb-cloudy",
-    iconColor: "#ffffff",
-    backgroundColor: "#163828",
-  },
-  {
-    key: "direct",
-    label: "DIRECT",
-    icon: "wb-sunny",
-    iconColor: "#94492e",
-    backgroundColor: "#ffdbcf",
-  },
-];
-
 function buildDraftNotes(lightCondition: LightCondition) {
   if (lightCondition === "low") {
     return "Prefers low light conditions.";
@@ -100,6 +70,29 @@ export default function QuickStartScreen({
 }) {
   const router = useRouter();
   const { colors, spacing } = useTheme();
+  const lightOptions = [
+    {
+      key: "low" as const,
+      label: "LOW",
+      icon: "cloud",
+      iconColor: colors.onSurface,
+      backgroundColor: colors.surfaceContainerHigh,
+    },
+    {
+      key: "indirect" as const,
+      label: "INDIRECT",
+      icon: "wb-cloudy",
+      iconColor: colors.onPrimary,
+      backgroundColor: colors.primary,
+    },
+    {
+      key: "direct" as const,
+      label: "DIRECT",
+      icon: "wb-sunny",
+      iconColor: colors.secondary,
+      backgroundColor: colors.secondaryFixed,
+    },
+  ];
   const [speciesName, setSpeciesName] = useState("");
   const [photoUri, setPhotoUri] = useState<string | undefined>();
   const [lightCondition, setLightCondition] =
@@ -316,7 +309,7 @@ export default function QuickStartScreen({
             LIGHT CONDITION
           </Text>
           <View style={styles.lightOptions}>
-            {LIGHT_OPTIONS.map((option) => {
+                {lightOptions.map((option) => {
               const isActive = option.key === lightCondition;
               return (
                 <Pressable

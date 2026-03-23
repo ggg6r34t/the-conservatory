@@ -33,8 +33,10 @@ export function PrimaryButton({
   const { colors } = useTheme();
   const gradientColors =
     tone === "memorial"
-      ? (["#94492E", "#763219"] as const)
+      ? ([colors.secondary, colors.onSecondaryFixedVariant] as const)
       : ([colors.primary, colors.primaryContainer] as const);
+  const foregroundColor =
+    tone === "memorial" ? colors.onSecondary : colors.onPrimary;
 
   const content = (
     <LinearGradient
@@ -48,22 +50,22 @@ export function PrimaryButton({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={colors.surfaceBright} />
+        <ActivityIndicator color={foregroundColor} />
       ) : (
         <View style={styles.content}>
           {icon && iconPosition === "leading" ? (
             <Icon
               family={iconFamily}
-              color={colors.surfaceBright}
+              color={foregroundColor}
               name={icon}
               size={18}
             />
           ) : null}
-          <Text style={styles.label}>{label}</Text>
+          <Text style={[styles.label, { color: foregroundColor }]}>{label}</Text>
           {icon && iconPosition === "trailing" ? (
             <Icon
               family={iconFamily}
-              color={colors.surfaceBright}
+              color={foregroundColor}
               name={icon}
               size={18}
             />
@@ -124,7 +126,6 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   label: {
-    color: "#ffffff",
     fontFamily: "Manrope_700Bold",
     fontSize: 16,
     lineHeight: 20,
