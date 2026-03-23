@@ -35,9 +35,18 @@ const LOCATION_OPTIONS = ["East Conservatory", "Sunroom", "Studio Shelf", "Offic
 const SPECIES_SUGGESTIONS = ["Swiss Cheese Plant", "Fiddle Leaf", "Pothos"];
 const HYDRATION_MIN = 3;
 const HYDRATION_MAX = 21;
+const LEGACY_DEFAULT_NOTES = "bright indirect light";
 
 function clampHydration(value: number) {
   return Math.min(HYDRATION_MAX, Math.max(HYDRATION_MIN, Math.round(value)));
+}
+
+function normalizeNotes(value?: string) {
+  if (!value) {
+    return "";
+  }
+
+  return value.trim().toLowerCase() === LEGACY_DEFAULT_NOTES ? "" : value;
 }
 
 function PlantInput({
@@ -143,7 +152,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
     nickname: initialValues?.nickname ?? "",
     location: initialValues?.location ?? "East Conservatory",
     wateringIntervalDays: initialValues?.wateringIntervalDays ?? 7,
-    notes: initialValues?.notes ?? "",
+    notes: normalizeNotes(initialValues?.notes),
     photoUri: initialValues?.photoUri,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -166,6 +175,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
           ...parsed,
           location: parsed.location ?? current.location,
           wateringIntervalDays: parsed.wateringIntervalDays ?? current.wateringIntervalDays,
+          notes: normalizeNotes(parsed.notes) || current.notes,
         }));
       })
       .catch(() => undefined)
@@ -211,7 +221,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
       nickname: initialValues?.nickname ?? "",
       location: initialValues?.location ?? "East Conservatory",
       wateringIntervalDays: initialValues?.wateringIntervalDays ?? 7,
-      notes: initialValues?.notes ?? "",
+      notes: normalizeNotes(initialValues?.notes),
       photoUri: initialValues?.photoUri,
     });
     lastHydratedEditPlantId.current = plantId;
@@ -245,6 +255,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
       ...values,
       name: values.name.trim() || values.speciesName.trim(),
       speciesName: values.speciesName.trim() || values.name.trim(),
+      notes: normalizeNotes(values.notes),
     };
 
     const parsed = plantSchema.safeParse(payload);
@@ -562,6 +573,16 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
           onPress={() => updateSettings.mutate({ remindersEnabled: !remindersEnabled })}
         />
       </View>
+
+      <PlantInput
+        label="Care notes"
+        value={values.notes ?? ""}
+        placeholder="Add specimen-specific observations, routines, or reminders."
+        multiline
+        onChangeText={(text) =>
+          setValues((current) => ({ ...current, notes: text }))
+        }
+      />
 
       {(errors.name || errors.speciesName) ? (
         <Text style={[styles.errorText, { color: colors.error }]}>
