@@ -22,7 +22,10 @@ import {
   markQuickStartViewed,
 } from "@/features/onboarding/services/onboardingDebugStorage";
 import { completeOnboarding } from "@/features/onboarding/services/onboardingStorage";
-import { pickPlantImage } from "@/features/plants/services/photoService";
+import {
+  capturePlantImage,
+  pickPlantImage,
+} from "@/features/plants/services/photoService";
 import { setPlantDraft } from "@/features/plants/services/plantDraftStorage";
 import { trackEvent } from "@/services/analytics/analyticsService";
 
@@ -70,6 +73,26 @@ function buildDraftNotes(lightCondition: LightCondition) {
   return "Performs best in bright indirect light.";
 }
 
+function chooseImageSource(): Promise<"camera" | "library" | null> {
+  return new Promise((resolve) => {
+    Alert.alert("Add plant photo", "Choose how you'd like to add your photo.", [
+      {
+        text: "Take Photo",
+        onPress: () => resolve("camera"),
+      },
+      {
+        text: "Photo Library",
+        onPress: () => resolve("library"),
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+        onPress: () => resolve(null),
+      },
+    ]);
+  });
+}
+
 export default function QuickStartScreen({
   debugPreview = false,
 }: {
@@ -93,7 +116,16 @@ export default function QuickStartScreen({
     }
 
     try {
-      const asset = await pickPlantImage();
+      const source = await chooseImageSource();
+      if (!source) {
+        return;
+      }
+
+      const asset =
+        source === "camera"
+          ? await capturePlantImage()
+          : await pickPlantImage();
+
       if (!asset) {
         return;
       }
@@ -252,7 +284,7 @@ export default function QuickStartScreen({
         </View>
 
         <View style={styles.fieldBlock}>
-          <Text style={[styles.fieldLabel, { color: colors.secondary }]}>
+          <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>
             SCIENTIFIC OR COMMON NAME
           </Text>
           <View
@@ -264,13 +296,13 @@ export default function QuickStartScreen({
             <Icon
               family="MaterialIcons"
               name="search"
-              size={24}
-              color="#9ea39b"
+              size={20}
+              color={colors.onSurfaceVariant}
             />
             <TextInput
               accessibilityLabel="Scientific or common name"
               placeholder="e.g. Monstera Deliciosa"
-              placeholderTextColor={colors.onSurfaceVariant}
+              placeholderTextColor="#c6cbc5"
               value={speciesName}
               onChangeText={setSpeciesName}
               editable={!isSubmitting}
@@ -459,21 +491,21 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   fieldBlock: {
-    gap: 12,
+    gap: 8,
   },
   fieldLabel: {
     fontFamily: "Manrope_700Bold",
     fontSize: 12,
     lineHeight: 16,
-    letterSpacing: 3,
+    letterSpacing: 2.4,
   },
   searchField: {
-    minHeight: 72,
-    borderRadius: 24,
-    paddingHorizontal: 18,
+    minHeight: 56,
+    borderRadius: 14,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 10,
   },
   input: {
     flex: 1,
