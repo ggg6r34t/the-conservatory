@@ -66,10 +66,9 @@ export const walkthroughSlides: WalkthroughSlide[] = [
     buttonLabel: "Continue",
     imageSource: require("@/assets/images/peaceful-withered-botanical-detail-in-soft-morning-light.png"),
     titleAccent: "lesson.",
-    theme: "dark",
+    theme: "light",
     imagePosition: { top: -18, left: "-8%" },
     imageScale: 1.1,
-    showBrand: true,
   },
 ];
 

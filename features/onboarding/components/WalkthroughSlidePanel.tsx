@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
@@ -8,56 +8,33 @@ import type { WalkthroughSlide } from "@/features/onboarding/constants/walkthrou
 
 interface WalkthroughSlidePanelProps {
   slide: WalkthroughSlide;
-  onSkip: () => void;
-  isSkipDisabled?: boolean;
 }
 
-export function WalkthroughSlidePanel({
-  slide,
-  onSkip,
-  isSkipDisabled = false,
-}: WalkthroughSlidePanelProps) {
+export function WalkthroughSlidePanel({ slide }: WalkthroughSlidePanelProps) {
   const { colors } = useTheme();
+  const isGallerySlide = slide.id === "gallery";
+  const isCareRhythmSlide = slide.id === "care-rhythm";
+  const isGraveyardSlide = slide.id === "graveyard";
 
   return (
     <View style={styles.panel}>
       <View
-        style={[styles.heroCard, slide.theme === "dark" && styles.heroCardDark]}
+        style={[
+          styles.heroCard,
+          slide.theme === "dark" && styles.heroCardDark,
+          isGallerySlide && styles.galleryHeroCard,
+          isCareRhythmSlide && styles.careRhythmHeroCard,
+          isGraveyardSlide && styles.graveyardHeroCard,
+        ]}
       >
-        <View style={styles.topOverlay}>
-          {slide.showBrand ? (
-            <Text style={styles.brandText}>LEAF_RK Botanical</Text>
-          ) : (
-            <View style={styles.overlaySpacer} />
-          )}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Skip walkthrough slides"
-            disabled={isSkipDisabled}
-            onPress={onSkip}
-            style={styles.skipAction}
-          >
-            <Text
-              style={[
-                styles.skipText,
-                {
-                  color:
-                    slide.theme === "dark"
-                      ? "rgba(7, 102, 84, 0.9)"
-                      : colors.primary,
-                },
-              ]}
-            >
-              SKIP
-            </Text>
-          </Pressable>
-        </View>
-
         <Image
           source={slide.imageSource}
           style={[
             styles.heroImage,
-            slide.imagePosition,
+            isGallerySlide && styles.galleryHeroImage,
+            isCareRhythmSlide && styles.careRhythmHeroImage,
+            isGraveyardSlide && styles.graveyardHeroImage,
+            !isGallerySlide && !isCareRhythmSlide && !isGraveyardSlide && slide.imagePosition,
             slide.imageScale
               ? { transform: [{ scale: slide.imageScale }] }
               : null,
@@ -111,6 +88,9 @@ export function WalkthroughSlidePanel({
       <View
         style={[
           styles.contentCard,
+          isGallerySlide && styles.galleryContentCard,
+          isCareRhythmSlide && styles.careRhythmContentCard,
+          isGraveyardSlide && styles.graveyardContentCard,
           {
             backgroundColor:
               slide.theme === "dark" ? colors.surfaceBright : colors.surface,
@@ -122,6 +102,7 @@ export function WalkthroughSlidePanel({
             <View
               style={[
                 styles.eyebrowLine,
+                isGraveyardSlide && styles.graveyardEyebrowLine,
                 { backgroundColor: colors.secondary },
               ]}
             />
@@ -131,19 +112,43 @@ export function WalkthroughSlidePanel({
           </View>
 
           {slide.titleAccent ? (
-            <Text style={[styles.title, { color: colors.onSurface }]}>
+            <Text
+              style={[
+                styles.title,
+                isGraveyardSlide && styles.graveyardTitle,
+                { color: colors.onSurface },
+              ]}
+            >
               {slide.title.split(slide.titleAccent)[0]}
-              <Text style={[styles.titleAccent, { color: colors.primary }]}>
+              <Text
+                style={[
+                  styles.titleAccent,
+                  isGraveyardSlide && styles.graveyardTitleAccent,
+                  { color: colors.primary },
+                ]}
+              >
                 {slide.titleAccent}
               </Text>
             </Text>
           ) : (
-            <Text style={[styles.title, { color: colors.onSurface }]}>
+            <Text
+              style={[
+                styles.title,
+                isGraveyardSlide && styles.graveyardTitle,
+                { color: colors.onSurface },
+              ]}
+            >
               {slide.title}
             </Text>
           )}
 
-          <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
+          <Text
+            style={[
+              styles.body,
+              isGraveyardSlide && styles.graveyardBody,
+              { color: colors.onSurfaceVariant },
+            ]}
+          >
             {slide.body}
           </Text>
         </View>
@@ -167,39 +172,44 @@ const styles = StyleSheet.create({
   heroCardDark: {
     backgroundColor: "#101612",
   },
-  topOverlay: {
-    position: "absolute",
-    zIndex: 3,
-    top: 18,
-    left: 20,
-    right: 20,
-    minHeight: 36,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  galleryHeroCard: {
+    minHeight: 418,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    backgroundColor: "#dde4d8",
   },
-  overlaySpacer: {
-    minWidth: 1,
+  careRhythmHeroCard: {
+    minHeight: 418,
+    backgroundColor: "#dbe3dd",
   },
-  brandText: {
-    fontFamily: "NotoSerif_400Regular_Italic",
-    fontSize: 19,
-    lineHeight: 24,
-    color: "rgba(7, 102, 84, 0.86)",
-  },
-  skipAction: {
-    minHeight: 30,
-    justifyContent: "center",
-  },
-  skipText: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 12,
-    letterSpacing: 2,
+  graveyardHeroCard: {
+    minHeight: 418,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    backgroundColor: "#111611",
   },
   heroImage: {
     position: "absolute",
     width: "126%",
     height: "118%",
+  },
+  galleryHeroImage: {
+    width: "100%",
+    height: "100%",
+    top: 0,
+    left: 0,
+  },
+  careRhythmHeroImage: {
+    width: "100%",
+    height: "100%",
+    top: 0,
+    left: 0,
+  },
+  graveyardHeroImage: {
+    width: "100%",
+    height: "100%",
+    top: 0,
+    left: 0,
   },
   darkOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -241,11 +251,29 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   contentCard: {
-    flex: 1,
+    flexGrow: 0,
+    minHeight: 336,
     marginTop: -10,
-    paddingHorizontal: 28,
-    paddingTop: 38,
-    paddingBottom: 8,
+    paddingHorizontal: 40,
+    paddingTop: 48,
+    paddingBottom: 40,
+  },
+  galleryContentCard: {
+    marginTop: -34,
+    borderTopLeftRadius: 42,
+    borderTopRightRadius: 42,
+  },
+  careRhythmContentCard: {
+    marginTop: 0,
+    paddingTop: 36,
+  },
+  graveyardContentCard: {
+    marginTop: -34,
+    borderTopLeftRadius: 42,
+    borderTopRightRadius: 42,
+    paddingHorizontal: 40,
+    paddingTop: 48,
+    paddingBottom: 40,
   },
   copyBlock: {
     gap: 24,
@@ -260,6 +288,9 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: 999,
   },
+  graveyardEyebrowLine: {
+    width: 32,
+  },
   eyebrow: {
     fontFamily: "Manrope_700Bold",
     fontSize: 12,
@@ -271,15 +302,32 @@ const styles = StyleSheet.create({
     fontSize: 35,
     lineHeight: 45,
   },
+  graveyardTitle: {
+    maxWidth: 300,
+    fontFamily: "NotoSerif_400Regular",
+    fontSize: 36,
+    lineHeight: 41,
+    letterSpacing: -0.2,
+  },
   titleAccent: {
     fontFamily: "NotoSerif_400Regular_Italic",
     fontSize: 35,
     lineHeight: 45,
   },
+  graveyardTitleAccent: {
+    fontFamily: "NotoSerif_400Regular_Italic",
+    fontSize: 36,
+    lineHeight: 41,
+  },
   body: {
     maxWidth: 330,
     fontFamily: "Manrope_500Medium",
     fontSize: 17,
+    lineHeight: 29,
+  },
+  graveyardBody: {
+    maxWidth: 280,
+    fontSize: 18,
     lineHeight: 29,
   },
 });

@@ -9,6 +9,7 @@ import {
 } from "@expo-google-fonts/manrope";
 import {
   NotoSerif_400Regular,
+  NotoSerif_400Regular_Italic,
   NotoSerif_700Bold,
 } from "@expo-google-fonts/noto-serif";
 
@@ -23,6 +24,7 @@ export function Providers({ children }: PropsWithChildren) {
     Manrope_600SemiBold,
     Manrope_700Bold,
     NotoSerif_400Regular,
+    NotoSerif_400Regular_Italic,
     NotoSerif_700Bold,
   });
 

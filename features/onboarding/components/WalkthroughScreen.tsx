@@ -3,13 +3,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
+  Pressable,
   StyleSheet,
+  Text,
   useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { WalkthroughProgress } from "@/features/onboarding/components/WalkthroughProgress";
 import { WalkthroughSlidePanel } from "@/features/onboarding/components/WalkthroughSlidePanel";
@@ -69,11 +72,12 @@ export function WalkthroughScreen({
         return;
       }
 
-      router.push(
+      const resolvedTarget =
         debugPreview && target === "/onboarding/permissions"
           ? "/debug/onboarding-permissions"
-          : target,
-      );
+          : target;
+
+      router.replace(resolvedTarget);
     } catch (error) {
       Alert.alert(
         "Unable to continue",
@@ -83,6 +87,16 @@ export function WalkthroughScreen({
       setIsNavigating(false);
     }
   };
+
+  const handleBack = useCallback(() => {
+    if (isNavigating || activeIndex === 0) {
+      return;
+    }
+
+    const previousIndex = activeIndex - 1;
+    setActiveIndex(previousIndex);
+    listRef.current?.scrollToIndex({ index: previousIndex, animated: true });
+  }, [activeIndex, isNavigating]);
 
   const handleMomentumEnd = useCallback(
     (event: { nativeEvent: { contentOffset: { x: number } } }) => {
@@ -103,6 +117,63 @@ export function WalkthroughScreen({
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
       <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLead}>
+            {activeIndex > 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Go to previous walkthrough slide"
+                accessibilityState={{ disabled: isNavigating }}
+                disabled={isNavigating}
+                onPress={handleBack}
+                style={[
+                  styles.headerIconButton,
+                  {
+                    backgroundColor:
+                      slide.theme === "dark"
+                        ? "rgba(251, 249, 244, 0.92)"
+                        : "rgba(255, 255, 255, 0.78)",
+                  },
+                ]}
+              >
+                <Icon
+                  family="MaterialIcons"
+                  name="arrow-back"
+                  size={22}
+                  color={colors.primary}
+                />
+              </Pressable>
+            ) : (
+              <View style={styles.headerIconSpacer} />
+            )}
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Skip walkthrough and continue to permissions"
+            accessibilityState={{ disabled: isNavigating }}
+            disabled={isNavigating}
+            onPress={() => handleAction("skip")}
+            style={[
+              styles.skipAction,
+              {
+                backgroundColor:
+                  slide.theme === "dark"
+                    ? "rgba(251, 249, 244, 0.92)"
+                    : "rgba(255, 255, 255, 0.78)",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.skipText,
+                { color: colors.primary },
+              ]}
+            >
+              SKIP
+            </Text>
+          </Pressable>
+        </View>
+
         <FlatList
           ref={listRef}
           data={walkthroughSlides}
@@ -114,11 +185,7 @@ export function WalkthroughScreen({
           onMomentumScrollEnd={handleMomentumEnd}
           renderItem={({ item }) => (
             <View style={[styles.slideFrame, { width }]}>
-              <WalkthroughSlidePanel
-                slide={item}
-                onSkip={() => handleAction("skip")}
-                isSkipDisabled={isNavigating}
-              />
+              <WalkthroughSlidePanel slide={item} />
             </View>
           )}
           getItemLayout={(_, index) => ({
@@ -155,6 +222,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fbf9f4",
+  },
+  header: {
+    position: "absolute",
+    top: 18,
+    left: 20,
+    right: 20,
+    zIndex: 4,
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerLead: {
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+  },
+  headerIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerIconSpacer: {
+    width: 36,
+    height: 36,
+  },
+  skipAction: {
+    minHeight: 34,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  skipText: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 12,
+    letterSpacing: 2,
   },
   slider: {
     flex: 1,
