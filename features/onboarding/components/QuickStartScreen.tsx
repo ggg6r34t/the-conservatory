@@ -1,10 +1,10 @@
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
+import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import {
   markOnboardingAction,
@@ -75,7 +76,7 @@ export default function QuickStartScreen({
   debugPreview?: boolean;
 }) {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, spacing } = useTheme();
   const [speciesName, setSpeciesName] = useState("");
   const [photoUri, setPhotoUri] = useState<string | undefined>();
   const [lightCondition, setLightCondition] =
@@ -173,21 +174,27 @@ export default function QuickStartScreen({
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
-      <View style={styles.container}>
-        <View style={styles.heroStarVertical} pointerEvents="none" />
-        <View style={styles.heroStarHorizontal} pointerEvents="none" />
-        <Text style={[styles.brand, { color: colors.primary }]}>
-          LEAF_RK Botanical
-        </Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.lg,
+            paddingBottom: 80,
+          },
+        ]}
+      >
+        <AppHeader
+          title={"Add your first\nspecimen"}
+          subtitle="Quick Start"
+          showBackButton
+        />
 
-        <View style={styles.copyBlock}>
-          <Text style={[styles.eyebrow, { color: colors.secondary }]}>
-            QUICK START
-          </Text>
-          <Text style={[styles.title, { color: colors.primary }]}>
-            Add your first{"\n"}specimen
-          </Text>
-        </View>
+        <Text style={[styles.description, { color: colors.onSurfaceVariant }]}>
+          Start with one plant so your garden opens with real data. You can add
+          more details, photos, and care history after signup.
+        </Text>
 
         <Pressable
           accessibilityRole="button"
@@ -197,8 +204,8 @@ export default function QuickStartScreen({
           style={[
             styles.imagePicker,
             {
-              backgroundColor: colors.surface,
-              borderColor: "rgba(22, 56, 40, 0.42)",
+              backgroundColor: colors.surfaceContainerLow,
+              borderColor: colors.surfaceContainerHigh,
             },
           ]}
         >
@@ -207,14 +214,6 @@ export default function QuickStartScreen({
               source={{ uri: photoUri }}
               style={styles.image}
               contentFit="cover"
-            />
-          ) : null}
-          {!photoUri ? (
-            <LinearGradient
-              colors={["rgba(255,255,255,0.42)", "rgba(255,255,255,0.06)"]}
-              start={{ x: 0.2, y: 0.1 }}
-              end={{ x: 0.82, y: 0.9 }}
-              style={styles.imageGloss}
             />
           ) : null}
           <View
@@ -259,7 +258,7 @@ export default function QuickStartScreen({
             <TextInput
               accessibilityLabel="Scientific or common name"
               placeholder="e.g. Monstera Deliciosa"
-              placeholderTextColor="#b5b9b2"
+              placeholderTextColor={colors.onSurfaceVariant}
               value={speciesName}
               onChangeText={setSpeciesName}
               editable={!isSubmitting}
@@ -285,11 +284,11 @@ export default function QuickStartScreen({
                   style={styles.lightCardPressable}
                 >
                   {isActive ? (
-                    <LinearGradient
-                      colors={[colors.primary, colors.primaryContainer]}
-                      start={{ x: 0.12, y: 0.08 }}
-                      end={{ x: 0.88, y: 0.92 }}
-                      style={styles.lightCard}
+                    <View
+                      style={[
+                        styles.lightCard,
+                        { backgroundColor: colors.primary },
+                      ]}
                     >
                       <View
                         style={[
@@ -314,7 +313,7 @@ export default function QuickStartScreen({
                       >
                         {option.label}
                       </Text>
-                    </LinearGradient>
+                    </View>
                   ) : (
                     <View
                       style={[
@@ -358,6 +357,9 @@ export default function QuickStartScreen({
             onPress={handleCreate}
             loading={isSubmitting}
             disabled={isSubmitting}
+            icon="arrow-forward"
+            iconFamily="MaterialIcons"
+            iconPosition="trailing"
           />
           <Pressable
             accessibilityRole="button"
@@ -379,15 +381,7 @@ export default function QuickStartScreen({
             </Text>
           </Pressable>
         </View>
-
-        <LinearGradient
-          colors={["rgba(233, 237, 226, 0.02)", "rgba(233, 237, 226, 0.72)"]}
-          start={{ x: 0.25, y: 0.1 }}
-          end={{ x: 0.8, y: 0.9 }}
-          style={styles.footerOrb}
-          pointerEvents="none"
-        />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -396,58 +390,19 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  container: {
-    flex: 1,
+  content: {
     backgroundColor: "#fbf9f4",
-    paddingHorizontal: 30,
-    paddingTop: 6,
-    paddingBottom: 26,
-    gap: 30,
-    overflow: "hidden",
+    gap: 20,
   },
-  heroStarVertical: {
-    position: "absolute",
-    top: -98,
-    left: "48%",
-    marginLeft: -70,
-    width: 140,
-    height: 400,
-    borderRadius: 100,
-    backgroundColor: "#d8ded4",
-    opacity: 0.78,
-  },
-  heroStarHorizontal: {
-    position: "absolute",
-    top: 34,
-    left: -84,
-    width: 620,
-    height: 140,
-    borderRadius: 100,
-    backgroundColor: "#d8ded4",
-    opacity: 0.78,
-  },
-  brand: {
-    fontFamily: "NotoSerif_400Regular_Italic",
-    fontSize: 18,
-    lineHeight: 24,
-  },
-  copyBlock: {
-    gap: 8,
-  },
-  eyebrow: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 3.8,
-  },
-  title: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 34,
-    lineHeight: 44,
+  description: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 16,
+    lineHeight: 28,
+    maxWidth: 340,
   },
   imagePicker: {
-    minHeight: 414,
-    borderRadius: 34,
+    minHeight: 320,
+    borderRadius: 24,
     borderWidth: 1,
     borderStyle: "dashed",
     alignItems: "center",
@@ -455,24 +410,17 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     gap: 10,
     paddingHorizontal: 24,
+    paddingVertical: 24,
   },
   image: {
     ...StyleSheet.absoluteFillObject,
   },
-  imageGloss: {
-    ...StyleSheet.absoluteFillObject,
-  },
   captureBadge: {
-    width: 102,
-    height: 102,
-    borderRadius: 51,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "rgba(27, 28, 25, 0.04)",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 1,
-    shadowRadius: 32,
-    elevation: 6,
   },
   captureTitle: {
     fontFamily: "Manrope_500Medium",
@@ -494,9 +442,9 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
   },
   searchField: {
-    minHeight: 88,
-    borderRadius: 18,
-    paddingHorizontal: 22,
+    minHeight: 72,
+    borderRadius: 24,
+    paddingHorizontal: 18,
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
@@ -515,17 +463,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   lightCard: {
-    minHeight: 128,
-    borderRadius: 22,
+    minHeight: 132,
+    borderRadius: 24,
     paddingVertical: 20,
     alignItems: "center",
     justifyContent: "center",
-    gap: 18,
+    gap: 14,
   },
   lightIconWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -535,8 +483,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   footer: {
-    marginTop: "auto",
-    gap: 24,
+    gap: 18,
   },
   skipAction: {
     minHeight: 32,
@@ -547,13 +494,5 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 16,
     lineHeight: 22,
-  },
-  footerOrb: {
-    position: "absolute",
-    right: -128,
-    bottom: -106,
-    width: 430,
-    height: 430,
-    borderRadius: 999,
   },
 });

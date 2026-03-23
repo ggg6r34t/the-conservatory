@@ -1,10 +1,10 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import {
   Alert,
   Linking,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
+import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useOnboardingPermissions } from "@/features/onboarding/hooks/useOnboardingPermissions";
 import {
@@ -117,7 +118,7 @@ export function PermissionsScreen({
   debugPreview?: boolean;
 }) {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, spacing } = useTheme();
   const permissions = useOnboardingPermissions();
 
   useEffect(() => {
@@ -180,35 +181,27 @@ export function PermissionsScreen({
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
-      <View style={styles.container}>
-        <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Icon
-              family="MaterialIcons"
-              name="arrow-back"
-              size={24}
-              color={colors.primary}
-            />
-          </Pressable>
-          <Text style={[styles.brand, { color: colors.primary }]}>
-            Botanical
-          </Text>
-          <View style={styles.spacer} />
-        </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.lg,
+            paddingBottom: 80,
+          },
+        ]}
+      >
+        <AppHeader
+          title="Permissions"
+          subtitle="Setting Up"
+          showBackButton
+        />
 
-        <View style={styles.heroCopy}>
-          <Text style={[styles.eyebrow, { color: colors.secondary }]}>
-            SETTING UP
-          </Text>
-          <Text style={[styles.title, { color: colors.primary }]}>
-            Permissions
-          </Text>
-        </View>
+        <Text style={[styles.description, { color: colors.onSurfaceVariant }]}>
+          Choose the permissions you want to enable now. You can change any of
+          them later from your device settings.
+        </Text>
 
         <View style={styles.cardStack}>
           <PermissionCard
@@ -269,6 +262,9 @@ export function PermissionsScreen({
               onPress={handleContinue}
               loading={permissions.continueLoading}
               disabled={permissions.activeKey !== null}
+              icon="arrow-forward"
+              iconFamily="MaterialIcons"
+              iconPosition="trailing"
             />
             <Pressable
               accessibilityRole="button"
@@ -290,15 +286,7 @@ export function PermissionsScreen({
             </Pressable>
           </View>
         </View>
-
-        <LinearGradient
-          colors={["rgba(233, 237, 226, 0.02)", "rgba(233, 237, 226, 0.82)"]}
-          start={{ x: 0.2, y: 0.12 }}
-          end={{ x: 0.85, y: 0.9 }}
-          style={styles.ambientOrb}
-          pointerEvents="none"
-        />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -307,85 +295,52 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  container: {
-    flex: 1,
-    paddingHorizontal: 34,
-    paddingTop: 6,
-    paddingBottom: 28,
+  content: {
+    gap: 20,
     backgroundColor: "#fbf9f4",
   },
-  topBar: {
-    minHeight: 36,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brand: {
-    fontFamily: "NotoSerif_400Regular_Italic",
-    fontSize: 18,
-    lineHeight: 24,
-  },
-  spacer: {
-    width: 36,
-  },
-  heroCopy: {
-    gap: 10,
-    marginTop: 34,
-  },
-  eyebrow: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 3.8,
-  },
-  title: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 34,
-    lineHeight: 42,
+  description: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 16,
+    lineHeight: 28,
+    maxWidth: 340,
   },
   cardStack: {
     gap: 16,
-    marginTop: 44,
   },
   card: {
     borderRadius: 24,
-    minHeight: 170,
-    paddingHorizontal: 22,
-    paddingVertical: 24,
-    gap: 12,
+    minHeight: 164,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    gap: 14,
   },
   iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   cardCopy: {
-    gap: 8,
-    paddingRight: 8,
+    gap: 4,
+    paddingRight: 12,
   },
   cardTitle: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 20,
-    lineHeight: 28,
+    fontSize: 18,
+    lineHeight: 24,
   },
   cardBody: {
     fontFamily: "Manrope_500Medium",
     fontSize: 15,
-    lineHeight: 21,
+    lineHeight: 24,
   },
   inlineAction: {
     alignSelf: "flex-end",
     alignItems: "flex-end",
-    gap: 3,
-    marginTop: 2,
+    gap: 4,
+    marginTop: 4,
   },
   inlineActionText: {
     fontFamily: "Manrope_700Bold",
@@ -398,16 +353,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   bottomActions: {
-    gap: 24,
-    marginTop: "auto",
-    paddingTop: 8,
+    gap: 18,
   },
   bottomPanel: {
-    marginTop: "auto",
     borderRadius: 24,
-    paddingHorizontal: 0,
-    paddingTop: 16,
-    paddingBottom: 10,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 14,
   },
   secondaryAction: {
     minHeight: 32,
@@ -418,13 +370,5 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 16,
     lineHeight: 22,
-  },
-  ambientOrb: {
-    position: "absolute",
-    right: -124,
-    bottom: -92,
-    width: 422,
-    height: 422,
-    borderRadius: 999,
   },
 });
