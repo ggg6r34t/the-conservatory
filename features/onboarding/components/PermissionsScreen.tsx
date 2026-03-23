@@ -20,6 +20,7 @@ import {
   markOnboardingAction,
   markPermissionsViewed,
 } from "@/features/onboarding/services/onboardingDebugStorage";
+import { shadowScale } from "@/styles/shadows";
 import type { PermissionState } from "@/features/onboarding/utils/permissionState";
 import { trackEvent } from "@/services/analytics/analyticsService";
 
@@ -91,7 +92,10 @@ function PermissionCard({
         accessibilityState={{ disabled }}
         disabled={disabled}
         onPress={onPress}
-        style={styles.inlineAction}
+        style={({ pressed }) => [
+          styles.inlineAction,
+          pressed && !disabled && styles.inlineActionPressed,
+        ]}
       >
         <Text
           style={[
@@ -314,6 +318,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 18,
     gap: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.72)",
+    ...shadowScale.elevatedCard,
   },
   iconWrap: {
     width: 52,
@@ -321,6 +328,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
+    ...shadowScale.subtleSurface,
   },
   cardCopy: {
     gap: 4,
@@ -342,6 +350,9 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 4,
   },
+  inlineActionPressed: {
+    opacity: 0.72,
+  },
   inlineActionText: {
     fontFamily: "Manrope_700Bold",
     fontSize: 14,
@@ -360,6 +371,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 18,
     paddingBottom: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.7)",
+    ...shadowScale.elevatedCard,
   },
   secondaryAction: {
     minHeight: 32,

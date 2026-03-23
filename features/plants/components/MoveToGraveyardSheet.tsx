@@ -1,7 +1,10 @@
+import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -17,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
 const CAUSE_OPTIONS = [
   "Overwatering",
@@ -44,7 +48,9 @@ function buildMemorialDescription(name: string, emphasisColor: string) {
   return (
     <>
       Once archived,{" "}
-      <Text style={[styles.bodyEmphasis, { color: emphasisColor }]}>{name}</Text>{" "}
+      <Text style={[styles.bodyEmphasis, { color: emphasisColor }]}>
+        {name}
+      </Text>{" "}
       will rest in the Memorial Garden. We acknowledge the journey and the
       lessons learned.
     </>
@@ -65,16 +71,37 @@ export function MoveToGraveyardSheet({
   const [causeOfPassing, setCauseOfPassing] = useState("");
   const [memorialNote, setMemorialNote] = useState("");
   const [causeMenuVisible, setCauseMenuVisible] = useState(false);
+  const sheetOpacity = useRef(new Animated.Value(0)).current;
+  const sheetTranslateY = useRef(new Animated.Value(28)).current;
 
   useEffect(() => {
     if (!visible) {
       setCauseMenuVisible(false);
+      sheetOpacity.setValue(0);
+      sheetTranslateY.setValue(28);
       return;
     }
 
     setCauseOfPassing("");
     setMemorialNote(initialMemorialNote?.trim() ?? "");
-  }, [initialMemorialNote, visible]);
+    sheetOpacity.setValue(0);
+    sheetTranslateY.setValue(28);
+
+    Animated.parallel([
+      Animated.timing(sheetOpacity, {
+        toValue: 1,
+        duration: 180,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
+      }),
+      Animated.timing(sheetTranslateY, {
+        toValue: 0,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [initialMemorialNote, sheetOpacity, sheetTranslateY, visible]);
 
   const memorialDescription = useMemo(
     () => buildMemorialDescription(plantName, colors.onSurface),
@@ -95,18 +122,27 @@ export function MoveToGraveyardSheet({
       visible={visible}
       onRequestClose={onClose}
     >
-      <View style={[styles.overlay, { backgroundColor: colors.backdrop }]}>
+      <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <BlurView intensity={54} tint="dark" style={StyleSheet.absoluteFill}>
+          <View
+            style={[styles.overlayTint, { backgroundColor: colors.backdrop }]}
+          />
+        </BlurView>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboardWrap}
         >
-          <View
-            style={[
-              styles.sheet,
-              {
-                backgroundColor: colors.surfaceContainerLowest,
-                paddingBottom: Math.max(24, insets.bottom + 12),
+            <Animated.View
+              style={[
+                styles.sheet,
+                shadowWithColor(shadowScale.floatingSheet, colors.backdrop),
+                {
+                  backgroundColor: colors.surfaceContainerLowest,
+                  paddingBottom: Math.max(24, insets.bottom + 12),
+                  borderColor: "rgba(255, 255, 255, 0.72)",
+                  opacity: sheetOpacity,
+                  transform: [{ translateY: sheetTranslateY }],
               },
             ]}
           >
@@ -155,14 +191,10 @@ export function MoveToGraveyardSheet({
                 </View>
 
                 <View style={styles.heroCopy}>
-                  <Text
-                    style={[styles.eyebrow, { color: colors.secondary }]}
-                  >
+                  <Text style={[styles.eyebrow, { color: colors.secondary }]}>
                     FAREWELL CEREMONY
                   </Text>
-                  <Text
-                    style={[styles.title, { color: colors.onSurface }]}
-                  >
+                  <Text style={[styles.title, { color: colors.onSurface }]}>
                     Move to{"\n"}Graveyard?
                   </Text>
                   <Text
@@ -186,18 +218,21 @@ export function MoveToGraveyardSheet({
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => setCauseMenuVisible((current) => !current)}
-                    style={[
+                    style={({ pressed }) => [
                       styles.selectWrap,
-                      { backgroundColor: colors.surfaceContainerLow },
+                      {
+                        backgroundColor: colors.surfaceContainerLow,
+                        borderColor: colors.surfaceContainerHigh,
+                        opacity: pressed ? 0.9 : 1,
+                        transform: [{ scale: pressed ? 0.992 : 1 }],
+                      },
                     ]}
                   >
                     <Text
                       style={[
                         styles.selectValue,
                         {
-                          color: causeOfPassing
-                            ? colors.onSurface
-                            : "#9ea49f",
+                          color: causeOfPassing ? colors.onSurface : "#9ea49f",
                         },
                       ]}
                     >
@@ -213,7 +248,10 @@ export function MoveToGraveyardSheet({
                     <View
                       style={[
                         styles.menu,
-                        { backgroundColor: colors.surfaceContainerLow },
+                        {
+                          backgroundColor: colors.surfaceContainerLow,
+                          borderColor: colors.surfaceContainerHigh,
+                        },
                       ]}
                     >
                       {CAUSE_OPTIONS.map((option) => (
@@ -224,7 +262,10 @@ export function MoveToGraveyardSheet({
                             setCauseOfPassing(option);
                             setCauseMenuVisible(false);
                           }}
-                          style={styles.menuOption}
+                          style={({ pressed }) => [
+                            styles.menuOption,
+                            pressed && styles.menuOptionPressed,
+                          ]}
                         >
                           <Text
                             style={[
@@ -254,17 +295,17 @@ export function MoveToGraveyardSheet({
                   <View
                     style={[
                       styles.textAreaWrap,
-                      { backgroundColor: colors.surfaceContainerLow },
+                      {
+                        backgroundColor: colors.surfaceContainerLow,
+                        borderColor: colors.surfaceContainerHigh,
+                      },
                     ]}
                   >
                     <TextInput
                       multiline
                       placeholder="What did this specimen teach you about care or resilience?"
                       placeholderTextColor="#c6cbc5"
-                      style={[
-                        styles.textArea,
-                        { color: colors.onSurface },
-                      ]}
+                      style={[styles.textArea, { color: colors.onSurface }]}
                       textAlignVertical="top"
                       value={memorialNote}
                       onChangeText={setMemorialNote}
@@ -281,7 +322,7 @@ export function MoveToGraveyardSheet({
                 tone="memorial"
               />
             </ScrollView>
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </View>
     </Modal>
@@ -293,6 +334,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
   },
+  overlayTint: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.72,
+  },
   keyboardWrap: {
     justifyContent: "flex-end",
   },
@@ -301,6 +346,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 32,
     paddingHorizontal: 20,
     paddingTop: 12,
+    borderWidth: 1,
   },
   handle: {
     width: 64,
@@ -319,6 +365,9 @@ const styles = StyleSheet.create({
     height: 210,
     borderRadius: 28,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.44)",
+    ...shadowScale.elevatedCard,
   },
   heroImage: {
     width: "100%",
@@ -373,6 +422,7 @@ const styles = StyleSheet.create({
   selectWrap: {
     minHeight: 56,
     borderRadius: 14,
+    borderWidth: 1,
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -387,12 +437,16 @@ const styles = StyleSheet.create({
   },
   menu: {
     borderRadius: 18,
+    borderWidth: 1,
     paddingVertical: 8,
   },
   menuOption: {
     minHeight: 46,
     justifyContent: "center",
     paddingHorizontal: 16,
+  },
+  menuOptionPressed: {
+    opacity: 0.7,
   },
   menuOptionLabel: {
     fontFamily: "Manrope_500Medium",
@@ -402,6 +456,7 @@ const styles = StyleSheet.create({
   textAreaWrap: {
     minHeight: 138,
     borderRadius: 20,
+    borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 16,
   },

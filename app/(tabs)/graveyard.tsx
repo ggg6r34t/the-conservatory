@@ -16,6 +16,7 @@ import { useTheme } from "@/components/design-system/useTheme";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
+import { shadowScale } from "@/styles/shadows";
 
 function formatYearRange(memorial: GraveyardPlantListItem) {
   const plantedYear = new Date(memorial.createdAt).getFullYear();
@@ -265,7 +266,10 @@ export default function GraveyardScreen() {
 
             <Pressable
               accessibilityRole="button"
-              style={styles.memorialButtonPressable}
+              style={({ pressed }) => [
+                styles.memorialButtonPressable,
+                pressed && styles.memorialButtonPressed,
+              ]}
             >
               <LinearGradient
                 colors={[colors.primary, colors.primaryContainer]}
@@ -407,6 +411,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 24,
     gap: 14,
+    ...shadowScale.elevatedCard,
   },
   featuredImageWrap: {
     borderRadius: 18,
@@ -467,6 +472,7 @@ const styles = StyleSheet.create({
     gap: 14,
     borderWidth: 1,
     minHeight: 394,
+    ...shadowScale.elevatedCard,
   },
   reflectionImageWrap: {
     height: 252,
@@ -495,6 +501,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     alignItems: "center",
     gap: 14,
+    ...shadowScale.elevatedCard,
   },
   avatarCluster: {
     height: 56,
@@ -538,16 +545,17 @@ const styles = StyleSheet.create({
     minWidth: 136,
     marginTop: 2,
   },
+  memorialButtonPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.985 }],
+  },
   memorialButton: {
     minHeight: 46,
     paddingHorizontal: 32,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "rgba(27, 28, 25, 0.04)",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 1,
-    shadowRadius: 24,
+    ...shadowScale.subtleSurface,
   },
   memorialButtonLabel: {
     color: "#ffffff",
@@ -560,6 +568,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     gap: 18,
     minHeight: 220,
+    ...shadowScale.elevatedCard,
   },
   compactTopRow: {
     flexDirection: "row",
@@ -579,11 +588,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 4,
     backgroundColor: "#ffffff",
-    shadowColor: "rgba(27, 28, 25, 0.08)",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    elevation: 5,
+    ...shadowScale.subtleSurface,
   },
   compactCopy: {
     flex: 1,
@@ -642,6 +647,7 @@ const styles = StyleSheet.create({
     paddingVertical: 34,
     alignItems: "center",
     gap: 8,
+    ...shadowScale.elevatedCard,
   },
   quoteIcon: {
     opacity: 0.6,

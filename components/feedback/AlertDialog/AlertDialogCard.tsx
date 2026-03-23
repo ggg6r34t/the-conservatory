@@ -3,6 +3,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
 import type { AlertDialogCardProps } from "./alert.types";
 
@@ -58,9 +59,9 @@ export function AlertDialogCard({
         style={[
           styles.card,
           containerStyle,
+          shadowWithColor(shadowScale.modalCard, colors.backdrop),
           {
             backgroundColor: colors.surfaceContainerLowest,
-            shadowColor: colors.backdrop,
             borderColor: "rgba(255, 255, 255, 0.74)",
           },
         ]}
@@ -174,10 +175,6 @@ const styles = StyleSheet.create({
     gap: 14,
     borderWidth: 1,
     overflow: "hidden",
-    shadowOffset: { width: 0, height: 24 },
-    shadowOpacity: 0.22,
-    shadowRadius: 48,
-    elevation: 16,
   },
   cardGlow: {
     ...StyleSheet.absoluteFillObject,

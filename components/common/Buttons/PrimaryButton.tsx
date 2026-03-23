@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { shadowScale } from "@/styles/shadows";
 
 interface PrimaryButtonProps {
   label: string;
@@ -107,10 +108,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
-    shadowColor: "rgba(27, 28, 25, 0.04)",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 1,
-    shadowRadius: 32,
+    ...shadowScale.elevatedCard,
   },
   compact: {
     minHeight: 56,

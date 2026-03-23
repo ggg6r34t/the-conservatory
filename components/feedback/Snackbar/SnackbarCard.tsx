@@ -10,6 +10,7 @@ import {
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { shadowScale } from "@/styles/shadows";
 
 import type { QueuedSnackbar } from "./snackbar.types";
 
@@ -143,11 +144,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    shadowColor: "rgba(27, 28, 25, 0.12)",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 1,
-    shadowRadius: 32,
-    elevation: 10,
+    ...shadowScale.modalCard,
   },
   message: {
     flex: 1,

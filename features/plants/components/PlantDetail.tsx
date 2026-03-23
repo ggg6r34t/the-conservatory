@@ -1,7 +1,16 @@
+import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
@@ -15,6 +24,7 @@ import {
   capturePlantImage,
   pickPlantImage,
 } from "@/features/plants/services/photoService";
+import { shadowScale, shadowWithColor } from "@/styles/shadows";
 import type { CareLogType, Plant, PlantWithRelations } from "@/types/models";
 
 interface PlantDetailProps {
@@ -340,6 +350,8 @@ export function PlantDetail({ data }: PlantDetailProps) {
   const addPlantProgressPhoto = useAddPlantProgressPhoto(data.plant.id);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [mediaSheetVisible, setMediaSheetVisible] = useState(false);
+  const mediaSheetOpacity = useRef(new Animated.Value(0)).current;
+  const mediaSheetTranslateY = useRef(new Animated.Value(24)).current;
   const primaryPhoto = getPrimaryPhoto(data);
   const status = getPlantStatus(data.plant);
   const careGuide = buildCareGuide(data.plant);
@@ -351,6 +363,31 @@ export function PlantDetail({ data }: PlantDetailProps) {
   while (growthPhotos.length < 3 && primaryPhoto) {
     growthPhotos.push(primaryPhoto);
   }
+
+  useEffect(() => {
+    if (!mediaSheetVisible) {
+      mediaSheetOpacity.setValue(0);
+      mediaSheetTranslateY.setValue(24);
+      return;
+    }
+
+    mediaSheetOpacity.setValue(0);
+    mediaSheetTranslateY.setValue(24);
+    Animated.parallel([
+      Animated.timing(mediaSheetOpacity, {
+        toValue: 1,
+        duration: 180,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
+      }),
+      Animated.timing(mediaSheetTranslateY, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [mediaSheetOpacity, mediaSheetTranslateY, mediaSheetVisible]);
 
   const applyPhotoUpdate = async (photoUri: string) => {
     setIsUploadingPhoto(true);
@@ -427,12 +464,24 @@ export function PlantDetail({ data }: PlantDetailProps) {
             style={StyleSheet.absoluteFill}
             onPress={() => setMediaSheetVisible(false)}
           />
-          <View
+          <BlurView intensity={42} tint="dark" style={StyleSheet.absoluteFill}>
+            <View
+              style={[
+                styles.mediaSheetOverlayTint,
+                { backgroundColor: colors.backdrop },
+              ]}
+            />
+          </BlurView>
+          <Animated.View
             style={[
               styles.mediaSheet,
+              shadowWithColor(shadowScale.floatingSheet, colors.backdrop),
               {
                 backgroundColor: colors.surfaceContainerLowest,
                 paddingBottom: Math.max(20, insets.bottom + 8),
+                borderColor: "rgba(255, 255, 255, 0.72)",
+                opacity: mediaSheetOpacity,
+                transform: [{ translateY: mediaSheetTranslateY }],
               },
             ]}
           >
@@ -458,9 +507,14 @@ export function PlantDetail({ data }: PlantDetailProps) {
               <Pressable
                 accessibilityRole="button"
                 onPress={handleCapturePhoto}
-                style={[
+                style={({ pressed }) => [
                   styles.mediaActionCard,
-                  { backgroundColor: colors.surfaceContainerLow },
+                  {
+                    backgroundColor: colors.surfaceContainerLow,
+                    borderColor: colors.surfaceContainerHigh,
+                    opacity: pressed ? 0.92 : 1,
+                    transform: [{ scale: pressed ? 0.992 : 1 }],
+                  },
                 ]}
               >
                 <View
@@ -492,9 +546,14 @@ export function PlantDetail({ data }: PlantDetailProps) {
               <Pressable
                 accessibilityRole="button"
                 onPress={handlePickPhoto}
-                style={[
+                style={({ pressed }) => [
                   styles.mediaActionCard,
-                  { backgroundColor: colors.surfaceContainerLow },
+                  {
+                    backgroundColor: colors.surfaceContainerLow,
+                    borderColor: colors.surfaceContainerHigh,
+                    opacity: pressed ? 0.92 : 1,
+                    transform: [{ scale: pressed ? 0.992 : 1 }],
+                  },
                 ]}
               >
                 <View
@@ -530,7 +589,7 @@ export function PlantDetail({ data }: PlantDetailProps) {
               variant="surface"
               onPress={() => setMediaSheetVisible(false)}
             />
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 
@@ -800,9 +859,13 @@ export function PlantDetail({ data }: PlantDetailProps) {
             accessibilityRole="button"
             onPress={handleAddPhoto}
             disabled={isUploadingPhoto || addPlantProgressPhoto.isPending}
-            style={[
+            style={({ pressed }) => [
               styles.addPhotoTile,
-              { backgroundColor: colors.surfaceContainerLow },
+              {
+                backgroundColor: colors.surfaceContainerLow,
+                opacity: pressed ? 0.92 : 1,
+                transform: [{ scale: pressed ? 0.985 : 1 }],
+              },
             ]}
           >
             <Icon
@@ -855,6 +918,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    ...shadowScale.elevatedCard,
   },
   statusIconWrap: {
     width: 20,
@@ -1051,7 +1115,10 @@ const styles = StyleSheet.create({
   mediaSheetOverlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(27, 28, 25, 0.28)",
+  },
+  mediaSheetOverlayTint: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.72,
   },
   mediaSheet: {
     borderTopLeftRadius: 30,
@@ -1059,6 +1126,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     gap: 18,
+    borderWidth: 1,
   },
   mediaSheetHandle: {
     width: 64,
@@ -1084,9 +1152,11 @@ const styles = StyleSheet.create({
   },
   mediaActionCard: {
     borderRadius: 24,
+    borderWidth: 1,
     paddingHorizontal: 18,
     paddingVertical: 18,
     gap: 12,
+    ...shadowScale.subtleSurface,
   },
   mediaActionIconTile: {
     width: 44,

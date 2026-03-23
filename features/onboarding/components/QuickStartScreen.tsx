@@ -26,6 +26,7 @@ import {
   capturePlantImage,
   pickPlantImage,
 } from "@/features/plants/services/photoService";
+import { shadowScale } from "@/styles/shadows";
 import { setPlantDraft } from "@/features/plants/services/plantDraftStorage";
 import { trackEvent } from "@/services/analytics/analyticsService";
 
@@ -237,11 +238,13 @@ export default function QuickStartScreen({
             accessibilityLabel="Add your first plant photo"
             disabled={isSubmitting}
             onPress={handlePickImage}
-            style={[
+            style={({ pressed }) => [
               styles.imagePicker,
               {
                 backgroundColor: colors.surfaceContainerLow,
                 borderColor: colors.surfaceContainerHigh,
+                opacity: pressed ? 0.94 : 1,
+                transform: [{ scale: pressed ? 0.992 : 1 }],
               },
             ]}
           >
@@ -318,7 +321,13 @@ export default function QuickStartScreen({
                   accessibilityState={{ selected: isActive }}
                   disabled={isSubmitting}
                   onPress={() => setLightCondition(option.key)}
-                  style={styles.lightCardPressable}
+                  style={({ pressed }) => [
+                    styles.lightCardPressable,
+                    {
+                      opacity: pressed ? 0.94 : 1,
+                      transform: [{ scale: pressed ? 0.985 : 1 }],
+                    },
+                  ]}
                 >
                   {isActive ? (
                     <View
@@ -402,7 +411,10 @@ export default function QuickStartScreen({
             accessibilityRole="button"
             onPress={handleSkip}
             disabled={isSubmitting}
-            style={styles.skipAction}
+            style={({ pressed }) => [
+              styles.skipAction,
+              pressed && !isSubmitting && styles.skipActionPressed,
+            ]}
           >
             <Text
               style={[
@@ -462,6 +474,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 24,
     paddingVertical: 24,
+    ...shadowScale.elevatedCard,
   },
   image: {
     ...StyleSheet.absoluteFillObject,
@@ -495,10 +508,13 @@ const styles = StyleSheet.create({
   searchField: {
     minHeight: 56,
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.72)",
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    ...shadowScale.subtleSurface,
   },
   input: {
     flex: 1,
@@ -520,6 +536,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.7)",
+    ...shadowScale.elevatedCard,
   },
   lightIconWrap: {
     width: 56,
@@ -540,6 +559,9 @@ const styles = StyleSheet.create({
     minHeight: 32,
     alignItems: "center",
     justifyContent: "center",
+  },
+  skipActionPressed: {
+    opacity: 0.72,
   },
   skipText: {
     fontFamily: "Manrope_500Medium",
