@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   LayoutChangeEvent,
@@ -284,18 +284,21 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
     }
   };
 
-  const setHydrationValueFromPosition = (positionX: number) => {
-    if (sliderWidth <= 0) {
-      return;
-    }
+  const setHydrationValueFromPosition = useCallback(
+    (positionX: number) => {
+      if (sliderWidth <= 0) {
+        return;
+      }
 
-    const ratio = Math.min(1, Math.max(0, positionX / sliderWidth));
-    const value = HYDRATION_MIN + ratio * (HYDRATION_MAX - HYDRATION_MIN);
-    setValues((current) => ({
-      ...current,
-      wateringIntervalDays: clampHydration(value),
-    }));
-  };
+      const ratio = Math.min(1, Math.max(0, positionX / sliderWidth));
+      const value = HYDRATION_MIN + ratio * (HYDRATION_MAX - HYDRATION_MIN);
+      setValues((current) => ({
+        ...current,
+        wateringIntervalDays: clampHydration(value),
+      }));
+    },
+    [sliderWidth],
+  );
 
   const sliderResponder = useMemo(
     () =>
@@ -309,7 +312,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
           setHydrationValueFromPosition(event.nativeEvent.locationX);
         },
       }),
-    [sliderWidth],
+    [setHydrationValueFromPosition],
   );
 
   const sliderRatio =
