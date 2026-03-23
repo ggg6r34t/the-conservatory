@@ -1,6 +1,15 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, type Href } from "expo-router";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
@@ -32,6 +41,7 @@ export function PrimaryButton({
   tone = "primary",
 }: PrimaryButtonProps) {
   const { colors } = useTheme();
+  const loadingOpacity = useRef(new Animated.Value(loading ? 1 : 0)).current;
   const gradientColors =
     tone === "memorial"
       ? ([colors.secondary, colors.onSecondaryFixedVariant] as const)
@@ -39,21 +49,46 @@ export function PrimaryButton({
   const foregroundColor =
     tone === "memorial" ? colors.onSecondary : colors.onPrimary;
 
+  useEffect(() => {
+    Animated.timing(loadingOpacity, {
+      toValue: loading ? 1 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: false,
+    }).start();
+  }, [loading, loadingOpacity]);
+
   const content = (
-    <LinearGradient
-      colors={gradientColors}
-      start={{ x: 0.12, y: 0.08 }}
-      end={{ x: 0.88, y: 0.92 }}
-      style={[
-        styles.gradient,
-        compact && styles.compact,
-        disabled && styles.disabled,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator color={foregroundColor} />
-      ) : (
-        <View style={styles.content}>
+    <View>
+      <LinearGradient
+        colors={gradientColors}
+        start={{ x: 0.12, y: 0.08 }}
+        end={{ x: 0.88, y: 0.92 }}
+        style={[
+          styles.gradient,
+          compact && styles.compact,
+          disabled && styles.disabled,
+        ]}
+      >
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.loadingOverlay,
+            { opacity: loadingOpacity },
+          ]}
+        >
+          <ActivityIndicator color={foregroundColor} />
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.content,
+            {
+              opacity: loading ? 0 : 1,
+              transform: [{ scale: loading ? 0.985 : 1 }],
+            },
+          ]}
+        >
           {icon && iconPosition === "leading" ? (
             <Icon
               family={iconFamily}
@@ -71,15 +106,21 @@ export function PrimaryButton({
               size={18}
             />
           ) : null}
-        </View>
-      )}
-    </LinearGradient>
+        </Animated.View>
+      </LinearGradient>
+    </View>
   );
 
   if (href) {
     return (
       <Link href={href} asChild>
-        <Pressable disabled={disabled} style={compact && styles.inlinePressable}>
+        <Pressable
+          disabled={disabled}
+          style={({ pressed }) => [
+            compact && styles.inlinePressable,
+            pressed && !disabled && styles.pressed,
+          ]}
+        >
           {content}
         </Pressable>
       </Link>
@@ -91,7 +132,10 @@ export function PrimaryButton({
       accessibilityRole="button"
       onPress={onPress}
       disabled={disabled || loading}
-      style={compact && styles.inlinePressable}
+      style={({ pressed }) => [
+        compact && styles.inlinePressable,
+        pressed && !disabled && !loading && styles.pressed,
+      ]}
     >
       {content}
     </Pressable>
@@ -120,8 +164,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
   },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   disabled: {
     opacity: 0.4,
+  },
+  pressed: {
+    opacity: 0.96,
+    transform: [{ scale: 0.988 }],
   },
   label: {
     fontFamily: "Manrope_700Bold",

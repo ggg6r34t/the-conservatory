@@ -1,10 +1,12 @@
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
 const tabTitles: Record<string, string> = {
   index: "Garden",
@@ -22,6 +24,83 @@ const tabIcons: Record<
   journal: "book-open-variant-outline",
   graveyard: "skull-outline",
 };
+
+function ConservatoryTabBarItem({
+  isFocused,
+  label,
+  iconName,
+  onPress,
+}: {
+  isFocused: boolean;
+  label: string;
+  iconName: string;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  const scale = useRef(new Animated.Value(isFocused ? 1 : 0.92)).current;
+  const translateY = useRef(new Animated.Value(isFocused ? 0 : 2)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue: isFocused ? 1 : 0.92,
+        damping: 14,
+        stiffness: 180,
+        mass: 0.9,
+        useNativeDriver: false,
+      }),
+      Animated.timing(translateY, {
+        toValue: isFocused ? 0 : 2,
+        duration: 180,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [isFocused, scale, translateY]);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.item,
+        pressed && styles.itemPressed,
+      ]}
+    >
+      <Animated.View
+        style={[
+          styles.iconWrap,
+          isFocused && [
+            styles.iconWrapActive,
+            shadowScale.subtleSurface,
+            { backgroundColor: colors.surfaceContainerHigh },
+          ],
+          {
+            transform: [{ scale }, { translateY }],
+          },
+        ]}
+      >
+        <Icon
+          color={isFocused ? colors.primary : colors.outline}
+          name={iconName}
+          size={20}
+        />
+      </Animated.View>
+      <Animated.Text
+        style={[
+          styles.label,
+          {
+            color: isFocused ? colors.onSurface : colors.outline,
+            opacity: isFocused ? 1 : 0.82,
+            transform: [{ translateY }],
+          },
+        ]}
+      >
+        {label.toUpperCase()}
+      </Animated.Text>
+    </Pressable>
+  );
+}
 
 export function ConservatoryTabBar({ state, navigation }: BottomTabBarProps) {
   const { colors } = useTheme();
@@ -66,37 +145,13 @@ export function ConservatoryTabBar({ state, navigation }: BottomTabBarProps) {
             };
 
             return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={isFocused ? { selected: true } : {}}
+              <ConservatoryTabBarItem
                 key={route.key}
+                isFocused={isFocused}
+                label={label}
+                iconName={iconName}
                 onPress={onPress}
-                style={styles.item}
-              >
-                <View
-                  style={[
-                    styles.iconWrap,
-                    isFocused && [
-                      styles.iconWrapActive,
-                      { backgroundColor: colors.surfaceContainerHigh },
-                    ],
-                  ]}
-                >
-                  <Icon
-                    color={isFocused ? colors.primary : colors.outline}
-                    name={iconName}
-                    size={20}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.label,
-                    { color: isFocused ? colors.onSurface : colors.outline },
-                  ]}
-                >
-                  {label.toUpperCase()}
-                </Text>
-              </Pressable>
+              />
             );
           })}
         </View>
@@ -119,10 +174,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     minHeight: 72,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 28,
-    elevation: 0,
+    ...shadowWithColor(shadowScale.elevatedCard),
   },
   row: {
     flexDirection: "row",
@@ -134,6 +186,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 3,
     paddingVertical: 2,
+  },
+  itemPressed: {
+    opacity: 0.9,
   },
   iconWrap: {
     width: 34,
