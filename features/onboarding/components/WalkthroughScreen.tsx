@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  type PressableStateCallbackType,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -112,6 +113,18 @@ export function WalkthroughScreen({
     [activeIndex, width],
   );
 
+  const getHeaderControlStyle = useCallback(
+    (
+      baseStyle: object,
+      { pressed }: PressableStateCallbackType,
+    ) => [
+      baseStyle,
+      styles.headerControl,
+      pressed && styles.headerControlPressed,
+    ],
+    [],
+  );
+
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
@@ -126,15 +139,9 @@ export function WalkthroughScreen({
                 accessibilityState={{ disabled: isNavigating }}
                 disabled={isNavigating}
                 onPress={handleBack}
-                style={[
-                  styles.headerIconButton,
-                  {
-                    backgroundColor:
-                      slide.theme === "dark"
-                        ? "rgba(251, 249, 244, 0.92)"
-                        : "rgba(255, 255, 255, 0.78)",
-                  },
-                ]}
+                style={(state) =>
+                  getHeaderControlStyle(styles.headerIconButton, state)
+                }
               >
                 <Icon
                   family="MaterialIcons"
@@ -153,15 +160,7 @@ export function WalkthroughScreen({
             accessibilityState={{ disabled: isNavigating }}
             disabled={isNavigating}
             onPress={() => handleAction("skip")}
-            style={[
-              styles.skipAction,
-              {
-                backgroundColor:
-                  slide.theme === "dark"
-                    ? "rgba(251, 249, 244, 0.92)"
-                    : "rgba(255, 255, 255, 0.78)",
-              },
-            ]}
+            style={(state) => getHeaderControlStyle(styles.skipAction, state)}
           >
             <Text
               style={[
@@ -246,6 +245,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  headerControl: {
+    backgroundColor: "rgba(255, 255, 255, 0.82)",
+  },
+  headerControlPressed: {
+    opacity: 0.9,
   },
   headerIconSpacer: {
     width: 36,

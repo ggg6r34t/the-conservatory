@@ -6,6 +6,10 @@ import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import type { WalkthroughSlide } from "@/features/onboarding/constants/walkthroughSlides";
 
+const HERO_MIN_HEIGHT = 418;
+const CONTENT_CARD_MIN_HEIGHT = 336;
+const CARD_RADIUS = 42;
+
 interface WalkthroughSlidePanelProps {
   slide: WalkthroughSlide;
 }
@@ -15,13 +19,14 @@ export function WalkthroughSlidePanel({ slide }: WalkthroughSlidePanelProps) {
   const isGallerySlide = slide.id === "gallery";
   const isCareRhythmSlide = slide.id === "care-rhythm";
   const isGraveyardSlide = slide.id === "graveyard";
+  const isOverlapLayout = slide.layout === "overlap";
 
   return (
     <View style={styles.panel}>
       <View
         style={[
           styles.heroCard,
-          slide.theme === "dark" && styles.heroCardDark,
+          isOverlapLayout ? styles.overlapHeroCard : styles.stackedHeroCard,
           isGallerySlide && styles.galleryHeroCard,
           isCareRhythmSlide && styles.careRhythmHeroCard,
           isGraveyardSlide && styles.graveyardHeroCard,
@@ -34,7 +39,7 @@ export function WalkthroughSlidePanel({ slide }: WalkthroughSlidePanelProps) {
             isGallerySlide && styles.galleryHeroImage,
             isCareRhythmSlide && styles.careRhythmHeroImage,
             isGraveyardSlide && styles.graveyardHeroImage,
-            !isGallerySlide && !isCareRhythmSlide && !isGraveyardSlide && slide.imagePosition,
+            !isGallerySlide && !isCareRhythmSlide && slide.imagePosition,
             slide.imageScale
               ? { transform: [{ scale: slide.imageScale }] }
               : null,
@@ -44,7 +49,7 @@ export function WalkthroughSlidePanel({ slide }: WalkthroughSlidePanelProps) {
           accessibilityIgnoresInvertColors
         />
 
-        {slide.theme === "dark" ? (
+        {slide.id === "graveyard" ? (
           <LinearGradient
             colors={["rgba(11,15,12,0.82)", "rgba(11,15,12,0.08)"]}
             start={{ x: 0.52, y: 0.98 }}
@@ -88,12 +93,12 @@ export function WalkthroughSlidePanel({ slide }: WalkthroughSlidePanelProps) {
       <View
         style={[
           styles.contentCard,
+          isOverlapLayout ? styles.overlapContentCard : styles.stackedContentCard,
           isGallerySlide && styles.galleryContentCard,
           isCareRhythmSlide && styles.careRhythmContentCard,
           isGraveyardSlide && styles.graveyardContentCard,
           {
-            backgroundColor:
-              slide.theme === "dark" ? colors.surfaceBright : colors.surface,
+            backgroundColor: colors.surface,
           },
         ]}
       >
@@ -163,29 +168,25 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     position: "relative",
-    minHeight: 418,
-    borderBottomLeftRadius: 42,
-    borderBottomRightRadius: 42,
+    minHeight: HERO_MIN_HEIGHT,
     overflow: "hidden",
     backgroundColor: "#e7ebdf",
   },
-  heroCardDark: {
-    backgroundColor: "#101612",
-  },
-  galleryHeroCard: {
-    minHeight: 418,
+  overlapHeroCard: {
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
+  },
+  stackedHeroCard: {
+    borderBottomLeftRadius: CARD_RADIUS,
+    borderBottomRightRadius: CARD_RADIUS,
+  },
+  galleryHeroCard: {
     backgroundColor: "#dde4d8",
   },
   careRhythmHeroCard: {
-    minHeight: 418,
     backgroundColor: "#dbe3dd",
   },
   graveyardHeroCard: {
-    minHeight: 418,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
     backgroundColor: "#111611",
   },
   heroImage: {
@@ -252,28 +253,25 @@ const styles = StyleSheet.create({
   },
   contentCard: {
     flexGrow: 0,
-    minHeight: 336,
-    marginTop: -10,
+    minHeight: CONTENT_CARD_MIN_HEIGHT,
     paddingHorizontal: 40,
     paddingTop: 48,
     paddingBottom: 40,
   },
-  galleryContentCard: {
+  overlapContentCard: {
     marginTop: -34,
-    borderTopLeftRadius: 42,
-    borderTopRightRadius: 42,
+    borderTopLeftRadius: CARD_RADIUS,
+    borderTopRightRadius: CARD_RADIUS,
+  },
+  stackedContentCard: {
+    marginTop: 0,
+  },
+  galleryContentCard: {
   },
   careRhythmContentCard: {
-    marginTop: 0,
     paddingTop: 36,
   },
   graveyardContentCard: {
-    marginTop: -34,
-    borderTopLeftRadius: 42,
-    borderTopRightRadius: 42,
-    paddingHorizontal: 40,
-    paddingTop: 48,
-    paddingBottom: 40,
   },
   copyBlock: {
     gap: 24,

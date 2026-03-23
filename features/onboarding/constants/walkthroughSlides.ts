@@ -11,14 +11,13 @@ export interface WalkthroughSlide {
   buttonLabel: string;
   imageSource: number;
   titleAccent?: string;
-  theme: "light" | "dark";
+  layout: "overlap" | "stacked";
   imagePosition: {
     top?: number;
     left?: DimensionValue;
     right?: DimensionValue;
   };
   imageScale?: number;
-  showBrand?: boolean;
   badge?: {
     eyebrow: string;
     title: string;
@@ -35,7 +34,7 @@ export const walkthroughSlides: WalkthroughSlide[] = [
     body: "Build a visual archive of your entire collection with photos, care notes, and growth records.",
     buttonLabel: "Next",
     imageSource: require("@/assets/images/lush-monstera-deliciosa-leaves-in-morning-light.png"),
-    theme: "light",
+    layout: "overlap",
     imagePosition: { top: 0, left: "-18%" },
     imageScale: 1.16,
   },
@@ -48,7 +47,7 @@ export const walkthroughSlides: WalkthroughSlide[] = [
     buttonLabel: "Next",
     imageSource: require("@/assets/images/close-up-of-hands-misting-a-green-houseplant-with-sunbeams.png"),
     titleAccent: "best fertilizer.",
-    theme: "light",
+    layout: "stacked",
     imagePosition: { top: -10, left: "-8%" },
     imageScale: 1.08,
     badge: {
@@ -66,7 +65,7 @@ export const walkthroughSlides: WalkthroughSlide[] = [
     buttonLabel: "Continue",
     imageSource: require("@/assets/images/peaceful-withered-botanical-detail-in-soft-morning-light.png"),
     titleAccent: "lesson.",
-    theme: "light",
+    layout: "overlap",
     imagePosition: { top: -18, left: "-8%" },
     imageScale: 1.1,
   },
