@@ -1,15 +1,45 @@
+import { Image } from "expo-image";
 import { Link } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 interface DashboardHeaderProps {
   isOffline: boolean;
 }
 
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) {
+    return "C";
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 export function DashboardHeader({ isOffline }: DashboardHeaderProps) {
   const { colors } = useTheme();
+  const { user } = useAuth();
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const displayName = user?.displayName ?? "Curator";
+  const initials = getInitials(displayName);
+  const avatarSource = useMemo(
+    () =>
+      user?.avatarUrl
+        ? { uri: user.avatarUrl }
+        : require("@/assets/images/placeholder-avatar.png"),
+    [user?.avatarUrl],
+  );
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [avatarSource]);
 
   return (
     <View style={styles.container}>
@@ -36,16 +66,19 @@ export function DashboardHeader({ isOffline }: DashboardHeaderProps) {
               hitSlop={10}
               style={[styles.avatar, { backgroundColor: "#bfd8d4" }]}
             >
-              <View style={styles.avatarArt}>
-                <View style={styles.hairBack} />
-                <View style={styles.face} />
-                <View style={styles.hairTop} />
-                <View style={styles.bunLeft} />
-                <View style={styles.bunRight} />
-                <View style={styles.body} />
-                <View style={styles.neck} />
-                <View style={[styles.eye, styles.eyeLeft]} />
-                <View style={[styles.eye, styles.eyeRight]} />
+              <View style={styles.avatarImageWrap}>
+                {avatarFailed ? (
+                  <Text style={[styles.avatarInitials, { color: colors.primary }]}>
+                    {initials}
+                  </Text>
+                ) : (
+                  <Image
+                    source={avatarSource}
+                    style={styles.avatarImage}
+                    contentFit="contain"
+                    onError={() => setAvatarFailed(true)}
+                  />
+                )}
               </View>
             </Pressable>
           </Link>
@@ -90,101 +123,27 @@ const styles = StyleSheet.create({
     width: 0,
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarArt: {
-    width: 30,
-    height: 30,
-    position: "relative",
+  avatarImageWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  hairBack: {
-    position: "absolute",
-    top: 4,
-    left: 6,
-    width: 18,
-    height: 15,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    backgroundColor: "#3a4c4b",
+  avatarImage: {
+    width: 42,
+    height: 42,
   },
-  face: {
-    position: "absolute",
-    top: 6,
-    left: 8,
-    width: 14,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#f3d6c4",
-  },
-  hairTop: {
-    position: "absolute",
-    top: 3,
-    left: 7,
-    width: 16,
-    height: 8,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 5,
-    borderBottomRightRadius: 5,
-    backgroundColor: "#314443",
-  },
-  bunLeft: {
-    position: "absolute",
-    top: 5,
-    left: 4,
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: "#314443",
-  },
-  bunRight: {
-    position: "absolute",
-    top: 5,
-    right: 4,
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: "#314443",
-  },
-  neck: {
-    position: "absolute",
-    top: 20,
-    left: 13,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#f0cdb8",
-  },
-  body: {
-    position: "absolute",
-    bottom: 2,
-    left: 7,
-    width: 16,
-    height: 9,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 5,
-    borderBottomRightRadius: 5,
-    backgroundColor: "#de9b82",
-  },
-  eye: {
-    position: "absolute",
-    top: 12,
-    width: 2,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: "#314443",
-  },
-  eyeLeft: {
-    left: 12,
-  },
-  eyeRight: {
-    right: 12,
+  avatarInitials: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 18,
+    lineHeight: 22,
   },
 });

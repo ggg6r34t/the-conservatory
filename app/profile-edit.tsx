@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Image, StyleSheet, Text, View } from "react-native";
 
@@ -28,6 +28,7 @@ export default function ProfileEditScreen() {
   const { user } = useAuth();
   const updateProfile = useUpdateProfile();
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   useEffect(() => {
     setDisplayName(user?.displayName ?? "");
@@ -35,8 +36,19 @@ export default function ProfileEditScreen() {
 
   const trimmedName = displayName.trim();
   const initials = getInitials(trimmedName || user?.displayName || "Curator");
+  const avatarSource = useMemo(
+    () =>
+      user?.avatarUrl
+        ? { uri: user.avatarUrl }
+        : require("@/assets/images/placeholder-avatar.png"),
+    [user?.avatarUrl],
+  );
   const isInvalid = trimmedName.length < 2;
   const isUnchanged = trimmedName === (user?.displayName ?? "").trim();
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [avatarSource]);
 
   return (
     <ProfileScreenScaffold
@@ -56,8 +68,12 @@ export default function ProfileEditScreen() {
             { backgroundColor: colors.secondaryContainer },
           ]}
         >
-          {user?.avatarUrl ? (
-            <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
+          {!avatarFailed ? (
+            <Image
+              source={avatarSource}
+              style={styles.avatarImage}
+              onError={() => setAvatarFailed(true)}
+            />
           ) : (
             <Text style={[styles.initials, { color: colors.primary }]}>
               {initials || "C"}

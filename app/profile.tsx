@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useQueries } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -170,6 +170,7 @@ export default function ProfileScreen() {
   const { user, signOut, isSigningOut } = useAuth();
   const router = useRouter();
   const [showDeveloperMenu, setShowDeveloperMenu] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const plantsQuery = usePlants();
   const graveyardQuery = useGraveyard();
   const settingsQuery = useSettings();
@@ -199,8 +200,19 @@ export default function ProfileScreen() {
   const displayName = user?.displayName ?? "Elowen Thorne";
   const email = user?.email ?? "elowen.garden@botany.io";
   const initials = getInitials(displayName);
+  const avatarSource = useMemo(
+    () =>
+      user?.avatarUrl
+        ? { uri: user.avatarUrl }
+        : require("@/assets/images/placeholder-avatar.png"),
+    [user?.avatarUrl],
+  );
   const plantsRemembered = graveyard.length;
   const activeSpecimens = plants.length;
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [avatarSource]);
 
   return (
     <SafeAreaView
@@ -229,10 +241,11 @@ export default function ProfileScreen() {
                 { backgroundColor: colors.secondaryContainer },
               ]}
             >
-              {user?.avatarUrl ? (
+              {!avatarFailed ? (
                 <Image
-                  source={{ uri: user.avatarUrl }}
+                  source={avatarSource}
                   style={styles.avatarImage}
+                  onError={() => setAvatarFailed(true)}
                 />
               ) : (
                 <Text
