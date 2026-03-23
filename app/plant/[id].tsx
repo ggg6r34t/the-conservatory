@@ -35,16 +35,35 @@ export default function PlantDetailRoute() {
         ]}
       >
         <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
-            style={styles.iconButton}
-            onPress={() => router.back()}
-          >
-            <Icon name="arrow-left" size={20} color={colors.primary} />
-          </Pressable>
-          <Text style={[styles.brand, { color: colors.primary }]}>
-            The Conservatory
-          </Text>
+          <View style={styles.topBarLeft}>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.iconButton}
+              onPress={() => router.back()}
+            >
+              <Icon name="arrow-left" size={20} color={colors.primary} />
+            </Pressable>
+            <Text style={[styles.brand, { color: colors.primary }]}>
+              The Conservatory
+            </Text>
+          </View>
+
+          {plantQuery.data ? (
+            <Pressable
+              accessibilityRole="button"
+              style={styles.iconButton}
+              onPress={() => router.push(`/plant/${id}/edit` as const)}
+            >
+              <Icon
+                family="Feather"
+                name="edit-3"
+                size={20}
+                color={colors.primary}
+              />
+            </Pressable>
+          ) : (
+            <View style={styles.iconButton} />
+          )}
         </View>
 
         {plantQuery.data ? (
@@ -69,6 +88,11 @@ const styles = StyleSheet.create({
   content: { gap: 24 },
   topBar: {
     minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  topBarLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,

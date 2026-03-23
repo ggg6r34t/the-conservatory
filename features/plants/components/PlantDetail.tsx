@@ -1,11 +1,18 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
+import {
+  capturePlantImage,
+  pickPlantImage,
+} from "@/features/plants/services/photoService";
 import type { CareLogType, Plant, PlantWithRelations } from "@/types/models";
 
 interface PlantDetailProps {
@@ -325,6 +332,10 @@ function getActivityVisualType(
 export function PlantDetail({ data }: PlantDetailProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const addPlantProgressPhoto = useAddPlantProgressPhoto(data.plant.id);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [mediaSheetVisible, setMediaSheetVisible] = useState(false);
   const primaryPhoto = getPrimaryPhoto(data);
   const status = getPlantStatus(data.plant);
   const careGuide = buildCareGuide(data.plant);
@@ -337,8 +348,181 @@ export function PlantDetail({ data }: PlantDetailProps) {
     growthPhotos.push(primaryPhoto);
   }
 
+  const applyPhotoUpdate = async (photoUri: string) => {
+    setIsUploadingPhoto(true);
+
+    try {
+      await addPlantProgressPhoto.mutateAsync(photoUri);
+    } catch (error) {
+      Alert.alert(
+        "Unable to add photo",
+        error instanceof Error ? error.message : "Try again.",
+      );
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleAddPhoto = () => {
+    setMediaSheetVisible(true);
+  };
+
+  const handleCapturePhoto = async () => {
+    setMediaSheetVisible(false);
+
+    try {
+      const asset = await capturePlantImage();
+      if (!asset) {
+        return;
+      }
+
+      await applyPhotoUpdate(asset.uri);
+    } catch (error) {
+      Alert.alert(
+        "Unable to open camera",
+        error instanceof Error ? error.message : "Try again.",
+      );
+    }
+  };
+
+  const handlePickPhoto = async () => {
+    setMediaSheetVisible(false);
+
+    try {
+      const asset = await pickPlantImage();
+      if (!asset) {
+        return;
+      }
+
+      await applyPhotoUpdate(asset.uri);
+    } catch (error) {
+      Alert.alert(
+        "Unable to open photo library",
+        error instanceof Error ? error.message : "Try again.",
+      );
+    }
+  };
+
   return (
     <View style={styles.container}>
+      <Modal
+        animationType="fade"
+        transparent
+        visible={mediaSheetVisible}
+        onRequestClose={() => setMediaSheetVisible(false)}
+      >
+        <View style={styles.mediaSheetOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setMediaSheetVisible(false)}
+          />
+          <View
+            style={[
+              styles.mediaSheet,
+              {
+                backgroundColor: colors.surfaceContainerLowest,
+                paddingBottom: Math.max(20, insets.bottom + 8),
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.mediaSheetHandle,
+                { backgroundColor: colors.surfaceContainerHigh },
+              ]}
+            />
+
+            <View style={styles.mediaSheetHeader}>
+              <Text style={[styles.mediaSheetTitle, { color: colors.primary }]}>
+                Add Progress Photo
+              </Text>
+              <Text
+                style={[styles.mediaSheetBody, { color: colors.onSurfaceVariant }]}
+              >
+                Capture a fresh milestone or choose one from your library.
+              </Text>
+            </View>
+
+            <View style={styles.mediaSheetActions}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleCapturePhoto}
+                style={[
+                  styles.mediaActionCard,
+                  { backgroundColor: colors.surfaceContainerLow },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.mediaActionIconTile,
+                    { backgroundColor: colors.secondaryContainer },
+                  ]}
+                >
+                  <Icon
+                    family="MaterialIcons"
+                    name="photo-camera"
+                    size={22}
+                    color={colors.secondary}
+                  />
+                </View>
+                <Text style={[styles.mediaActionTitle, { color: colors.onSurface }]}>
+                  Take Photo
+                </Text>
+                <Text
+                  style={[
+                    styles.mediaActionBody,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  Open the camera and capture today&apos;s growth.
+                </Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={handlePickPhoto}
+                style={[
+                  styles.mediaActionCard,
+                  { backgroundColor: colors.surfaceContainerLow },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.mediaActionIconTile,
+                    { backgroundColor: colors.primaryFixed },
+                  ]}
+                >
+                  <Icon
+                    family="MaterialIcons"
+                    name="photo-library"
+                    size={22}
+                    color={colors.primary}
+                  />
+                </View>
+                <Text style={[styles.mediaActionTitle, { color: colors.onSurface }]}>
+                  Photo Library
+                </Text>
+                <Text
+                  style={[
+                    styles.mediaActionBody,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  Choose an existing image from your camera roll.
+                </Text>
+              </Pressable>
+            </View>
+
+            <SecondaryButton
+              label="Cancel"
+              fullWidth
+              variant="surface"
+              onPress={() => setMediaSheetVisible(false)}
+            />
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.heroWrap}>
         {primaryPhoto?.localUri || primaryPhoto?.remoteUrl ? (
           <Image
@@ -406,6 +590,7 @@ export function PlantDetail({ data }: PlantDetailProps) {
         <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
           {getEditorialSubtitle(data.plant)}
         </Text>
+
       </View>
 
       <View style={styles.actions}>
@@ -600,7 +785,8 @@ export function PlantDetail({ data }: PlantDetailProps) {
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push(`/plant/${data.plant.id}/edit` as const)}
+            onPress={handleAddPhoto}
+            disabled={isUploadingPhoto || addPlantProgressPhoto.isPending}
             style={[
               styles.addPhotoTile,
               { backgroundColor: colors.surfaceContainerLow },
@@ -615,7 +801,9 @@ export function PlantDetail({ data }: PlantDetailProps) {
             <Text
               style={[styles.addPhotoLabel, { color: colors.onSurfaceVariant }]}
             >
-              ADD PHOTO
+              {isUploadingPhoto || addPlantProgressPhoto.isPending
+                ? "ADDING PHOTO"
+                : "ADD PHOTO"}
             </Text>
           </Pressable>
         </View>
@@ -846,5 +1034,62 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     letterSpacing: 1.6,
+  },
+  mediaSheetOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(27, 28, 25, 0.28)",
+  },
+  mediaSheet: {
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    gap: 18,
+  },
+  mediaSheetHandle: {
+    width: 64,
+    height: 6,
+    borderRadius: 999,
+    alignSelf: "center",
+  },
+  mediaSheetHeader: {
+    gap: 6,
+  },
+  mediaSheetTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 24,
+    lineHeight: 30,
+  },
+  mediaSheetBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  mediaSheetActions: {
+    gap: 12,
+  },
+  mediaActionCard: {
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    gap: 12,
+  },
+  mediaActionIconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mediaActionTitle: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 18,
+    lineHeight: 24,
+  },
+  mediaActionBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 20,
   },
 });

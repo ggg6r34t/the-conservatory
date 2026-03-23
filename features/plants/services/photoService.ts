@@ -20,3 +20,22 @@ export async function pickPlantImage() {
 
   return result.assets[0];
 }
+
+export async function capturePlantImage() {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error("Camera permission is required to take a plant photo.");
+  }
+
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: ["images"],
+    allowsEditing: true,
+    quality: 0.8,
+  });
+
+  if (result.canceled || !result.assets.length) {
+    return null;
+  }
+
+  return result.assets[0];
+}

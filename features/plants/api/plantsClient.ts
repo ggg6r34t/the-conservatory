@@ -549,6 +549,62 @@ export async function createPlant(input: {
   return created!;
 }
 
+export async function addPlantProgressPhoto(input: {
+  userId: string;
+  plantId: string;
+  photoUri: string;
+}) {
+  const database = await getDatabase();
+  const current = await getPlantById(input.userId, input.plantId);
+  if (!current) {
+    throw new Error("Plant not found.");
+  }
+
+  const now = new Date().toISOString();
+  const photoId = createId("photo");
+  const storagePath = buildPhotoStoragePath(
+    input.userId,
+    input.plantId,
+    photoId,
+    input.photoUri,
+  );
+
+  await database.runAsync(
+    `INSERT INTO photos (
+      id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
+      taken_at, is_primary, created_at, updated_at, pending, synced_at, sync_error
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+    photoId,
+    input.userId,
+    input.plantId,
+    input.photoUri,
+    null,
+    storagePath,
+    "image/jpeg",
+    null,
+    null,
+    now,
+    0,
+    now,
+    now,
+    1,
+    null,
+    null,
+  );
+
+  await enqueueSyncOperation({
+    entity: "photos",
+    entityId: photoId,
+    operation: "insert",
+    payload: {
+      userId: input.userId,
+      plantId: input.plantId,
+    },
+  });
+
+  return (await getPlantById(input.userId, input.plantId))!;
+}
+
 export async function updatePlant(input: {
   userId: string;
   plantId: string;
