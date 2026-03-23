@@ -321,13 +321,16 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
       </Pressable>
 
       <View style={[styles.editorialHeader, styles.identityHeader]}>
-        <Text style={[styles.eyebrow, { color: colors.secondary }]}>DOCUMENTATION</Text>
+        <Text style={[styles.eyebrow, { color: colors.secondary }]}>
+          {mode === "create" ? "DOCUMENTATION" : "VISUAL IDENTITY"}
+        </Text>
         <Text style={[styles.editorialTitle, { color: colors.onSurface }]}>
-          Visual Identity
+          {mode === "create" ? "Visual Identity" : "Refresh Portrait"}
         </Text>
         <Text style={[styles.editorialBody, { color: colors.onSurfaceVariant }]}>
-          Start your journal with a high-fidelity image. This helps our botanical
-          engine monitor health changes over time.
+          {mode === "create"
+            ? "Start your journal with a high-fidelity image. This helps our botanical engine monitor health changes over time."
+            : "Update the specimen portrait and refine its profile details so your conservatory stays accurate over time."}
         </Text>
       </View>
 
@@ -542,10 +545,12 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
         loading={mutation.isPending}
       />
 
-      <Pressable accessibilityRole="button" onPress={handleSaveDraft} style={styles.draftAction}>
-        <Text style={[styles.draftLabel, { color: colors.onSurface }]}>SAVE AS DRAFT</Text>
-        <View style={[styles.draftUnderline, { backgroundColor: colors.primaryFixed }]} />
-      </Pressable>
+      {mode === "create" ? (
+        <Pressable accessibilityRole="button" onPress={handleSaveDraft} style={styles.draftAction}>
+          <Text style={[styles.draftLabel, { color: colors.onSurface }]}>SAVE AS DRAFT</Text>
+          <View style={[styles.draftUnderline, { backgroundColor: colors.primaryFixed }]} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
