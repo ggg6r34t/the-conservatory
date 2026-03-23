@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   LayoutChangeEvent,
@@ -135,6 +135,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   const [draftLoaded, setDraftLoaded] = useState(mode === "edit");
   const [locationOpen, setLocationOpen] = useState(false);
   const [sliderWidth, setSliderWidth] = useState(0);
+  const lastHydratedEditPlantId = useRef<string | undefined>(undefined);
 
   const [values, setValues] = useState<PlantFormInput>({
     name: initialValues?.name ?? "",
@@ -142,7 +143,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
     nickname: initialValues?.nickname ?? "",
     location: initialValues?.location ?? "East Conservatory",
     wateringIntervalDays: initialValues?.wateringIntervalDays ?? 7,
-    notes: initialValues?.notes ?? "Bright indirect light",
+    notes: initialValues?.notes ?? "",
     photoUri: initialValues?.photoUri,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -186,6 +187,35 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
 
     AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(values)).catch(() => undefined);
   }, [draftLoaded, mode, values]);
+
+  useEffect(() => {
+    if (mode !== "edit" || !plantId || lastHydratedEditPlantId.current === plantId) {
+      return;
+    }
+
+    if (
+      !initialValues?.name &&
+      !initialValues?.speciesName &&
+      !initialValues?.nickname &&
+      !initialValues?.location &&
+      !initialValues?.photoUri &&
+      initialValues?.wateringIntervalDays == null &&
+      !initialValues?.notes
+    ) {
+      return;
+    }
+
+    setValues({
+      name: initialValues?.name ?? "",
+      speciesName: initialValues?.speciesName ?? "",
+      nickname: initialValues?.nickname ?? "",
+      location: initialValues?.location ?? "East Conservatory",
+      wateringIntervalDays: initialValues?.wateringIntervalDays ?? 7,
+      notes: initialValues?.notes ?? "",
+      photoUri: initialValues?.photoUri,
+    });
+    lastHydratedEditPlantId.current = plantId;
+  }, [initialValues, mode, plantId]);
 
   const remindersEnabled = settingsQuery.data?.remindersEnabled ?? true;
 
@@ -560,7 +590,8 @@ const styles = StyleSheet.create({
     gap: 28,
   },
   imagePicker: {
-    minHeight: 334,
+    position: "relative",
+    height: 334,
     borderRadius: 30,
     overflow: "hidden",
     alignItems: "center",
@@ -569,8 +600,7 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   image: {
-    width: "100%",
-    height: "100%",
+    ...StyleSheet.absoluteFillObject,
   },
   placeholderImage: {
     ...StyleSheet.absoluteFillObject,

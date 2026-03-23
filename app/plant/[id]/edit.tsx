@@ -1,5 +1,12 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
@@ -24,7 +31,8 @@ export default function EditPlantScreen() {
   const plantQuery = usePlant(id ?? "");
   const archivePlant = useArchivePlant(id ?? "");
   const plant = plantQuery.data;
-  const primaryPhoto = plant?.photos.find((photo) => photo.isPrimary === 1);
+  const primaryPhoto =
+    plant?.photos.find((photo) => photo.isPrimary === 1) ?? plant?.photos[0];
 
   const handleArchivePlant = () => {
     if (!plant) {
@@ -93,10 +101,14 @@ export default function EditPlantScreen() {
         {plant ? (
           <>
             <View style={styles.contextBlock}>
-              <Text style={[styles.contextEyebrow, { color: colors.secondary }]}>
+              <Text
+                style={[styles.contextEyebrow, { color: colors.secondary }]}
+              >
                 CURRENT PROFILE
               </Text>
-              <Text style={[styles.contextBody, { color: colors.onSurfaceVariant }]}>
+              <Text
+                style={[styles.contextBody, { color: colors.onSurfaceVariant }]}
+              >
                 {`${plant.plant.name} • Last updated ${formatUpdatedAt(plant.plant.updatedAt)}`}
               </Text>
             </View>
@@ -112,20 +124,31 @@ export default function EditPlantScreen() {
                 wateringIntervalDays: plant.plant.wateringIntervalDays,
                 notes: plant.plant.notes ?? "",
                 photoUri:
-                  primaryPhoto?.localUri ?? primaryPhoto?.remoteUrl ?? undefined,
+                  primaryPhoto?.localUri ??
+                  primaryPhoto?.remoteUrl ??
+                  undefined,
               }}
             />
 
             <View style={styles.managementSection}>
-              <Text style={[styles.managementLabel, { color: colors.secondary }]}>
+              <Text
+                style={[styles.managementLabel, { color: colors.secondary }]}
+              >
                 SPECIMEN STATUS
               </Text>
-              <Text style={[styles.managementTitle, { color: colors.onSurface }]}>
+              <Text
+                style={[styles.managementTitle, { color: colors.onSurface }]}
+              >
                 Memorial Transfer
               </Text>
-              <Text style={[styles.managementBody, { color: colors.onSurfaceVariant }]}>
-                Move this plant into the Graveyard when you want to preserve its record
-                as part of your memorial archive.
+              <Text
+                style={[
+                  styles.managementBody,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
+                Move this plant into the Graveyard when you want to preserve its
+                record as part of your memorial archive.
               </Text>
               <SecondaryButton
                 label="Move to Graveyard"
@@ -135,6 +158,10 @@ export default function EditPlantScreen() {
               />
             </View>
           </>
+        ) : plantQuery.isLoading ? (
+          <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
+            Loading specimen profile...
+          </Text>
         ) : (
           <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
             Plant details are not available yet.
