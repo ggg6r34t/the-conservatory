@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAlert } from "@/hooks/useAlert";
 import { useLogin } from "@/features/auth/hooks/useLogin";
 import { loginSchema } from "@/features/auth/schemas/authValidation";
 
 export function LoginForm() {
   const { colors } = useTheme();
+  const alert = useAlert();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -54,7 +56,12 @@ export function LoginForm() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Try again.";
       setSubmitError(message);
-      Alert.alert("Unable to sign in", message);
+      void alert.show({
+        variant: "error",
+        title: "Unable to sign in",
+        message,
+        primaryAction: { label: "Close", tone: "danger" },
+      });
     }
   };
 

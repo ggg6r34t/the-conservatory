@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAlert } from "@/hooks/useAlert";
 import { useSignup } from "@/features/auth/hooks/useSignup";
 import { signupSchema } from "@/features/auth/schemas/authValidation";
 
 export function SignupForm() {
   const { colors } = useTheme();
+  const alert = useAlert();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,17 +51,25 @@ export function SignupForm() {
       const result = await signupMutation.mutateAsync(parsed.data);
 
       if (result.requiresEmailVerification) {
-        Alert.alert(
-          "Verify your email",
-          "Check your inbox to activate your account before signing in.",
-        );
+        void alert.show({
+          variant: "info",
+          title: "Verify your email",
+          message:
+            "Check your inbox to activate your account before signing in.",
+          primaryAction: { label: "Close" },
+        });
         return;
       }
 
     } catch (error) {
       const message = error instanceof Error ? error.message : "Try again.";
       setSubmitError(message);
-      Alert.alert("Unable to create account", message);
+      void alert.show({
+        variant: "error",
+        title: "Unable to create account",
+        message,
+        primaryAction: { label: "Close", tone: "danger" },
+      });
     }
   };
 

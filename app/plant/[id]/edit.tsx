@@ -1,7 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAlert } from "@/hooks/useAlert";
 import { MoveToGraveyardSheet } from "@/features/plants/components/MoveToGraveyardSheet";
 import { PlantForm } from "@/features/plants/components/PlantForm";
 import { useArchivePlant } from "@/features/plants/hooks/useArchivePlant";
@@ -30,6 +30,7 @@ export default function EditPlantScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors, spacing } = useTheme();
+  const alert = useAlert();
   const plantQuery = usePlant(id ?? "");
   const archivePlant = useArchivePlant(id ?? "");
   const [graveyardSheetVisible, setGraveyardSheetVisible] = useState(false);
@@ -53,10 +54,14 @@ export default function EditPlantScreen() {
       setGraveyardSheetVisible(false);
       router.replace("/(tabs)/graveyard");
     } catch (error) {
-      Alert.alert(
-        "Unable to archive plant",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      await alert.show({
+        variant: "error",
+        title: "Unable to archive plant",
+        message: error instanceof Error ? error.message : "Try again.",
+        primaryAction: {
+          label: "Close",
+        },
+      });
     }
   };
 

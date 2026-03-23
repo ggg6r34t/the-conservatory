@@ -1,6 +1,6 @@
 import { Link, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
@@ -8,9 +8,13 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { AuthScreenScaffold } from "@/features/auth/components/AuthScreenScaffold";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { forgotPasswordSchema } from "@/features/auth/schemas/authValidation";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
 
 export default function ForgotPasswordScreen() {
   const { colors } = useTheme();
+  const alert = useAlert();
+  const snackbar = useSnackbar();
   const { requestPasswordReset } = useAuth();
   const { redirectTo } = useLocalSearchParams<{ redirectTo?: string }>();
   const [email, setEmail] = useState("");
@@ -45,17 +49,19 @@ export default function ForgotPasswordScreen() {
       setSuccessMessage(
         "If an account exists for this email, reset instructions will arrive shortly.",
       );
-      Alert.alert(
-        "Reset requested",
+      snackbar.info(
         "If an account exists for this email, reset instructions will arrive shortly.",
       );
     } catch (submissionError) {
-      Alert.alert(
-        "Unable to send reset link",
-        submissionError instanceof Error
-          ? submissionError.message
-          : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Unable to send reset link",
+        message:
+          submissionError instanceof Error
+            ? submissionError.message
+            : "Try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+      });
     } finally {
       setIsSubmitting(false);
     }

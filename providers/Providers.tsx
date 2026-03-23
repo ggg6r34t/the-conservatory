@@ -14,7 +14,9 @@ import {
 } from "@expo-google-fonts/noto-serif";
 
 import { BotanicalThemeProvider } from "@/components/design-system/Theme";
+import { AlertProvider } from "@/providers/AlertProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { SnackbarProvider } from "@/providers/SnackbarProvider";
 import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
 import { initializeDatabase } from "@/services/database/sqlite";
 
@@ -42,9 +44,13 @@ export function Providers({ children }: PropsWithChildren) {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <BotanicalThemeProvider>
-          <QueryProvider>
-            <SyncBootstrapProvider>{children}</SyncBootstrapProvider>
-          </QueryProvider>
+          <AlertProvider>
+            <SnackbarProvider>
+              <QueryProvider>
+                <SyncBootstrapProvider>{children}</SyncBootstrapProvider>
+              </QueryProvider>
+            </SnackbarProvider>
+          </AlertProvider>
         </BotanicalThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

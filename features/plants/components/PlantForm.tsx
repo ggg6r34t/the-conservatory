@@ -2,7 +2,6 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   LayoutChangeEvent,
   PanResponder,
   Pressable,
@@ -15,6 +14,8 @@ import {
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAddPlant } from "@/features/plants/hooks/useAddPlant";
 import { useUpdatePlant } from "@/features/plants/hooks/useUpdatePlant";
 import type { PlantFormInput } from "@/features/plants/schemas/plantValidation";
@@ -139,6 +140,8 @@ function NotificationToggle({
 export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const alert = useAlert();
+  const snackbar = useSnackbar();
   const addPlant = useAddPlant();
   const updatePlant = useUpdatePlant(plantId ?? "");
   const settingsQuery = useSettings();
@@ -240,16 +243,23 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
 
       setValues((current) => ({ ...current, photoUri: asset.uri }));
     } catch (error) {
-      Alert.alert(
-        "Unable to open photo library",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Unable to open photo library",
+        message: error instanceof Error ? error.message : "Try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+      });
     }
   };
 
   const handleSaveDraft = async () => {
     await setPlantDraft(values);
-    Alert.alert("Draft saved", "Your specimen draft is saved on this device.");
+    snackbar.success("Draft saved on this device.", {
+      action: {
+        label: "Undo",
+        onPress: () => clearPlantDraft(),
+      },
+    });
   };
 
   const handleSubmit = async () => {
@@ -277,12 +287,19 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
       if (mode === "create") {
         await clearPlantDraft().catch(() => undefined);
       }
+      snackbar.success(
+        mode === "create"
+          ? "Specimen registered successfully."
+          : "Specimen updated successfully.",
+      );
       router.replace(`/plant/${result.plant.id}` as const);
     } catch (error) {
-      Alert.alert(
-        "Unable to save plant",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Unable to save plant",
+        message: error instanceof Error ? error.message : "Try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+      });
     }
   };
 

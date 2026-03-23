@@ -1,13 +1,15 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
 import {
   capturePlantImage,
@@ -332,6 +334,8 @@ function getActivityVisualType(
 export function PlantDetail({ data }: PlantDetailProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const alert = useAlert();
+  const snackbar = useSnackbar();
   const insets = useSafeAreaInsets();
   const addPlantProgressPhoto = useAddPlantProgressPhoto(data.plant.id);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -353,11 +357,14 @@ export function PlantDetail({ data }: PlantDetailProps) {
 
     try {
       await addPlantProgressPhoto.mutateAsync(photoUri);
+      snackbar.success("Progress photo saved successfully.");
     } catch (error) {
-      Alert.alert(
-        "Unable to add photo",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Unable to add photo",
+        message: error instanceof Error ? error.message : "Try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+      });
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -378,10 +385,12 @@ export function PlantDetail({ data }: PlantDetailProps) {
 
       await applyPhotoUpdate(asset.uri);
     } catch (error) {
-      Alert.alert(
-        "Unable to open camera",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Unable to open camera",
+        message: error instanceof Error ? error.message : "Try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+      });
     }
   };
 
@@ -396,10 +405,12 @@ export function PlantDetail({ data }: PlantDetailProps) {
 
       await applyPhotoUpdate(asset.uri);
     } catch (error) {
-      Alert.alert(
-        "Unable to open photo library",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Unable to open photo library",
+        message: error instanceof Error ? error.message : "Try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+      });
     }
   };
 

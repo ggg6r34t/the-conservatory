@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 
-import { Alert, Image, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useUpdateProfile } from "@/features/profile/hooks/useUpdateProfile";
@@ -21,6 +23,8 @@ function getInitials(name: string) {
 
 export default function ProfileEditScreen() {
   const { colors } = useTheme();
+  const alert = useAlert();
+  const snackbar = useSnackbar();
   const { user } = useAuth();
   const updateProfile = useUpdateProfile();
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
@@ -111,18 +115,20 @@ export default function ProfileEditScreen() {
             { displayName: trimmedName },
             {
               onSuccess: () => {
-                Alert.alert(
-                  "Profile updated",
+                snackbar.success(
                   "Your display name has been refreshed across the app.",
                 );
               },
               onError: (error) => {
-                Alert.alert(
-                  "Update failed",
-                  error instanceof Error
-                    ? error.message
-                    : "We couldn't save your profile right now.",
-                );
+                void alert.show({
+                  variant: "error",
+                  title: "Update failed",
+                  message:
+                    error instanceof Error
+                      ? error.message
+                      : "We couldn't save your profile right now.",
+                  primaryAction: { label: "Close", tone: "danger" },
+                });
               },
             },
           );
