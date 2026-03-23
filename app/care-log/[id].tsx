@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: "NotoSerif_700Bold",
     fontSize: 32,
-    lineHeight: 36,
+    lineHeight: 40,
   },
   body: {
     fontFamily: "Manrope_500Medium",
