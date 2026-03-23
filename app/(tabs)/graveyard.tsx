@@ -23,6 +23,15 @@ function formatYearRange(memorial: GraveyardPlantListItem) {
   return `${plantedYear}-${archivedYear}`;
 }
 
+function formatAddedMonthYear(memorial: GraveyardPlantListItem) {
+  return new Date(memorial.archivedAt)
+    .toLocaleDateString("en-US", {
+      month: "short",
+      year: "numeric",
+    })
+    .toUpperCase();
+}
+
 function buildMemorialNote(memorial: GraveyardPlantListItem) {
   return (
     memorial.memorialNote?.trim() ??
@@ -278,10 +287,12 @@ export default function GraveyardScreen() {
             ]}
           >
             <View style={styles.compactTopRow}>
-              <GrayscaleImage
-                uri={compactMemorial.primaryPhotoUri}
-                style={styles.compactImage}
-              />
+              <View style={styles.compactImageFrame}>
+                <GrayscaleImage
+                  uri={compactMemorial.primaryPhotoUri}
+                  style={styles.compactImage}
+                />
+              </View>
 
               <View style={styles.compactHeader}>
                 <Text style={[styles.compactName, { color: colors.onSurface }]}>
@@ -301,6 +312,12 @@ export default function GraveyardScreen() {
                 { backgroundColor: colors.surfaceContainerLowest },
               ]}
             >
+              <Icon
+                name="format-quote-open"
+                size={24}
+                color={colors.primaryFixed}
+                style={styles.compactQuoteIcon}
+              />
               <Text
                 style={[
                   styles.compactNoteText,
@@ -310,6 +327,12 @@ export default function GraveyardScreen() {
                 &quot;{buildShortReflection(compactMemorial, 112)}&quot;
               </Text>
             </View>
+
+            <Text
+              style={[styles.compactDate, { color: colors.onSurfaceVariant }]}
+            >
+              {`ADDED ${formatAddedMonthYear(compactMemorial)}`}
+            </Text>
           </View>
         ) : null}
 
@@ -535,8 +558,8 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     paddingHorizontal: 24,
     paddingVertical: 24,
-    gap: 14,
-    minHeight: 180,
+    gap: 18,
+    minHeight: 220,
   },
   compactTopRow: {
     flexDirection: "row",
@@ -547,8 +570,20 @@ const styles = StyleSheet.create({
   compactImage: {
     width: 88,
     height: 88,
-    borderRadius: 18,
+    borderRadius: 14,
     overflow: "hidden",
+  },
+  compactImageFrame: {
+    width: 96,
+    height: 96,
+    borderRadius: 18,
+    padding: 4,
+    backgroundColor: "#ffffff",
+    shadowColor: "rgba(27, 28, 25, 0.08)",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    elevation: 5,
   },
   compactCopy: {
     flex: 1,
@@ -577,14 +612,29 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   compactNote: {
+    position: "relative",
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    paddingTop: 28,
+  },
+  compactQuoteIcon: {
+    position: "absolute",
+    top: 10,
+    left: 12,
+    opacity: 0.42,
   },
   compactNoteText: {
     fontFamily: "NotoSerif_400Regular_Italic",
     fontSize: 13,
     lineHeight: 22,
+  },
+  compactDate: {
+    alignSelf: "flex-end",
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.2,
   },
   quoteCard: {
     borderRadius: 18,
