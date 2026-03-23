@@ -185,59 +185,71 @@ export default function QuickStartScreen({
           },
         ]}
       >
-        <AppHeader
-          title={"Add your first\nspecimen"}
-          subtitle="Quick Start"
-          showBackButton
-        />
+        <View style={styles.heroSection}>
+          <Image
+            source={require("@/assets/images/bird-of-paradise.png")}
+            style={styles.heroBackground}
+            contentFit="cover"
+            contentPosition="right center"
+            accessibilityIgnoresInvertColors
+          />
 
-        <Text style={[styles.description, { color: colors.onSurfaceVariant }]}>
-          Start with one plant so your garden opens with real data. You can add
-          more details, photos, and care history after signup.
-        </Text>
+          <AppHeader
+            title={"Add your first\nspecimen"}
+            subtitle="Quick Start"
+            showBackButton
+          />
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add your first plant photo"
-          disabled={isSubmitting}
-          onPress={handlePickImage}
-          style={[
-            styles.imagePicker,
-            {
-              backgroundColor: colors.surfaceContainerLow,
-              borderColor: colors.surfaceContainerHigh,
-            },
-          ]}
-        >
-          {photoUri ? (
-            <Image
-              source={{ uri: photoUri }}
-              style={styles.image}
-              contentFit="cover"
-            />
-          ) : null}
-          <View
+          <Text
+            style={[styles.description, { color: colors.onSurfaceVariant }]}
+          >
+            Start with one plant so your garden opens with real data. You can
+            add more details, photos, and care history after signup.
+          </Text>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add your first plant photo"
+            disabled={isSubmitting}
+            onPress={handlePickImage}
             style={[
-              styles.captureBadge,
-              { backgroundColor: colors.surfaceContainerLowest },
+              styles.imagePicker,
+              {
+                backgroundColor: colors.surfaceContainerLow,
+                borderColor: colors.surfaceContainerHigh,
+              },
             ]}
           >
-            <Icon
-              family="MaterialIcons"
-              name="add-a-photo"
-              size={30}
-              color={colors.primary}
-            />
-          </View>
-          <Text style={[styles.captureTitle, { color: colors.onSurface }]}>
-            Tap to capture your plant
-          </Text>
-          <Text
-            style={[styles.captureMeta, { color: colors.onSurfaceVariant }]}
-          >
-            JPEG or PNG, up to 10MB
-          </Text>
-        </Pressable>
+            {photoUri ? (
+              <Image
+                source={{ uri: photoUri }}
+                style={styles.image}
+                contentFit="cover"
+              />
+            ) : null}
+            <View
+              style={[
+                styles.captureBadge,
+                { backgroundColor: colors.surfaceContainerLowest },
+              ]}
+            >
+              <Icon
+                family="MaterialIcons"
+                name="add-a-photo"
+                size={30}
+                color={colors.primary}
+              />
+            </View>
+            <Text style={[styles.captureTitle, { color: colors.onSurface }]}>
+              Tap to capture your plant
+            </Text>
+            <Text
+              style={[styles.captureMeta, { color: colors.onSurfaceVariant }]}
+            >
+              JPEG or PNG, up to 10MB
+            </Text>
+          </Pressable>
+        </View>
 
         <View style={styles.fieldBlock}>
           <Text style={[styles.fieldLabel, { color: colors.secondary }]}>
@@ -393,6 +405,20 @@ const styles = StyleSheet.create({
   content: {
     backgroundColor: "#fbf9f4",
     gap: 20,
+  },
+  heroSection: {
+    position: "relative",
+    overflow: "hidden",
+    gap: 20,
+    paddingBottom: 8,
+  },
+  heroBackground: {
+    position: "absolute",
+    top: 64,
+    right: -84,
+    width: 380,
+    height: 420,
+    opacity: 0.28,
   },
   description: {
     fontFamily: "Manrope_500Medium",
