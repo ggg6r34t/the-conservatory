@@ -59,6 +59,15 @@ function RootNavigator({
   isAuthenticated: boolean;
   onboardingStatus: "pending" | "completed";
 }) {
+  const debugRoutes = __DEV__
+    ? [
+        "debug/onboarding",
+        "debug/onboarding-welcome",
+        "debug/onboarding-walkthrough",
+        "debug/onboarding-permissions",
+        "debug/onboarding-quick-start",
+      ]
+    : [];
   const segments = useSegments();
   const pathname = usePathname();
   const { redirectTo } = useGlobalSearchParams<{ redirectTo?: string }>();
@@ -110,30 +119,13 @@ function RootNavigator({
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      {__DEV__ ? (
-        <>
-          <Stack.Screen
-            name="debug/onboarding"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="debug/onboarding-welcome"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="debug/onboarding-walkthrough"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="debug/onboarding-permissions"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="debug/onboarding-quick-start"
-            options={{ headerShown: false }}
-          />
-        </>
-      ) : null}
+      {debugRoutes.map((routeName) => (
+        <Stack.Screen
+          key={routeName}
+          name={routeName}
+          options={{ headerShown: false }}
+        />
+      ))}
       <Stack.Screen
         name="onboarding/walkthrough"
         options={{ headerShown: false }}
