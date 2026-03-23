@@ -3,6 +3,7 @@ import { PropsWithChildren, useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 
 import { queryKeys } from "@/config/constants";
+import { waitForAuthPersistenceIdle } from "@/features/auth/api/authClient";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useNetworkState } from "@/hooks/useNetworkState";
 import { bootstrapUserDataSync } from "@/services/database/bootstrapSync";
@@ -10,14 +11,21 @@ import { logger } from "@/utils/logger";
 
 export function SyncBootstrapProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, authStatus } = useAuth();
   const { isOffline } = useNetworkState();
   const isSyncingRef = useRef(false);
+  const activeUserIdRef = useRef<string | null>(null);
   const lastUserIdRef = useRef<string | null>(null);
+  const attemptedUserBootstrapRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    activeUserIdRef.current = authStatus === "authenticated" ? user?.id ?? null : null;
+  }, [authStatus, user?.id]);
 
   useEffect(() => {
     if (!isAuthenticated) {
       lastUserIdRef.current = null;
+      attemptedUserBootstrapRef.current = null;
     }
   }, [isAuthenticated]);
 
@@ -31,9 +39,22 @@ export function SyncBootstrapProvider({ children }: PropsWithChildren) {
         return;
       }
 
+      if (reason === "user" && attemptedUserBootstrapRef.current === user.id) {
+        return;
+      }
+
+      if (reason === "user") {
+        attemptedUserBootstrapRef.current = user.id;
+        await waitForAuthPersistenceIdle(3000);
+      }
+
       isSyncingRef.current = true;
       try {
+        const activeUserId = user.id;
         await bootstrapUserDataSync(user.id);
+        if (activeUserIdRef.current !== activeUserId) {
+          return;
+        }
         lastUserIdRef.current = user.id;
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: queryKeys.plants }),
@@ -44,12 +65,14 @@ export function SyncBootstrapProvider({ children }: PropsWithChildren) {
       }
     };
 
-    runBootstrap("user").catch((error) => {
-      logger.warn("sync.bootstrap.user_failed", {
-        userId: user?.id ?? null,
-        message: error instanceof Error ? error.message : "Unknown error",
+    const userBootstrapTimer = setTimeout(() => {
+      runBootstrap("user").catch((error) => {
+        logger.warn("sync.bootstrap.user_failed", {
+          userId: user?.id ?? null,
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
       });
-    });
+    }, 1500);
 
     const subscription = AppState.addEventListener(
       "change",
@@ -66,9 +89,10 @@ export function SyncBootstrapProvider({ children }: PropsWithChildren) {
     );
 
     return () => {
+      clearTimeout(userBootstrapTimer);
       subscription.remove();
     };
-  }, [isAuthenticated, isOffline, queryClient, user?.id]);
+  }, [authStatus, isAuthenticated, isOffline, queryClient, user?.id]);
 
   return children;
 }

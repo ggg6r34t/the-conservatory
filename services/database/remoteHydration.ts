@@ -1,3 +1,5 @@
+import type { SQLiteDatabase } from "expo-sqlite";
+
 import { supabase } from "@/config/supabase";
 import { getDatabase } from "@/services/database/sqlite";
 import {
@@ -137,8 +139,11 @@ async function fetchRemotePhotos(userId: string) {
   );
 }
 
-async function shouldReplaceLocalRow(table: string, row: MergeableRemoteRow) {
-  const database = await getDatabase();
+async function shouldReplaceLocalRow(
+  database: SQLiteDatabase,
+  table: string,
+  row: MergeableRemoteRow,
+) {
   const localRow = await database.getFirstAsync<LocalSyncRow>(
     `SELECT pending, updated_at FROM ${table} WHERE id = ? LIMIT 1;`,
     row.id,
@@ -156,12 +161,12 @@ async function shouldReplaceLocalRow(table: string, row: MergeableRemoteRow) {
 }
 
 async function reconcileRemoteDeletions(params: {
+  database: SQLiteDatabase;
   table: string;
   userId: string;
   remoteIds: string[];
 }) {
-  const database = await getDatabase();
-  const { table, userId, remoteIds } = params;
+  const { database, table, userId, remoteIds } = params;
 
   if (remoteIds.length === 0) {
     await database.runAsync(
@@ -307,7 +312,7 @@ export async function hydrateRemoteUserData(userId: string) {
 
   await database.withTransactionAsync(async () => {
     for (const row of plants) {
-      if (!(await shouldReplaceLocalRow("plants", row))) {
+      if (!(await shouldReplaceLocalRow(database, "plants", row))) {
         continue;
       }
 
@@ -338,7 +343,7 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of hydratedPhotos) {
-      if (!(await shouldReplaceLocalRow("photos", row))) {
+      if (!(await shouldReplaceLocalRow(database, "photos", row))) {
         continue;
       }
 
@@ -368,7 +373,7 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of careLogs) {
-      if (!(await shouldReplaceLocalRow("care_logs", row))) {
+      if (!(await shouldReplaceLocalRow(database, "care_logs", row))) {
         continue;
       }
 
@@ -393,7 +398,7 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of reminders) {
-      if (!(await shouldReplaceLocalRow("care_reminders", row))) {
+      if (!(await shouldReplaceLocalRow(database, "care_reminders", row))) {
         continue;
       }
 
@@ -422,7 +427,7 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of graveyardPlants) {
-      if (!(await shouldReplaceLocalRow("graveyard_plants", row))) {
+      if (!(await shouldReplaceLocalRow(database, "graveyard_plants", row))) {
         continue;
       }
 
@@ -448,6 +453,7 @@ export async function hydrateRemoteUserData(userId: string) {
 
     if (photosResult.ok) {
       await reconcileRemoteDeletions({
+        database,
         table: "photos",
         userId,
         remoteIds: hydratedPhotos.map((row) => row.id),
@@ -456,6 +462,7 @@ export async function hydrateRemoteUserData(userId: string) {
 
     if (careLogsResult.ok) {
       await reconcileRemoteDeletions({
+        database,
         table: "care_logs",
         userId,
         remoteIds: careLogs.map((row) => row.id),
@@ -464,6 +471,7 @@ export async function hydrateRemoteUserData(userId: string) {
 
     if (remindersResult.ok) {
       await reconcileRemoteDeletions({
+        database,
         table: "care_reminders",
         userId,
         remoteIds: reminders.map((row) => row.id),
@@ -472,6 +480,7 @@ export async function hydrateRemoteUserData(userId: string) {
 
     if (graveyardResult.ok) {
       await reconcileRemoteDeletions({
+        database,
         table: "graveyard_plants",
         userId,
         remoteIds: graveyardPlants.map((row) => row.id),
@@ -480,6 +489,7 @@ export async function hydrateRemoteUserData(userId: string) {
 
     if (plantsResult.ok) {
       await reconcileRemoteDeletions({
+        database,
         table: "plants",
         userId,
         remoteIds: plants.map((row) => row.id),

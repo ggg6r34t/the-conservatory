@@ -1,12 +1,14 @@
 import { env } from "@/config/env";
 import { supabase } from "@/config/supabase";
-import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import {
   clearSession,
   readSession,
   writeSession,
 } from "@/services/auth/sessionManager";
 import { getDatabase } from "@/services/database/sqlite";
+import {
+  syncOnboardingStatusToAccount,
+} from "@/features/onboarding/services/onboardingStorage";
 import type { AuthResult } from "@/types/api";
 import type { AppUser } from "@/types/models";
 import { logger } from "@/utils/logger";
@@ -25,6 +27,84 @@ interface LocalCredentialRow {
   user_id: string;
   email: string;
   password_hash: string;
+}
+
+class AuthClientError extends Error {
+  code: string;
+  retryable: boolean;
+
+  constructor(code: string, message: string, retryable = false) {
+    super(message);
+    this.name = "AuthClientError";
+    this.code = code;
+    this.retryable = retryable;
+  }
+}
+
+let localUserWriteQueue: Promise<void> = Promise.resolve();
+const deferredLocalUserPersistRuns = new Map<string, Promise<void>>();
+let pendingLocalUserWriteCount = 0;
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function normalizeDisplayName(displayName: string) {
+  return displayName.trim().replace(/\s+/g, " ").slice(0, 80);
+}
+
+function isLocalAuthEnabled() {
+  return !env.isSupabaseConfigured && (__DEV__ || process.env.NODE_ENV === "test");
+}
+
+function createAuthError(code: string, message: string, retryable = false) {
+  return new AuthClientError(code, message, retryable);
+}
+
+function mapSupabaseAuthError(error: unknown, fallbackMessage: string) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (
+    message.includes("invalid login credentials") ||
+    message.includes("invalid credentials")
+  ) {
+    return createAuthError(
+      "invalid_credentials",
+      "Incorrect email or password.",
+    );
+  }
+
+  if (message.includes("email not confirmed")) {
+    return createAuthError(
+      "email_verification_required",
+      "Verify your email before signing in.",
+    );
+  }
+
+  if (
+    message.includes("already registered") ||
+    message.includes("already exists") ||
+    message.includes("user already registered")
+  ) {
+    return createAuthError(
+      "email_in_use",
+      "An account with this email already exists.",
+    );
+  }
+
+  if (
+    message.includes("network") ||
+    message.includes("fetch") ||
+    message.includes("timeout")
+  ) {
+    return createAuthError(
+      "network_unavailable",
+      "We couldn't reach the server. Check your connection and try again.",
+      true,
+    );
+  }
+
+  return createAuthError("auth_failed", fallbackMessage, false);
 }
 
 function createLocalUser(email: string, displayName?: string): AppUser {
@@ -87,10 +167,8 @@ async function hashLocalPassword(password: string) {
       cryptoModule.CryptoDigestAlgorithm.SHA256,
       password,
     );
-  } catch (error) {
-    logger.warn("auth.local_hash_fallback", {
-      message: error instanceof Error ? error.message : "Unknown error",
-    });
+  } catch {
+    logger.warn("auth.local_hash_fallback");
     return fallbackPasswordHash(password);
   }
 }
@@ -123,43 +201,141 @@ async function getLocalUserByEmail(email: string) {
   return row ? mapLocalUser(row) : null;
 }
 
+function isUniqueConstraintError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const normalized = error.message.toLowerCase();
+  return normalized.includes("unique") || normalized.includes("constraint failed");
+}
+
+function isDatabaseLockedError(error: unknown) {
+  return error instanceof Error && error.message.toLowerCase().includes("database is locked");
+}
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function withDatabaseBusyRetry<T>(label: string, operation: () => Promise<T>) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      logger.warn("auth.db_operation_failed", {
+        label,
+        attempt: attempt + 1,
+        retrying: isDatabaseLockedError(error) && attempt < 3,
+      });
+      if (!isDatabaseLockedError(error) || attempt === 3) {
+        throw error;
+      }
+
+      await delay(80 * (attempt + 1));
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Database operation failed.");
+}
+
+function queueLocalUserWrite<T>(label: string, operation: () => Promise<T>) {
+  const run = localUserWriteQueue
+    .catch(() => undefined)
+    .then(async () => {
+      pendingLocalUserWriteCount += 1;
+      try {
+        return await operation();
+      } catch (error) {
+        logger.warn("auth.local_user_write.failed", { label });
+        throw error;
+      } finally {
+        pendingLocalUserWriteCount = Math.max(0, pendingLocalUserWriteCount - 1);
+      }
+    });
+
+  localUserWriteQueue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+
+  return run;
+}
+
+function hasPendingAuthPersistence() {
+  return pendingLocalUserWriteCount > 0 || deferredLocalUserPersistRuns.size > 0;
+}
+
+export async function waitForAuthPersistenceIdle(timeoutMs = 2500) {
+  const startedAt = Date.now();
+
+  while (hasPendingAuthPersistence() && Date.now() - startedAt < timeoutMs) {
+    await delay(50);
+  }
+}
+
 async function createLocalUserAccount(user: AppUser, password: string) {
   const database = await getDatabase();
   const existingCredential = await getLocalCredentialByEmail(user.email);
   const existingUser = await getLocalUserByEmail(user.email);
 
   if (existingCredential || existingUser) {
-    throw new Error("An account with this email already exists.");
+    throw createAuthError(
+      "email_in_use",
+      "An account with this email already exists.",
+    );
   }
 
   const passwordHash = await hashLocalPassword(password);
 
-  await database.withTransactionAsync(async () => {
-    await database.runAsync(
-      `INSERT INTO users (id, email, display_name, avatar_url, role, created_at, updated_at, updated_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
-      user.id,
-      user.email,
-      user.displayName,
-      user.avatarUrl ?? null,
-      user.role,
-      user.createdAt,
-      user.updatedAt,
-      user.id,
-    );
+  try {
+    await queueLocalUserWrite("auth.create_local_user_account", () =>
+      withDatabaseBusyRetry("auth.create_local_user_account", () =>
+        database.withTransactionAsync(async () => {
+          await database.runAsync(
+            `INSERT INTO users (id, email, display_name, avatar_url, role, created_at, updated_at, updated_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+            user.id,
+            user.email,
+            user.displayName,
+            user.avatarUrl ?? null,
+            user.role,
+            user.createdAt,
+            user.updatedAt,
+            user.id,
+          );
 
-    await database.runAsync(
-      `INSERT INTO local_auth_credentials (user_id, email, password_hash, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?);`,
-      user.id,
-      user.email,
-      passwordHash,
-      user.createdAt,
-      user.updatedAt,
+          await database.runAsync(
+            `INSERT INTO local_auth_credentials (user_id, email, password_hash, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?);`,
+            user.id,
+            user.email,
+            passwordHash,
+            user.createdAt,
+            user.updatedAt,
+          );
+        }),
+      ),
     );
-  });
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw createAuthError(
+        "email_in_use",
+        "An account with this email already exists.",
+      );
+    }
 
-  await getUserPreferences(user.id);
+    throw createAuthError(
+      "local_signup_failed",
+      "We couldn't create your account right now.",
+      true,
+    );
+  }
 }
 
 async function syncRemoteProfile(user: AppUser) {
@@ -180,7 +356,7 @@ async function syncRemoteProfile(user: AppUser) {
   );
 
   if (upsertError) {
-    logger.warn("profile.upsert_failed", { message: upsertError.message });
+    logger.warn("profile.upsert_failed");
     return user;
   }
 
@@ -192,7 +368,7 @@ async function syncRemoteProfile(user: AppUser) {
 
   if (profileError || !profile) {
     if (profileError) {
-      logger.warn("profile.fetch_failed", { message: profileError.message });
+      logger.warn("profile.fetch_failed");
     }
     return user;
   }
@@ -208,36 +384,116 @@ async function syncRemoteProfile(user: AppUser) {
 
 async function persistLocalUser(user: AppUser) {
   const database = await getDatabase();
-  await database.runAsync(
-    `INSERT OR REPLACE INTO users (id, email, display_name, avatar_url, role, created_at, updated_at, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
-    user.id,
-    user.email,
-    user.displayName,
-    user.avatarUrl ?? null,
-    user.role,
-    user.createdAt,
-    user.updatedAt,
-    user.id,
+  await queueLocalUserWrite("auth.persist_local_user", () =>
+    withDatabaseBusyRetry("auth.persist_local_user", () =>
+      database.runAsync(
+        `INSERT OR REPLACE INTO users (id, email, display_name, avatar_url, role, created_at, updated_at, updated_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+        user.id,
+        user.email,
+        user.displayName,
+        user.avatarUrl ?? null,
+        user.role,
+        user.createdAt,
+        user.updatedAt,
+        user.id,
+      ),
+    ),
   );
-  await getUserPreferences(user.id);
+}
+
+async function persistLocalUserDeferred(user: AppUser) {
+  const existingRun = deferredLocalUserPersistRuns.get(user.id);
+  if (existingRun) {
+    return existingRun;
+  }
+
+  const run = (async () => {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        if (attempt > 0) {
+          await delay(400 * attempt);
+        }
+
+        await persistLocalUser(user);
+        return;
+      } catch (error) {
+        const locked = isDatabaseLockedError(error);
+        logger.warn("auth.persist_local_user_deferred.failed", {
+          attempt: attempt + 1,
+          retrying: locked && attempt < 3,
+        });
+
+        if (!locked || attempt === 3) {
+          throw error;
+        }
+      }
+    }
+  })().finally(() => {
+    if (deferredLocalUserPersistRuns.get(user.id) === run) {
+      deferredLocalUserPersistRuns.delete(user.id);
+    }
+  });
+
+  deferredLocalUserPersistRuns.set(user.id, run);
+  return run;
+}
+
+async function persistLocalUserForAuth(user: AppUser) {
+  try {
+    await persistLocalUser(user);
+  } catch (error) {
+    if (!isDatabaseLockedError(error)) {
+      throw error;
+    }
+
+    logger.warn("auth.persist_local_user_deferred");
+    void persistLocalUserDeferred(user).catch(() => {
+      logger.warn("auth.persist_local_user_deferred.exhausted");
+    });
+  }
+}
+
+async function finalizeAuthenticatedUser(user: AppUser) {
+  await syncOnboardingStatusToAccount(user.id);
+  await writeSession(user);
+  return user;
 }
 
 export async function getInitialAuthUser() {
   if (env.isSupabaseConfigured && supabase) {
-    const { data } = await supabase.auth.getSession();
-    if (data.session?.user) {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        logger.warn("auth.restore.session_failed");
+        await clearSession();
+        return null;
+      }
+
+      if (!data.session?.user) {
+        await clearSession();
+        return null;
+      }
+
       const user = createSupabaseUser(
         data.session.user.id,
-        data.session.user.email ?? "botanist@conservatory.com",
+        normalizeEmail(data.session.user.email ?? "botanist@conservatory.com"),
         data.session.user.user_metadata.display_name,
         data.session.user.user_metadata.avatar_url,
       );
       const syncedProfile = await syncRemoteProfile(user);
-      await persistLocalUser(syncedProfile);
-      await writeSession(syncedProfile);
-      return syncedProfile;
+      return finalizeAuthenticatedUser(syncedProfile);
+    } catch {
+      logger.warn("auth.restore.failed");
+      await clearSession();
+      return null;
     }
+  }
+
+  if (!isLocalAuthEnabled()) {
+    await clearSession();
+    return null;
   }
 
   return readSession();
@@ -247,46 +503,61 @@ export async function login(
   email: string,
   password: string,
 ): Promise<AuthResult> {
+  const normalizedEmail = normalizeEmail(email);
+
   if (env.isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
     if (error || !data.user) {
-      throw error ?? new Error("Unable to sign in.");
+      throw mapSupabaseAuthError(error, "Unable to sign in right now.");
     }
 
     const user = createSupabaseUser(
       data.user.id,
-      email,
+      normalizedEmail,
       data.user.user_metadata.display_name,
       data.user.user_metadata.avatar_url,
     );
     const syncedProfile = await syncRemoteProfile(user);
-    await persistLocalUser(syncedProfile);
-    await writeSession(syncedProfile);
+    await finalizeAuthenticatedUser(syncedProfile);
     return { user: syncedProfile, requiresEmailVerification: false };
   }
 
-  logger.warn(
-    "Supabase is not configured. Falling back to local development auth.",
-  );
-  const credential = await getLocalCredentialByEmail(email);
+  if (!isLocalAuthEnabled()) {
+    throw createAuthError(
+      "auth_unavailable",
+      "Sign-in isn't available in this build right now.",
+    );
+  }
+
+  const credential = await getLocalCredentialByEmail(normalizedEmail);
   if (!credential) {
-    throw new Error("No local account found for this email.");
+    throw createAuthError(
+      "invalid_credentials",
+      "Incorrect email or password.",
+    );
   }
 
   const passwordHash = await hashLocalPassword(password);
   if (credential.password_hash !== passwordHash) {
-    throw new Error("Incorrect email or password.");
+    throw createAuthError(
+      "invalid_credentials",
+      "Incorrect email or password.",
+    );
   }
 
   const user = await getLocalUserById(credential.user_id);
   if (!user) {
-    throw new Error("Local account data is missing. Create the account again.");
+    throw createAuthError(
+      "account_missing",
+      "We couldn't restore this account. Try signing in again.",
+      true,
+    );
   }
 
-  await writeSession(user);
+  await finalizeAuthenticatedUser(user);
   return { user, requiresEmailVerification: false };
 }
 
@@ -295,52 +566,66 @@ export async function signup(
   password: string,
   displayName: string,
 ): Promise<AuthResult> {
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedDisplayName = normalizeDisplayName(displayName);
+
   if (env.isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
-      options: { data: { display_name: displayName } },
+      options: { data: { display_name: normalizedDisplayName } },
     });
 
     if (error || !data.user) {
-      throw error ?? new Error("Unable to create account.");
+      throw mapSupabaseAuthError(error, "Unable to create your account right now.");
     }
 
     const user = createSupabaseUser(
       data.user.id,
-      email,
-      displayName,
+      normalizedEmail,
+      normalizedDisplayName,
       data.user.user_metadata.avatar_url,
     );
     const syncedProfile = await syncRemoteProfile(user);
-    await persistLocalUser(syncedProfile);
     if (data.session) {
-      await writeSession(syncedProfile);
+      await finalizeAuthenticatedUser(syncedProfile);
     }
     return { user: syncedProfile, requiresEmailVerification: !data.session };
   }
 
-  logger.warn(
-    "Supabase is not configured. Falling back to local development signup.",
-  );
-  const user = createLocalUser(email, displayName);
+  if (!isLocalAuthEnabled()) {
+    throw createAuthError(
+      "signup_unavailable",
+      "Account creation isn't available in this build right now.",
+    );
+  }
+
+  const user = createLocalUser(normalizedEmail, normalizedDisplayName);
   await createLocalUserAccount(user, password);
-  await writeSession(user);
+  await finalizeAuthenticatedUser(user);
   return { user, requiresEmailVerification: false };
 }
 
 export async function requestPasswordReset(email: string) {
+  const normalizedEmail = normalizeEmail(email);
+
   if (env.isSupabaseConfigured && supabase) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail);
     if (error) {
-      throw error;
+      throw mapSupabaseAuthError(
+        error,
+        "We couldn't start password recovery right now.",
+      );
     }
     return;
   }
 
-  logger.warn(
-    "Supabase is not configured. Password reset is simulated locally.",
-  );
+  if (!isLocalAuthEnabled()) {
+    throw createAuthError(
+      "password_reset_unavailable",
+      "Password recovery isn't available in this build right now.",
+    );
+  }
 }
 
 export async function updateProfileIdentity(
@@ -352,7 +637,7 @@ export async function updateProfileIdentity(
 ) {
   const nextUser: AppUser = {
     ...currentUser,
-    displayName: patch.displayName.trim(),
+    displayName: normalizeDisplayName(patch.displayName),
     avatarUrl: patch.avatarUrl ?? currentUser.avatarUrl ?? null,
     updatedAt: new Date().toISOString(),
   };
@@ -366,7 +651,7 @@ export async function updateProfileIdentity(
     });
 
     if (authError) {
-      logger.warn("profile.auth_update_failed", { message: authError.message });
+      logger.warn("profile.auth_update_failed");
     }
 
     const { error: upsertError } = await supabase.from("users").upsert(
@@ -382,7 +667,7 @@ export async function updateProfileIdentity(
     );
 
     if (upsertError) {
-      logger.warn("profile.upsert_failed", { message: upsertError.message });
+      logger.warn("profile.upsert_failed");
     }
   }
 
@@ -394,8 +679,14 @@ export async function updateProfileIdentity(
 
 export async function logout() {
   if (env.isSupabaseConfigured && supabase) {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      logger.warn("auth.logout.remote_failed");
+    }
   }
 
   await clearSession();
 }
+
+export { AuthClientError };

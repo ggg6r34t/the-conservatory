@@ -1,6 +1,5 @@
-import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
@@ -8,19 +7,29 @@ import { useSignup } from "@/features/auth/hooks/useSignup";
 import { signupSchema } from "@/features/auth/schemas/authValidation";
 
 export function SignupForm() {
-  const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState("");
   const signupMutation = useSignup();
 
+  const clearFieldError = (field: "displayName" | "email" | "password") => {
+    setErrors((current) => ({ ...current, [field]: "" }));
+    setSubmitError("");
+  };
+
   const handleSubmit = async () => {
+    if (signupMutation.isPending) {
+      return;
+    }
+
     const parsed = signupSchema.safeParse({
-      displayName: displayName.trim(),
-      email: email.trim().toLowerCase(),
+      displayName,
+      email,
       password,
     });
+
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
       setErrors({
@@ -32,23 +41,23 @@ export function SignupForm() {
     }
 
     setErrors({});
+    setSubmitError("");
 
     try {
       const result = await signupMutation.mutateAsync(parsed.data);
+
       if (result.requiresEmailVerification) {
         Alert.alert(
           "Verify your email",
-          "Check your inbox to activate your account.",
+          "Check your inbox to activate your account before signing in.",
         );
         return;
       }
 
-      router.replace("/(tabs)");
     } catch (error) {
-      Alert.alert(
-        "Unable to create account",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      const message = error instanceof Error ? error.message : "Try again.";
+      setSubmitError(message);
+      Alert.alert("Unable to create account", message);
     }
   };
 
@@ -57,31 +66,53 @@ export function SignupForm() {
       <TextInputField
         label="Full name"
         value={displayName}
-        onChangeText={setDisplayName}
+        onChangeText={(value) => {
+          setDisplayName(value);
+          clearFieldError("displayName");
+        }}
+        textContentType="name"
+        autoComplete="name"
+        returnKeyType="next"
         placeholder="Elowen Thorne"
         error={errors.displayName}
       />
       <TextInputField
         label="Email address"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(value) => {
+          setEmail(value);
+          clearFieldError("email");
+        }}
         autoCapitalize="none"
         keyboardType="email-address"
+        autoComplete="email"
+        textContentType="emailAddress"
+        returnKeyType="next"
         placeholder="elowen@garden.io"
         error={errors.email}
       />
       <TextInputField
         label="Password"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(value) => {
+          setPassword(value);
+          clearFieldError("password");
+        }}
         secureTextEntry
-        placeholder="••••••••"
+        autoComplete="new-password"
+        textContentType="newPassword"
+        returnKeyType="go"
+        placeholder="Choose a secure password"
         error={errors.password}
       />
+      {submitError ? (
+        <Text style={styles.submitError}>{submitError}</Text>
+      ) : null}
       <PrimaryButton
         label="Create Account"
         onPress={handleSubmit}
         loading={signupMutation.isPending}
+        disabled={signupMutation.isPending}
       />
     </View>
   );
@@ -90,5 +121,10 @@ export function SignupForm() {
 const styles = StyleSheet.create({
   container: {
     gap: 18,
+  },
+  submitError: {
+    fontFamily: "Manrope_600SemiBold",
+    fontSize: 13,
+    color: "#ba1a1a",
   },
 });

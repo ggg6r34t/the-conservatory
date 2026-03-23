@@ -7,6 +7,10 @@ const mockDigestStringAsync = jest.fn(
 );
 const mockGetDatabase = jest.fn();
 
+jest.mock("@react-native-async-storage/async-storage", () =>
+  require("@react-native-async-storage/async-storage/jest/async-storage-mock"),
+);
+
 jest.mock("@/config/env", () => ({
   env: {
     isSupabaseConfigured: false,
@@ -126,7 +130,6 @@ describe("auth client local fallback", () => {
 
     expect(signupResult.user.email).toBe("curator@example.com");
     expect(loginResult.user.id).toBe(signupResult.user.id);
-    expect(mockGetUserPreferences).toHaveBeenCalledWith(signupResult.user.id);
     expect(mockWriteSession).toHaveBeenCalledWith(
       expect.objectContaining({ email: "curator@example.com" }),
     );
@@ -141,7 +144,49 @@ describe("auth client local fallback", () => {
       login("curator@example.com", "wrong-password"),
     ).rejects.toThrow("Incorrect email or password.");
     await expect(login("missing@example.com", "fern-secret")).rejects.toThrow(
-      "No local account found for this email.",
+      "Incorrect email or password.",
+    );
+  });
+
+  it("returns a friendly duplicate-email error when local signup hits a uniqueness conflict", async () => {
+    let usersInsertAttempts = 0;
+
+    mockGetDatabase.mockResolvedValue({
+      withTransactionAsync: async (callback: () => Promise<void>) => callback(),
+      runAsync: async (sql: string) => {
+        if (sql.includes("INSERT INTO users")) {
+          usersInsertAttempts += 1;
+          if (usersInsertAttempts > 1) {
+            throw new Error("UNIQUE constraint failed: users.email");
+          }
+        }
+      },
+      getFirstAsync: async () => null,
+    });
+
+    const { signup } = require("@/features/auth/api/authClient");
+
+    await signup("curator@example.com", "fern-secret", "Fern Curator");
+
+    await expect(
+      signup("curator@example.com", "fern-secret", "Fern Curator"),
+    ).rejects.toThrow("An account with this email already exists.");
+  });
+
+  it("restores the local session only in explicit dev or test auth mode", async () => {
+    mockReadSession.mockResolvedValue({
+      id: "local-user",
+      email: "curator@example.com",
+      displayName: "Fern Curator",
+      role: "user",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const { getInitialAuthUser } = require("@/features/auth/api/authClient");
+
+    await expect(getInitialAuthUser()).resolves.toEqual(
+      expect.objectContaining({ id: "local-user" }),
     );
   });
 });

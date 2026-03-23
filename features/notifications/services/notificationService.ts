@@ -7,6 +7,12 @@ const shouldDisableNotificationsInCurrentRuntime =
 
 let hasRegisteredHandler = false;
 
+export type NotificationPermissionState =
+  | "granted"
+  | "denied"
+  | "undetermined"
+  | "unavailable";
+
 async function getNotificationsModule() {
   if (shouldDisableNotificationsInCurrentRuntime) {
     return null;
@@ -42,6 +48,25 @@ export async function ensureNotificationPermissions() {
 
   const next = await notifications.requestPermissionsAsync();
   return next.granted;
+}
+
+export async function getNotificationPermissionState(): Promise<NotificationPermissionState> {
+  const notifications = await getNotificationsModule();
+  if (!notifications) {
+    return "unavailable";
+  }
+
+  const current = await notifications.getPermissionsAsync();
+
+  if (current.granted) {
+    return "granted";
+  }
+
+  if (current.canAskAgain === false) {
+    return "denied";
+  }
+
+  return "undetermined";
 }
 
 export async function cancelReminderNotification(

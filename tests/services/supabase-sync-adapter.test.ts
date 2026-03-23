@@ -110,11 +110,15 @@ describe("supabase sync adapter", () => {
   it("should upload photo assets before syncing photo metadata", async () => {
     const upsert = jest.fn().mockResolvedValue({ error: null });
     const upload = jest.fn().mockResolvedValue({ error: null });
+    const createSignedUrl = jest.fn().mockResolvedValue({
+      data: { signedUrl: "https://cdn.example.com/photo-1.jpg" },
+      error: null,
+    });
     const from = require("@/config/supabase").supabase.from as jest.Mock;
     const storageFrom = require("@/config/supabase").supabase.storage
       .from as jest.Mock;
     from.mockReturnValue({ upsert });
-    storageFrom.mockReturnValue({ upload });
+    storageFrom.mockReturnValue({ upload, createSignedUrl });
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       blob: jest.fn().mockResolvedValue(new Blob(["photo"])),
@@ -160,6 +164,7 @@ describe("supabase sync adapter", () => {
     });
 
     expect(storageFrom).toHaveBeenCalledWith("photos");
+    expect(createSignedUrl).toHaveBeenCalledWith("user-1/plant-1/photo-1.jpg", 2592000);
     expect(upload).toHaveBeenCalledWith(
       "user-1/plant-1/photo-1.jpg",
       expect.any(Blob),

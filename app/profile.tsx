@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useQueries } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -167,8 +167,9 @@ function ProfileRow({
 
 export default function ProfileScreen() {
   const { colors, spacing } = useTheme();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isSigningOut } = useAuth();
   const router = useRouter();
+  const [showDeveloperMenu, setShowDeveloperMenu] = useState(false);
   const plantsQuery = usePlants();
   const graveyardQuery = useGraveyard();
   const settingsQuery = useSettings();
@@ -251,11 +252,7 @@ export default function ProfileScreen() {
                 },
               ]}
             >
-              <Icon
-                name="pencil"
-                size={16}
-                color={colors.surfaceBright}
-              />
+              <Icon name="pencil" size={16} color={colors.surfaceBright} />
             </View>
           </View>
 
@@ -420,26 +417,75 @@ export default function ProfileScreen() {
 
         <Pressable
           accessibilityRole="button"
-          onPress={signOut}
+          accessibilityState={{ disabled: isSigningOut }}
+          disabled={isSigningOut}
+          onPress={() => {
+            void signOut();
+          }}
           style={styles.signOutRow}
         >
-          <Icon
-            name="logout"
-            size={22}
-            color={colors.secondary}
-          />
+          <Icon name="logout" size={22} color={colors.secondary} />
           <Text style={[styles.signOutLabel, { color: colors.secondary }]}>
-            SIGN OUT
+            {isSigningOut ? "SIGNING OUT" : "SIGN OUT"}
           </Text>
         </Pressable>
 
+        {__DEV__ && showDeveloperMenu ? (
+          <View style={styles.section}>
+            <Text
+              style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
+            >
+              DEVELOPER
+            </Text>
+            <View
+              style={[
+                styles.groupCard,
+                { backgroundColor: colors.surfaceContainerLowest },
+              ]}
+            >
+              <ProfileRow
+                icon="bug-outline"
+                label="Onboarding Debug"
+                onPress={() => router.push("/debug/onboarding")}
+              />
+            </View>
+          </View>
+        ) : null}
+
         <View style={styles.footer}>
-          <Text style={[styles.footerBrand, { color: colors.primaryFixed }]}>
-            The Conservatory
-          </Text>
-          <Text style={[styles.footerMeta, { color: colors.onSurfaceVariant }]}>
-            VERSION 2.4.0 • BUILT FOR BOTANISTS
-          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Developer menu"
+            accessibilityHint="Long press to reveal developer tools"
+            delayLongPress={450}
+            onLongPress={() => {
+              if (__DEV__) {
+                setShowDeveloperMenu((current) => !current);
+              }
+            }}
+            style={styles.footerBrandPressable}
+          >
+            <Text style={[styles.footerBrand, { color: colors.primaryFixed }]}>
+              The Conservatory
+            </Text>
+          </Pressable>
+          <View style={styles.footerMetaRow}>
+            <Text
+              style={[styles.footerMeta, { color: colors.onSurfaceVariant }]}
+            >
+              VERSION 2.4.0
+            </Text>
+            <Icon
+              name="circle-small"
+              size={18}
+              color={colors.onSurfaceVariant}
+            />
+            <Text
+              style={[styles.footerMeta, { color: colors.onSurfaceVariant }]}
+            >
+              BUILT FOR BOTANISTS
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -637,6 +683,12 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingTop: 8,
   },
+  footerBrandPressable: {
+    minHeight: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
   footerBrand: {
     fontFamily: "NotoSerif_700Bold",
     fontSize: 17,
@@ -650,5 +702,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     letterSpacing: 1.6,
     textAlign: "center",
+  },
+  footerMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

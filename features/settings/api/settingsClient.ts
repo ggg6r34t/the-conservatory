@@ -14,6 +14,12 @@ function defaultPreferences(userId: string): UserPreferences {
   };
 }
 
+function assertValidUserId(userId: string) {
+  if (!userId.trim()) {
+    throw new Error("A signed-in user is required.");
+  }
+}
+
 function mapPreferences(row: {
   user_id: string;
   reminders_enabled: number;
@@ -35,24 +41,28 @@ function mapPreferences(row: {
 }
 
 export async function getUserPreferences(userId: string) {
+  assertValidUserId(userId);
   const database = await getDatabase();
-  const row = await database.getFirstAsync<{
-    user_id: string;
-    reminders_enabled: number;
-    preferred_theme: "linen-light";
-    timezone: string;
-    default_watering_hour: number;
-    created_at: string;
-    updated_at: string;
-  }>("SELECT * FROM user_preferences WHERE user_id = ? LIMIT 1;", userId);
+  const readPreferences = () =>
+    database.getFirstAsync<{
+      user_id: string;
+      reminders_enabled: number;
+      preferred_theme: "linen-light";
+      timezone: string;
+      default_watering_hour: number;
+      created_at: string;
+      updated_at: string;
+    }>("SELECT * FROM user_preferences WHERE user_id = ? LIMIT 1;", userId);
 
+  const row = await readPreferences();
+ 
   if (row) {
     return mapPreferences(row);
   }
 
   const preferences = defaultPreferences(userId);
   await database.runAsync(
-    `INSERT INTO user_preferences (
+    `INSERT OR IGNORE INTO user_preferences (
       user_id, reminders_enabled, preferred_theme, timezone, default_watering_hour, created_at, updated_at, updated_by
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
     preferences.userId,
@@ -64,6 +74,11 @@ export async function getUserPreferences(userId: string) {
     preferences.updatedAt,
     preferences.userId,
   );
+
+  const persistedRow = await readPreferences();
+  if (persistedRow) {
+    return mapPreferences(persistedRow);
+  }
 
   return preferences;
 }
@@ -77,11 +92,16 @@ export async function updateUserPreferences(
     >
   >,
 ) {
+  assertValidUserId(userId);
   const database = await getDatabase();
   const current = await getUserPreferences(userId);
   const next = {
     ...current,
     ...patch,
+    defaultWateringHour: Math.min(
+      23,
+      Math.max(0, patch.defaultWateringHour ?? current.defaultWateringHour),
+    ),
     updatedAt: new Date().toISOString(),
   };
 

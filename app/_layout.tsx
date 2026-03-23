@@ -1,10 +1,21 @@
-import { Redirect, Stack, useSegments } from "expo-router";
+import {
+  Redirect,
+  Stack,
+  useGlobalSearchParams,
+  usePathname,
+  useSegments,
+} from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding";
+import {
+  resolveEntryRoute,
+  resolveSafeAuthRedirectTarget,
+} from "@/features/onboarding/utils/resolveEntryRoute";
 import { Providers } from "@/providers/Providers";
 
 export const unstable_settings = {
@@ -14,41 +25,121 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
-  const { isReady, isAuthenticated } = useAuth();
+  const { isReady, isAuthenticated, authStatus, user } = useAuth();
+  const onboarding = useOnboarding(user?.id);
 
   useEffect(() => {
-    if (isReady) {
+    if (isReady && onboarding.isReady) {
       SplashScreen.hideAsync().catch(() => undefined);
     }
-  }, [isReady]);
+  }, [isReady, onboarding.isReady]);
 
-  if (!isReady) {
+  if (!isReady || !onboarding.isReady) {
     return null;
   }
 
   return (
     <Providers>
-      <RootNavigator isAuthenticated={isAuthenticated} />
+      <RootNavigator
+        authStatus={authStatus === "authenticated" ? "authenticated" : "anonymous"}
+        isAuthenticated={isAuthenticated}
+        onboardingStatus={onboarding.status}
+      />
       <StatusBar style="dark" />
     </Providers>
   );
 }
 
-function RootNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
+function RootNavigator({
+  authStatus,
+  isAuthenticated,
+  onboardingStatus,
+}: {
+  authStatus: "authenticated" | "anonymous";
+  isAuthenticated: boolean;
+  onboardingStatus: "pending" | "completed";
+}) {
   const segments = useSegments();
+  const pathname = usePathname();
+  const { redirectTo } = useGlobalSearchParams<{ redirectTo?: string }>();
   const isAuthRoute = segments[0] === "(auth)";
+  const isTabRoute = segments[0] === "(tabs)";
+  const isIndexRoute = pathname === "/" && !isTabRoute;
+  const isOnboardingRoute = segments[0] === "onboarding";
+  const isDebugRoute = segments[0] === "debug";
+  const expectedPublicEntry = resolveEntryRoute({
+    authStatus,
+    onboardingStatus,
+  });
+  const safeRedirectTo = resolveSafeAuthRedirectTarget(redirectTo);
 
-  if (!isAuthenticated && !isAuthRoute) {
+  if (isDebugRoute && !__DEV__) {
+    return <Redirect href={expectedPublicEntry} />;
+  }
+
+  if (
+    !isAuthenticated &&
+    !isAuthRoute &&
+    !isIndexRoute &&
+    !isOnboardingRoute &&
+    !isDebugRoute
+  ) {
+    return <Redirect href={expectedPublicEntry} />;
+  }
+
+  if (!isTabRoute && pathname === "/" && expectedPublicEntry !== "/") {
+    return <Redirect href={expectedPublicEntry} />;
+  }
+
+  if (
+    !isAuthenticated &&
+    isOnboardingRoute &&
+    onboardingStatus === "completed"
+  ) {
     return <Redirect href="/(auth)/login" />;
   }
 
-  if (isAuthenticated && isAuthRoute) {
+  if (isAuthenticated && isOnboardingRoute) {
     return <Redirect href="/(tabs)" />;
+  }
+
+  if (isAuthenticated && isAuthRoute) {
+    return <Redirect href={safeRedirectTo} />;
   }
 
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      {__DEV__ ? (
+        <Stack.Screen
+          name="debug/onboarding"
+          options={{ headerShown: false }}
+        />
+      ) : null}
+      <Stack.Screen
+        name="onboarding/walkthrough"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="onboarding/gallery"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="onboarding/care-rhythm"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="onboarding/graveyard"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="onboarding/permissions"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="onboarding/quick-start"
+        options={{ headerShown: false }}
+      />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />

@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -20,6 +19,11 @@ import { useAddPlant } from "@/features/plants/hooks/useAddPlant";
 import { useUpdatePlant } from "@/features/plants/hooks/useUpdatePlant";
 import type { PlantFormInput } from "@/features/plants/schemas/plantValidation";
 import { plantSchema } from "@/features/plants/schemas/plantValidation";
+import {
+  clearPlantDraft,
+  getPlantDraft,
+  setPlantDraft,
+} from "@/features/plants/services/plantDraftStorage";
 import { pickPlantImage } from "@/features/plants/services/photoService";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
@@ -30,7 +34,6 @@ interface PlantFormProps {
   initialValues?: Partial<PlantFormInput>;
 }
 
-const DRAFT_KEY = "plant-form-draft";
 const LOCATION_OPTIONS = ["East Conservatory", "Sunroom", "Studio Shelf", "Office"];
 const SPECIES_SUGGESTIONS = ["Swiss Cheese Plant", "Fiddle Leaf", "Pothos"];
 const HYDRATION_MIN = 3;
@@ -163,19 +166,18 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
     }
 
     let active = true;
-    AsyncStorage.getItem(DRAFT_KEY)
+    getPlantDraft()
       .then((saved) => {
         if (!saved || !active) {
           return;
         }
 
-        const parsed = JSON.parse(saved) as Partial<PlantFormInput>;
         setValues((current) => ({
           ...current,
-          ...parsed,
-          location: parsed.location ?? current.location,
-          wateringIntervalDays: parsed.wateringIntervalDays ?? current.wateringIntervalDays,
-          notes: normalizeNotes(parsed.notes) || current.notes,
+          ...saved,
+          location: saved.location ?? current.location,
+          wateringIntervalDays: saved.wateringIntervalDays ?? current.wateringIntervalDays,
+          notes: normalizeNotes(saved.notes) || current.notes,
         }));
       })
       .catch(() => undefined)
@@ -195,7 +197,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
       return;
     }
 
-    AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(values)).catch(() => undefined);
+    setPlantDraft(values).catch(() => undefined);
   }, [draftLoaded, mode, values]);
 
   useEffect(() => {
@@ -246,7 +248,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   };
 
   const handleSaveDraft = async () => {
-    await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(values));
+    await setPlantDraft(values);
     Alert.alert("Draft saved", "Your specimen draft is saved on this device.");
   };
 
@@ -273,7 +275,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
     try {
       const result = await mutation.mutateAsync(parsed.data);
       if (mode === "create") {
-        await AsyncStorage.removeItem(DRAFT_KEY).catch(() => undefined);
+        await clearPlantDraft().catch(() => undefined);
       }
       router.replace(`/plant/${result.plant.id}` as const);
     } catch (error) {

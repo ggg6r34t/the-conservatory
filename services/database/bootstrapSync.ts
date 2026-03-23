@@ -3,7 +3,9 @@ import { repairLocalPhotoRecords } from "@/services/database/photoRepair";
 import { syncPendingChanges } from "@/services/database/sync";
 import { logger } from "@/utils/logger";
 
-export async function bootstrapUserDataSync(userId: string) {
+const bootstrapInFlight = new Map<string, Promise<void>>();
+
+async function runBootstrapUserDataSync(userId: string) {
   try {
     await repairLocalPhotoRecords(userId);
   } catch (error) {
@@ -32,4 +34,20 @@ export async function bootstrapUserDataSync(userId: string) {
       message: error instanceof Error ? error.message : "Unknown error",
     });
   }
+}
+
+export async function bootstrapUserDataSync(userId: string) {
+  const existingRun = bootstrapInFlight.get(userId);
+  if (existingRun) {
+    return existingRun;
+  }
+
+  const run = runBootstrapUserDataSync(userId).finally(() => {
+    if (bootstrapInFlight.get(userId) === run) {
+      bootstrapInFlight.delete(userId);
+    }
+  });
+
+  bootstrapInFlight.set(userId, run);
+  return run;
 }

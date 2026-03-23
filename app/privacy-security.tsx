@@ -43,30 +43,29 @@ export default function PrivacySecurityScreen() {
           AUTHENTICATION MODE
         </Text>
         <Text style={[styles.cardValue, { color: colors.primary }]}>
-          {env.isSupabaseConfigured ? "Supabase synced" : "Local development"}
+          {env.isSupabaseConfigured ? "Supabase synced" : "Unavailable in this build"}
         </Text>
         <Text style={[styles.cardBody, { color: colors.onSurfaceVariant }]}>
           {env.isSupabaseConfigured
             ? "Your account data is backed by Supabase and mirrored into local storage for fast offline access."
-            : "This build is using local-only authentication, so password resets are simulated and account updates remain on-device."}
+            : "This build does not have a production auth provider configured, so password recovery is unavailable."}
         </Text>
       </View>
 
       <PrimaryButton
         label="Send Password Reset"
+        disabled={!user?.email}
         onPress={async () => {
           try {
             await requestPasswordReset(user?.email ?? "");
             Alert.alert(
               "Reset requested",
-              "If your auth provider is configured, a reset email will be sent shortly.",
+              "If an account exists for this email, reset instructions will arrive shortly.",
             );
           } catch (error) {
             Alert.alert(
               "Request failed",
-              error instanceof Error
-                ? error.message
-                : "We couldn't start password recovery.",
+              error instanceof Error ? error.message : "We couldn't start password recovery.",
             );
           }
         }}

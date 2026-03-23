@@ -7,6 +7,11 @@ let databasePromise: Promise<SQLiteDatabase> | null = null;
 
 async function openDatabase() {
   const database = await openDatabaseAsync(DATABASE_NAME);
+  await database.execAsync(`
+    PRAGMA journal_mode = WAL;
+    PRAGMA busy_timeout = 5000;
+    PRAGMA foreign_keys = ON;
+  `);
   await database.execAsync(bootstrapSql);
   return database;
 }
