@@ -13,6 +13,7 @@ interface PrimaryButtonProps {
   disabled?: boolean;
   icon?: string;
   iconFamily?: React.ComponentProps<typeof Icon>["family"];
+  iconPosition?: "leading" | "trailing";
   compact?: boolean;
 }
 
@@ -24,6 +25,7 @@ export function PrimaryButton({
   disabled = false,
   icon,
   iconFamily,
+  iconPosition = "leading",
   compact = false,
 }: PrimaryButtonProps) {
   const { colors } = useTheme();
@@ -43,7 +45,7 @@ export function PrimaryButton({
         <ActivityIndicator color={colors.surfaceBright} />
       ) : (
         <View style={styles.content}>
-          {icon ? (
+          {icon && iconPosition === "leading" ? (
             <Icon
               family={iconFamily}
               color={colors.surfaceBright}
@@ -52,6 +54,14 @@ export function PrimaryButton({
             />
           ) : null}
           <Text style={styles.label}>{label}</Text>
+          {icon && iconPosition === "trailing" ? (
+            <Icon
+              family={iconFamily}
+              color={colors.surfaceBright}
+              name={icon}
+              size={18}
+            />
+          ) : null}
         </View>
       )}
     </LinearGradient>

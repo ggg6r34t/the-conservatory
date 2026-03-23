@@ -205,6 +205,7 @@ export function WalkthroughScreen({
             compact
             iconFamily="MaterialIcons"
             icon="arrow-forward"
+            iconPosition="trailing"
             disabled={isNavigating}
             onPress={() => handleAction("next")}
           />
