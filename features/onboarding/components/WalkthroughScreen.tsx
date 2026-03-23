@@ -21,7 +21,11 @@ import {
 import { resolveWalkthroughTarget } from "@/features/onboarding/utils/resolveWalkthroughTarget";
 import { trackEvent } from "@/services/analytics/analyticsService";
 
-export function WalkthroughScreen() {
+export function WalkthroughScreen({
+  debugPreview = false,
+}: {
+  debugPreview?: boolean;
+}) {
   const router = useRouter();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
@@ -65,7 +69,11 @@ export function WalkthroughScreen() {
         return;
       }
 
-      router.push(target);
+      router.push(
+        debugPreview && target === "/onboarding/permissions"
+          ? "/debug/onboarding-permissions"
+          : target,
+      );
     } catch (error) {
       Alert.alert(
         "Unable to continue",

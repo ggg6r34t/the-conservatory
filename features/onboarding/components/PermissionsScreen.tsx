@@ -111,7 +111,11 @@ function PermissionCard({
   );
 }
 
-export function PermissionsScreen() {
+export function PermissionsScreen({
+  debugPreview = false,
+}: {
+  debugPreview?: boolean;
+}) {
   const router = useRouter();
   const { colors } = useTheme();
   const permissions = useOnboardingPermissions();
@@ -159,13 +163,17 @@ export function PermissionsScreen() {
     trackEvent("onboarding_permissions_continue_pressed");
     await permissions.requestAllPendingPermissions();
 
-    router.push("/onboarding/quick-start");
+    router.push(
+      debugPreview ? "/debug/onboarding-quick-start" : "/onboarding/quick-start",
+    );
   };
 
   const handleSkip = async () => {
     await markOnboardingAction("permissions_skip");
     trackEvent("onboarding_permissions_skipped");
-    router.push("/onboarding/quick-start");
+    router.push(
+      debugPreview ? "/debug/onboarding-quick-start" : "/onboarding/quick-start",
+    );
   };
 
   return (

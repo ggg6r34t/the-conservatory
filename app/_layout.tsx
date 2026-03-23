@@ -111,10 +111,28 @@ function RootNavigator({
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       {__DEV__ ? (
-        <Stack.Screen
-          name="debug/onboarding"
-          options={{ headerShown: false }}
-        />
+        <>
+          <Stack.Screen
+            name="debug/onboarding"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="debug/onboarding-welcome"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="debug/onboarding-walkthrough"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="debug/onboarding-permissions"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="debug/onboarding-quick-start"
+            options={{ headerShown: false }}
+          />
+        </>
       ) : null}
       <Stack.Screen
         name="onboarding/walkthrough"

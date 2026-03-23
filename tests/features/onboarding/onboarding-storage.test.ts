@@ -76,6 +76,25 @@ describe("onboardingStorage", () => {
     await expect(getOnboardingStatus()).resolves.toBe("pending");
   });
 
+  it("resets account-aware onboarding back to pending for signed-in users", async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: { onboarding_completed_at: "2026-03-23T00:00:00.000Z" },
+      error: null,
+    });
+
+    await expect(getOnboardingStatus("user-123")).resolves.toBe("completed");
+
+    mockMaybeSingle.mockResolvedValue({
+      data: { onboarding_completed_at: null },
+      error: null,
+    });
+
+    await resetOnboardingStatus({ userId: "user-123", scope: "both" });
+
+    await expect(getOnboardingStatus("user-123")).resolves.toBe("pending");
+    expect(mockUpdate).toHaveBeenCalled();
+  });
+
   it("promotes completed device onboarding into an authenticated account record", async () => {
     await completeOnboarding();
 

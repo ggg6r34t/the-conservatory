@@ -88,8 +88,13 @@ async function updateSnapshot(
   await writeSnapshot(next);
 }
 
-export async function getOnboardingDebugSnapshot(): Promise<ResolvedOnboardingDebugSnapshot> {
-  const [snapshot, status] = await Promise.all([readSnapshot(), getOnboardingStatus()]);
+export async function getOnboardingDebugSnapshot(
+  userId?: string,
+): Promise<ResolvedOnboardingDebugSnapshot> {
+  const [snapshot, status] = await Promise.all([
+    readSnapshot(),
+    getOnboardingStatus(userId),
+  ]);
   return {
     ...snapshot,
     status,

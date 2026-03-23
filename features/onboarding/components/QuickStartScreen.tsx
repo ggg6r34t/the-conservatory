@@ -69,7 +69,11 @@ function buildDraftNotes(lightCondition: LightCondition) {
   return "Performs best in bright indirect light.";
 }
 
-export default function QuickStartScreen() {
+export default function QuickStartScreen({
+  debugPreview = false,
+}: {
+  debugPreview?: boolean;
+}) {
   const router = useRouter();
   const { colors } = useTheme();
   const [speciesName, setSpeciesName] = useState("");
@@ -128,6 +132,11 @@ export default function QuickStartScreen() {
         lightCondition,
         hasPhoto: Boolean(photoUri),
       });
+      if (debugPreview) {
+        router.replace("/debug/onboarding");
+        return;
+      }
+
       router.push({
         pathname: "/(auth)/signup",
         params: { redirectTo: "/plant/add" },
@@ -149,7 +158,7 @@ export default function QuickStartScreen() {
       await completeOnboarding();
       await markOnboardingCompletedAt();
       trackEvent("onboarding_quick_start_skipped");
-      router.push("/(auth)/signup");
+      router.push(debugPreview ? "/debug/onboarding" : "/(auth)/signup");
     } catch (error) {
       Alert.alert(
         "Unable to continue",

@@ -14,7 +14,11 @@ import {
 } from "@/features/onboarding/services/onboardingDebugStorage";
 import { trackEvent } from "@/services/analytics/analyticsService";
 
-export function WelcomeGateway() {
+export function WelcomeGateway({
+  debugPreview = false,
+}: {
+  debugPreview?: boolean;
+}) {
   const router = useRouter();
   const { colors } = useTheme();
   const onboarding = useOnboarding();
@@ -33,7 +37,9 @@ export function WelcomeGateway() {
       setIsSubmitting(true);
       await markOnboardingAction("welcome_begin_collection");
       trackEvent("onboarding_welcome_cta_pressed", { target: "walkthrough" });
-      router.push("/onboarding/walkthrough");
+      router.push(
+        debugPreview ? "/debug/onboarding-walkthrough" : "/onboarding/walkthrough",
+      );
     } catch (error) {
       Alert.alert(
         "Unable to continue",
@@ -54,7 +60,7 @@ export function WelcomeGateway() {
       await markOnboardingAction("welcome_existing_account");
       trackEvent("onboarding_welcome_cta_pressed", { target: "login" });
       await onboarding.complete();
-      router.push("/(auth)/login");
+      router.push(debugPreview ? "/debug/onboarding" : "/(auth)/login");
     } catch (error) {
       Alert.alert(
         "Unable to continue",

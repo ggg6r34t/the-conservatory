@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { Button, Card, Divider, Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   getOnboardingDebugSnapshot,
   markOnboardingAction,
@@ -25,36 +26,43 @@ const formatTimestamp = (value: string | null | undefined) => {
 };
 
 export function OnboardingDebugScreen() {
+  const { user, isAuthenticated } = useAuth();
   const [snapshot, setSnapshot] = useState<ResolvedOnboardingDebugSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const userId = user?.id;
 
   const loadSnapshot = useCallback(async () => {
     setLoading(true);
     try {
-      const nextSnapshot = await getOnboardingDebugSnapshot();
+      const nextSnapshot = await getOnboardingDebugSnapshot(userId);
       setSnapshot(nextSnapshot);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     void loadSnapshot();
   }, [loadSnapshot]);
 
   const handleResetOnboarding = async () => {
-    await resetOnboardingStatus();
+    await resetOnboardingStatus({
+      userId,
+      scope: userId ? "both" : "device",
+    });
+    await markOnboardingAction("debug_reset");
     await resetOnboardingDebugSnapshot();
     await loadSnapshot();
-    router.replace("/");
   };
 
   const handleCompleteOnboarding = async () => {
-    await completeOnboarding();
+    await completeOnboarding({
+      userId,
+      scope: userId ? "both" : "device",
+    });
     await markOnboardingAction("debug_mark_completed");
     await markOnboardingCompletedAt();
     await loadSnapshot();
-    router.replace("/");
   };
 
   const milestoneRows = [
@@ -155,6 +163,14 @@ export function OnboardingDebugScreen() {
               </Text>
             </View>
           ))}
+          <View style={styles.dataRow}>
+            <Text variant="bodyMedium" style={styles.dataLabel}>
+              Active Account Scope
+            </Text>
+            <Text variant="bodyMedium" style={styles.dataValue}>
+              {isAuthenticated && userId ? "Signed-in account + device" : "Device only"}
+            </Text>
+          </View>
         </Card.Content>
       </Card>
 
@@ -188,7 +204,7 @@ export function OnboardingDebugScreen() {
 
           <Button
             mode="contained"
-            onPress={() => router.push("/")}
+            onPress={() => router.push("/debug/onboarding-welcome")}
             style={styles.actionButton}
             icon="home-outline"
           >
@@ -197,7 +213,7 @@ export function OnboardingDebugScreen() {
 
           <Button
             mode="outlined"
-            onPress={() => router.push("/onboarding/walkthrough")}
+            onPress={() => router.push("/debug/onboarding-walkthrough")}
             style={styles.actionButton}
             icon="view-carousel-outline"
           >
@@ -206,7 +222,7 @@ export function OnboardingDebugScreen() {
 
           <Button
             mode="outlined"
-            onPress={() => router.push("/onboarding/permissions")}
+            onPress={() => router.push("/debug/onboarding-permissions")}
             style={styles.actionButton}
             icon="shield-check-outline"
           >
@@ -215,7 +231,7 @@ export function OnboardingDebugScreen() {
 
           <Button
             mode="outlined"
-            onPress={() => router.push("/onboarding/quick-start")}
+            onPress={() => router.push("/debug/onboarding-quick-start")}
             style={styles.actionButton}
             icon="sprout-outline"
           >
@@ -241,6 +257,13 @@ export function OnboardingDebugScreen() {
           >
             Mark as Completed
           </Button>
+
+          <Divider style={styles.divider} />
+
+          <Text variant="bodySmall" style={styles.helperText}>
+            Reset and complete actions now target the same onboarding scope the app uses:
+            the active account when signed in, plus the device marker for first-run QA.
+          </Text>
 
           <Divider style={styles.divider} />
 

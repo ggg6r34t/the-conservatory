@@ -84,6 +84,40 @@ async function setRemoteOnboardingCompleted(userId: string): Promise<boolean> {
   }
 }
 
+async function clearRemoteOnboardingCompleted(userId: string): Promise<boolean> {
+  if (!env.isSupabaseConfigured || !supabase) {
+    return false;
+  }
+
+  try {
+    const updatedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from("users")
+      .update({
+        onboarding_completed_at: null,
+        updated_at: updatedAt,
+        updated_by: userId,
+      })
+      .eq("id", userId);
+
+    if (error) {
+      if (!isMissingRemoteColumnError(error)) {
+        logger.warn("onboarding.status.remote_reset_failed");
+      }
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    if (!isMissingRemoteColumnError(error)) {
+      logger.warn("onboarding.status.remote_reset_failed", {
+        message: error instanceof Error ? error.message : "unknown",
+      });
+    }
+    return false;
+  }
+}
+
 async function readStatus(key: string): Promise<OnboardingStatus> {
   try {
     const stored = await AsyncStorage.getItem(key);
@@ -190,6 +224,10 @@ export async function resetOnboardingStatus(options?: {
   scope?: "device" | "account" | "both";
 }): Promise<void> {
   const scope = options?.scope ?? (options?.userId ? "both" : "device");
+
+  if (options?.userId && (scope === "account" || scope === "both")) {
+    await clearRemoteOnboardingCompleted(options.userId);
+  }
 
   try {
     const removals: Promise<void>[] = [];
