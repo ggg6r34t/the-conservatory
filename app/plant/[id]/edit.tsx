@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
 import {
   Alert,
   Pressable,
@@ -12,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { MoveToGraveyardSheet } from "@/features/plants/components/MoveToGraveyardSheet";
 import { PlantForm } from "@/features/plants/components/PlantForm";
 import { useArchivePlant } from "@/features/plants/hooks/useArchivePlant";
 import { usePlant } from "@/features/plants/hooks/usePlant";
@@ -30,6 +32,7 @@ export default function EditPlantScreen() {
   const { colors, spacing } = useTheme();
   const plantQuery = usePlant(id ?? "");
   const archivePlant = useArchivePlant(id ?? "");
+  const [graveyardSheetVisible, setGraveyardSheetVisible] = useState(false);
   const plant = plantQuery.data;
   const primaryPhoto =
     plant?.photos.find((photo) => photo.isPrimary === 1) ?? plant?.photos[0];
@@ -38,35 +41,45 @@ export default function EditPlantScreen() {
     if (!plant) {
       return;
     }
+    setGraveyardSheetVisible(true);
+  };
 
-    Alert.alert(
-      "Move to Graveyard",
-      `Archive ${plant.plant.name} to the Graveyard? You can still revisit its memorial record later.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Move to Graveyard",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await archivePlant.mutateAsync();
-              router.replace("/(tabs)/graveyard");
-            } catch (error) {
-              Alert.alert(
-                "Unable to archive plant",
-                error instanceof Error ? error.message : "Try again.",
-              );
-            }
-          },
-        },
-      ],
-    );
+  const handleConfirmArchivePlant = async (input: {
+    causeOfPassing?: string;
+    memorialNote?: string;
+  }) => {
+    try {
+      await archivePlant.mutateAsync(input);
+      setGraveyardSheetVisible(false);
+      router.replace("/(tabs)/graveyard");
+    } catch (error) {
+      Alert.alert(
+        "Unable to archive plant",
+        error instanceof Error ? error.message : "Try again.",
+      );
+    }
   };
 
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
+      <MoveToGraveyardSheet
+        visible={graveyardSheetVisible}
+        plantName={plant?.plant.name ?? "this specimen"}
+        photoUri={
+          primaryPhoto?.localUri ?? primaryPhoto?.remoteUrl ?? undefined
+        }
+        initialMemorialNote={plant?.plant.notes}
+        loading={archivePlant.isPending}
+        onClose={() => {
+          if (!archivePlant.isPending) {
+            setGraveyardSheetVisible(false);
+          }
+        }}
+        onConfirm={handleConfirmArchivePlant}
+      />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[

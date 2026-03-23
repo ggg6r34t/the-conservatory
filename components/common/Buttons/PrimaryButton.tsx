@@ -15,6 +15,7 @@ interface PrimaryButtonProps {
   iconFamily?: React.ComponentProps<typeof Icon>["family"];
   iconPosition?: "leading" | "trailing";
   compact?: boolean;
+  tone?: "primary" | "memorial";
 }
 
 export function PrimaryButton({
@@ -27,12 +28,17 @@ export function PrimaryButton({
   iconFamily,
   iconPosition = "leading",
   compact = false,
+  tone = "primary",
 }: PrimaryButtonProps) {
   const { colors } = useTheme();
+  const gradientColors =
+    tone === "memorial"
+      ? (["#94492E", "#763219"] as const)
+      : ([colors.primary, colors.primaryContainer] as const);
 
   const content = (
     <LinearGradient
-      colors={[colors.primary, colors.primaryContainer]}
+      colors={gradientColors}
       start={{ x: 0.12, y: 0.08 }}
       end={{ x: 0.88, y: 0.92 }}
       style={[
