@@ -125,6 +125,7 @@ const styles = StyleSheet.create({
   },
   heroBlock: {
     gap: 24,
+    alignItems: "flex-start",
   },
   copyColumn: {
     gap: 16,

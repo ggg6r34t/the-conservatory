@@ -160,7 +160,7 @@ export default function CareRemindersScreen() {
           {
             paddingHorizontal: spacing.lg,
             paddingTop: spacing.lg,
-            paddingBottom: 112,
+            paddingBottom: 80,
           },
         ]}
       >
@@ -308,7 +308,7 @@ export default function CareRemindersScreen() {
                       <Icon
                         family={reminderIcon.family}
                         name={reminderIcon.name}
-                        size={14}
+                        size={16}
                         color={colors.onSurfaceVariant}
                       />
                       <Text
@@ -329,7 +329,7 @@ export default function CareRemindersScreen() {
                     family="MaterialCommunityIcons"
                     name="chevron-right"
                     size={22}
-                    color={colors.surfaceContainerHigh}
+                    color={colors.outlineVariant}
                   />
                 </Pressable>
 
@@ -348,7 +348,6 @@ export default function CareRemindersScreen() {
 
         <View style={styles.addButtonWrap}>
           <PrimaryButton
-            compact
             label={setReminder.isPending ? "Adding..." : "Add Reminder"}
             icon="plus"
             onPress={() => {
@@ -406,7 +405,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    gap: 26,
+    gap: 24,
   },
   topBar: {
     flexDirection: "row",
@@ -496,16 +495,17 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   reminderItemWrap: {
-    gap: 18,
+    gap: 0,
   },
   reminderItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
+    paddingVertical: 16,
   },
   reminderImageWrap: {
-    width: 68,
-    height: 68,
+    width: 80,
+    height: 80,
     borderRadius: 16,
     overflow: "hidden",
   },
@@ -524,8 +524,8 @@ const styles = StyleSheet.create({
   },
   reminderName: {
     fontFamily: "NotoSerif_700Bold",
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 20,
+    lineHeight: 28,
   },
   reminderMetaRow: {
     flexDirection: "row",
@@ -540,10 +540,12 @@ const styles = StyleSheet.create({
   rowRule: {
     height: 1,
     opacity: 0.45,
-    marginLeft: 84,
+    marginLeft: 96,
   },
   addButtonWrap: {
     width: "100%",
     alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
   },
 });
