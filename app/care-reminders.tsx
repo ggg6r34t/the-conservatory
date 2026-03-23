@@ -3,7 +3,6 @@ import { useMemo } from "react";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import { useSetReminder } from "@/features/notifications/hooks/useSetReminder";
@@ -94,6 +95,8 @@ function getReminderIcon(reminder?: CareReminder, fallbackDays = 7) {
 export default function CareRemindersScreen() {
   const router = useRouter();
   const { colors, spacing } = useTheme();
+  const alert = useAlert();
+  const snackbar = useSnackbar();
   const { user } = useAuth();
   const plantsQuery = usePlants();
   const remindersQuery = useReminders();
@@ -181,7 +184,7 @@ export default function CareRemindersScreen() {
               />
             </Pressable>
             <Text style={[styles.topBarTitle, { color: colors.primary }]}>
-              Care Reminders
+              Settings
             </Text>
           </View>
 
@@ -361,10 +364,13 @@ export default function CareRemindersScreen() {
               }
 
               if (!nextPlantWithoutReminder) {
-                Alert.alert(
-                  "All reminders active",
-                  "Every active specimen already has a reminder. Open a plant to fine-tune its schedule.",
-                );
+                void alert.show({
+                  variant: "info",
+                  title: "All reminders active",
+                  message:
+                    "Every active specimen already has a reminder. Open a plant to fine-tune its schedule.",
+                  primaryAction: { label: "Close" },
+                });
                 return;
               }
 
@@ -381,16 +387,18 @@ export default function CareRemindersScreen() {
                   enabled: remindersEnabled,
                 })
                 .then(() => {
-                  Alert.alert(
-                    "Reminder added",
+                  snackbar.success(
                     `${nextPlantWithoutReminder.name} is now part of your care schedule.`,
                   );
                 })
                 .catch((error) => {
-                  Alert.alert(
-                    "Unable to add reminder",
-                    error instanceof Error ? error.message : "Try again.",
-                  );
+                  void alert.show({
+                    variant: "error",
+                    title: "Unable to add reminder",
+                    message:
+                      error instanceof Error ? error.message : "Try again.",
+                    primaryAction: { label: "Close", tone: "danger" },
+                  });
                 });
             }}
           />

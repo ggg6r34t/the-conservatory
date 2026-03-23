@@ -1,10 +1,12 @@
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { queryKeys } from "@/config/constants";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   getBackupSummary,
@@ -39,6 +41,8 @@ function BackupMetric({
 
 export default function DataBackupScreen() {
   const { colors } = useTheme();
+  const alert = useAlert();
+  const snackbar = useSnackbar();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const network = useNetworkState();
@@ -58,15 +62,18 @@ export default function DataBackupScreen() {
         queryClient.invalidateQueries({ queryKey: queryKeys.preferences }),
         queryClient.invalidateQueries({ queryKey: ["profile-backup-summary", user?.id] }),
       ]);
-      Alert.alert("Sync complete", "Your local backup summary has been refreshed.");
+      snackbar.success("Your local backup summary has been refreshed.");
     },
     onError: (error) => {
-      Alert.alert(
-        "Sync failed",
-        error instanceof Error
-          ? error.message
-          : "We couldn't complete backup sync right now.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Sync failed",
+        message:
+          error instanceof Error
+            ? error.message
+            : "We couldn't complete backup sync right now.",
+        primaryAction: { label: "Close", tone: "danger" },
+      });
     },
   });
 

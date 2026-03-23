@@ -1,13 +1,17 @@
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { env } from "@/config/env";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 
 export default function PrivacySecurityScreen() {
   const { colors } = useTheme();
+  const alert = useAlert();
+  const snackbar = useSnackbar();
   const { user, requestPasswordReset } = useAuth();
 
   return (
@@ -58,15 +62,19 @@ export default function PrivacySecurityScreen() {
         onPress={async () => {
           try {
             await requestPasswordReset(user?.email ?? "");
-            Alert.alert(
-              "Reset requested",
+            snackbar.success(
               "If an account exists for this email, reset instructions will arrive shortly.",
             );
           } catch (error) {
-            Alert.alert(
-              "Request failed",
-              error instanceof Error ? error.message : "We couldn't start password recovery.",
-            );
+            void alert.show({
+              variant: "error",
+              title: "Request failed",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "We couldn't start password recovery.",
+              primaryAction: { label: "Close", tone: "danger" },
+            });
           }
         }}
       />

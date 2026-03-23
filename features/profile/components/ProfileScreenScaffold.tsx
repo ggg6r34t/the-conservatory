@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppHeader } from "@/components/common/TopBar/AppHeader";
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 
 interface ProfileScreenScaffoldProps {
@@ -19,6 +20,7 @@ export function ProfileScreenScaffold({
   description,
   children,
 }: ProfileScreenScaffoldProps) {
+  const router = useRouter();
   const { colors, spacing } = useTheme();
 
   return (
@@ -34,12 +36,40 @@ export function ProfileScreenScaffold({
           },
         ]}
       >
-        <AppHeader title={title} subtitle={subtitle} showBackButton />
-        {description ? (
-          <Text style={[styles.description, { color: colors.onSurfaceVariant }]}>
-            {description}
+        <View style={styles.topBar}>
+          <View style={styles.topBarLeft}>
+            <Pressable
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <Icon
+                family="MaterialCommunityIcons"
+                name="arrow-left"
+                size={24}
+                color={colors.primary}
+              />
+            </Pressable>
+            <Text style={[styles.topBarTitle, { color: colors.primary }]}>
+              Settings
+            </Text>
+          </View>
+        </View>
+        <View style={styles.hero}>
+          <Text style={[styles.eyebrow, { color: colors.secondary }]}>
+            {subtitle.toUpperCase()}
           </Text>
-        ) : null}
+          <Text style={[styles.heroTitle, { color: colors.primary }]}>
+            {title}
+          </Text>
+          {description ? (
+            <Text style={[styles.description, { color: colors.onSurfaceVariant }]}>
+              {description}
+            </Text>
+          ) : null}
+        </View>
         <View style={styles.body}>{children}</View>
       </ScrollView>
     </SafeAreaView>
@@ -52,6 +82,41 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 20,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  topBarLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  backButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topBarTitle: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 18,
+    lineHeight: 24,
+  },
+  hero: {
+    gap: 10,
+  },
+  eyebrow: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 2.4,
+  },
+  heroTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 40,
+    lineHeight: 46,
   },
   description: {
     fontFamily: "Manrope_500Medium",
