@@ -32,22 +32,24 @@ export function CareLogItem({ log }: CareLogItemProps) {
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 20,
-    padding: 16,
-    gap: 6,
+    borderRadius: 24,
+    padding: 18,
+    gap: 8,
   },
   type: {
     fontFamily: "Manrope_700Bold",
     fontSize: 12,
+    lineHeight: 16,
     letterSpacing: 2,
   },
   notes: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 22,
   },
   time: {
     fontFamily: "Manrope_500Medium",
     fontSize: 13,
+    lineHeight: 18,
   },
 });

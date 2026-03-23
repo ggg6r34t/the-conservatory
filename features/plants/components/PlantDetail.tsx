@@ -111,8 +111,12 @@ function getLogHeading(logType: CareLogType) {
       return "Humidity\nRefresh";
     case "feed":
       return "Feed\nSession";
+    case "repot":
+      return "Repot &\nRefresh";
     case "prune":
       return "Propagation\nPruning";
+    case "inspect":
+      return "Routine\nInspection";
     case "pest":
       return "Pest\nInspection";
     case "note":
@@ -133,8 +137,12 @@ function getLogBody(logType: CareLogType, notes?: string | null) {
       return "Boosted ambient moisture and refreshed the upper leaves.";
     case "feed":
       return "Fed to support steady growth and richer foliage tone.";
+    case "repot":
+      return "Repotted into fresh soil and refreshed the root zone to support steadier growth.";
     case "prune":
       return "Removed two older leaves for propagation. Nodes were placed in distilled water for root development.";
+    case "inspect":
+      return "Completed a close foliage and stem inspection to track growth and spot early issues.";
     case "pest":
       return "Cleaned leaves with neem oil. No signs of thrips or spider mites detected during routine check.";
     case "note":
@@ -148,11 +156,15 @@ function getLogIcon(logType: CareLogType) {
     case "water":
       return "water-drop";
     case "mist":
-      return "water-drop";
+      return "opacity";
     case "feed":
       return "leaf";
+    case "repot":
+      return "yard";
     case "prune":
       return "content-cut";
+    case "inspect":
+      return "search";
     case "pest":
       return "filter-center-focus";
     case "note":
@@ -273,6 +285,16 @@ function getActivityBadgeStyle(
       return {
         backgroundColor: "#dae7c9",
         iconColor: "#2a3521",
+      };
+    case "inspect":
+      return {
+        backgroundColor: "#dae7c9",
+        iconColor: "#2a3521",
+      };
+    case "repot":
+      return {
+        backgroundColor: "#ffdbcf",
+        iconColor: "#94492e",
       };
     case "prune":
       return {

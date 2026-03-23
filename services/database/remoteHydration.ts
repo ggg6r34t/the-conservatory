@@ -48,7 +48,7 @@ interface RemotePhotoRow extends MergeableRemoteRow {
 interface RemoteCareLogRow extends MergeableRemoteRow {
   user_id: string;
   plant_id: string;
-  log_type: "water" | "mist" | "feed" | "prune" | "pest" | "note";
+  log_type: "water" | "mist" | "feed" | "repot" | "prune" | "inspect" | "pest" | "note";
   notes: string | null;
   logged_at: string;
   created_at: string;

@@ -1,7 +1,16 @@
 import { z } from "zod";
 
 export const careLogSchema = z.object({
-  logType: z.enum(["water", "mist", "feed", "prune", "pest", "note"]),
+  logType: z.enum([
+    "water",
+    "mist",
+    "feed",
+    "repot",
+    "prune",
+    "inspect",
+    "pest",
+    "note",
+  ]),
   notes: z.string().optional(),
 });
 

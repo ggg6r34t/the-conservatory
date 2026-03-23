@@ -93,8 +93,12 @@ function formatEntryCopy(log: CareLog, plantName: string) {
       return `Light misting for ${plantName.toLowerCase()}.`;
     case "feed":
       return `Fed to support a healthy new growth cycle.`;
+    case "repot":
+      return `Repotted ${plantName.toLowerCase()} into fresh soil for healthier root growth.`;
     case "prune":
       return `Pruned back a few leaves for shape.`;
+    case "inspect":
+      return `Routine inspection complete with notes on foliage, stems, and overall vigor.`;
     case "pest":
       return `Routine pest inspection and cleanup.`;
     case "note":
@@ -108,11 +112,15 @@ function getLogIconName(logType: CareLog["logType"]) {
     case "water":
       return "water-drop";
     case "mist":
-      return "water-outline";
+      return "opacity";
     case "feed":
       return "white-balance-sunny";
+    case "repot":
+      return "shovel";
     case "prune":
       return "content-cut";
+    case "inspect":
+      return "magnify";
     case "pest":
       return "ladybug";
     case "note":
@@ -126,10 +134,14 @@ function getLogIconColor(
   colors: ReturnType<typeof useTheme>["colors"],
 ) {
   switch (logType) {
+    case "repot":
+      return colors.secondary;
     case "prune":
       return colors.secondaryOnContainer;
     case "feed":
       return colors.primary;
+    case "inspect":
+      return colors.onSurfaceVariant;
     case "pest":
       return colors.error;
     case "note":
@@ -138,6 +150,22 @@ function getLogIconColor(
     case "water":
     default:
       return colors.primary;
+  }
+}
+
+function getLogIconFamily(logType: CareLog["logType"]) {
+  switch (logType) {
+    case "water":
+    case "mist":
+      return "MaterialIcons" as const;
+    case "feed":
+    case "repot":
+    case "prune":
+    case "inspect":
+    case "pest":
+    case "note":
+    default:
+      return "MaterialCommunityIcons" as const;
   }
 }
 
@@ -308,11 +336,7 @@ export default function JournalScreen() {
                             ]}
                           >
                             <Icon
-                              family={
-                                log.logType === "water"
-                                  ? "MaterialIcons"
-                                  : "MaterialCommunityIcons"
-                              }
+                              family={getLogIconFamily(log.logType)}
                               name={getLogIconName(log.logType)}
                               size={24}
                               color={getLogIconColor(log.logType, colors)}

@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "@/components/design-system/useTheme";
 import { CareLogForm } from "@/features/care-logs/components/CareLogForm";
@@ -19,6 +20,7 @@ export default function CareLogRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors, spacing } = useTheme();
+  const insets = useSafeAreaInsets();
   const plantQuery = usePlant(id ?? "");
   const plant = plantQuery.data?.plant;
   const primaryPhoto = plantQuery.data?.photos.find(
@@ -88,7 +90,7 @@ export default function CareLogRoute() {
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: spacing.xl }}
+          contentContainerStyle={{ paddingBottom: Math.max(spacing.xl, insets.bottom + 24) }}
         >
           <View style={styles.dragRegion} {...panResponder.panHandlers}>
             <View
@@ -171,13 +173,13 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   content: {
-    gap: 26,
+    gap: 28,
   },
   dragRegion: {
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 2,
-    paddingBottom: 14,
+    paddingBottom: 12,
   },
   handle: {
     width: 74,
@@ -187,22 +189,22 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: "NotoSerif_700Bold",
-    fontSize: 35,
-    lineHeight: 45,
+    fontSize: 32,
+    lineHeight: 36,
   },
   body: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 21,
   },
   plantCard: {
     borderRadius: 28,
     minHeight: 112,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 12,
   },
   plantImage: {
     width: 76,
@@ -211,21 +213,24 @@ const styles = StyleSheet.create({
   },
   plantCopy: {
     flex: 1,
-    gap: 8,
+    gap: 6,
   },
   plantName: {
     fontFamily: "NotoSerif_700Bold",
-    fontSize: 23,
+    fontSize: 20,
     lineHeight: 28,
   },
   plantLocation: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 14,
+    fontSize: 12,
+    lineHeight: 16,
     letterSpacing: 1.6,
   },
   changeText: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 16,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 1.5,
     textDecorationLine: "underline",
     textDecorationColor: "#c5ebd4",
   },

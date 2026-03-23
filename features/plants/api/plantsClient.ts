@@ -5,6 +5,7 @@ import { getDatabase } from "@/services/database/sqlite";
 import { enqueueSyncOperation } from "@/services/database/sync";
 import { getStorageAssetUrl } from "@/services/supabase/storage";
 import type {
+  CareLogType,
   GraveyardPlant,
   Photo,
   Plant,
@@ -392,7 +393,7 @@ export async function getPlantById(
     id: string;
     user_id: string;
     plant_id: string;
-    log_type: "water" | "mist" | "feed" | "prune" | "pest" | "note";
+    log_type: CareLogType;
     notes: string | null;
     logged_at: string;
     created_at: string;

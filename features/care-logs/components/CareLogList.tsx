@@ -19,6 +19,6 @@ export function CareLogList({ logs }: CareLogListProps) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 12,
+    gap: 14,
   },
 });

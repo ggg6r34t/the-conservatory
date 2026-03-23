@@ -2,14 +2,14 @@ import { upsertReminder } from "@/features/notifications/api/remindersClient";
 import { getPlantById } from "@/features/plants/api/plantsClient";
 import { getDatabase } from "@/services/database/sqlite";
 import { enqueueSyncOperation } from "@/services/database/sync";
-import type { CareLog } from "@/types/models";
+import type { CareLog, CareLogType } from "@/types/models";
 import { createId } from "@/utils/id";
 
 function mapCareLog(row: {
   id: string;
   user_id: string;
   plant_id: string;
-  log_type: "water" | "mist" | "feed" | "prune" | "pest" | "note";
+  log_type: CareLogType;
   notes: string | null;
   logged_at: string;
   created_at: string;
@@ -47,7 +47,7 @@ export async function listCareLogs(plantId: string) {
     id: string;
     user_id: string;
     plant_id: string;
-    log_type: "water" | "mist" | "feed" | "prune" | "pest" | "note";
+    log_type: CareLogType;
     notes: string | null;
     logged_at: string;
     created_at: string;
@@ -67,7 +67,7 @@ export async function listCareLogs(plantId: string) {
 export async function createCareLog(input: {
   userId: string;
   plantId: string;
-  logType: "water" | "mist" | "feed" | "prune" | "pest" | "note";
+  logType: CareLogType;
   notes?: string;
 }) {
   const database = await getDatabase();
@@ -143,7 +143,7 @@ export async function createCareLog(input: {
     id: string;
     user_id: string;
     plant_id: string;
-    log_type: "water" | "mist" | "feed" | "prune" | "pest" | "note";
+    log_type: CareLogType;
     notes: string | null;
     logged_at: string;
     created_at: string;

@@ -14,19 +14,24 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAddLog } from "@/features/care-logs/hooks/useAddLog";
+import type { CareLogType } from "@/types/models";
 
 interface CareLogFormProps {
   plantId: string;
 }
 
 const logTypes: {
-  key: "water" | "feed" | "prune" | "pest" | "note";
+  key: CareLogType;
   label: string;
   icon: string;
+  iconFamily?: React.ComponentProps<typeof Icon>["family"];
 }[] = [
-  { key: "water", label: "WATER", icon: "water-outline" },
+  { key: "water", label: "WATER", icon: "water-drop", iconFamily: "MaterialIcons" },
+  { key: "mist", label: "MIST", icon: "opacity", iconFamily: "MaterialIcons" },
   { key: "feed", label: "FERTILIZE", icon: "white-balance-sunny" },
+  { key: "repot", label: "REPOT", icon: "shovel" },
   { key: "prune", label: "PRUNE", icon: "content-cut" },
+  { key: "inspect", label: "INSPECT", icon: "magnify" },
   { key: "pest", label: "PESTS", icon: "bug-outline" },
   { key: "note", label: "PHOTO", icon: "camera-outline" },
 ];
@@ -37,9 +42,7 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
   const router = useRouter();
   const { colors } = useTheme();
   const [notes, setNotes] = useState("");
-  const [logType, setLogType] = useState<
-    "water" | "feed" | "prune" | "pest" | "note"
-  >("water");
+  const [logType, setLogType] = useState<CareLogType>("water");
   const [condition, setCondition] =
     useState<(typeof conditionOptions)[number]>("Healthy");
   const addLog = useAddLog(plantId);
@@ -94,6 +97,7 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
                   ]}
                 >
                   <Icon
+                    family={type.iconFamily}
                     name={type.icon}
                     size={24}
                     color={
@@ -205,23 +209,24 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 30,
+    gap: 28,
   },
   section: {
-    gap: 12,
+    gap: 14,
   },
   sectionLabel: {
     fontFamily: "Manrope_700Bold",
     fontSize: 12,
+    lineHeight: 16,
     letterSpacing: 2.6,
   },
   typeRow: {
-    gap: 16,
+    gap: 12,
     paddingRight: 24,
   },
   typeOption: {
     width: 64,
-    gap: 6,
+    gap: 8,
     alignItems: "center",
   },
   typeTile: {
@@ -234,17 +239,17 @@ const styles = StyleSheet.create({
   typeLabel: {
     fontFamily: "Manrope_700Bold",
     fontSize: 10,
-    lineHeight: 13,
+    lineHeight: 14,
     textAlign: "center",
   },
   notesInput: {
-    minHeight: 210,
+    minHeight: 196,
     borderRadius: 28,
     paddingHorizontal: 20,
     paddingVertical: 18,
     fontFamily: "Manrope_500Medium",
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 22,
   },
   timeRow: {
     borderRadius: 26,
@@ -261,16 +266,16 @@ const styles = StyleSheet.create({
   },
   timeLabel: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 21,
   },
   conditionWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   conditionChip: {
-    minHeight: 46,
+    minHeight: 44,
     borderRadius: 999,
     paddingHorizontal: 16,
     alignItems: "center",

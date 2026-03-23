@@ -1,6 +1,14 @@
 export type EntitySyncState = "synced" | "pending" | "error";
 export type PlantStatus = "active" | "graveyard";
-export type CareLogType = "water" | "mist" | "feed" | "prune" | "pest" | "note";
+export type CareLogType =
+  | "water"
+  | "mist"
+  | "feed"
+  | "repot"
+  | "prune"
+  | "inspect"
+  | "pest"
+  | "note";
 export type ReminderType = "water" | "mist" | "feed";
 
 export interface AppUser {
