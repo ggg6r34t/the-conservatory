@@ -1,0 +1,59 @@
+{
+  "cli": {
+    "version": ">= 15.0.6",
+    "appVersionSource": "remote",
+    "requireCommit": true
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "node": "22.18.0",
+      "environment": "development",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "npm_config_legacy_peer_deps": "true"
+      },
+      "channel": "development"
+    },
+    "development-simulator": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "node": "22.18.0",
+      "environment": "development",
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "npm_config_legacy_peer_deps": "true"
+      },
+      "channel": "development-simulator"
+    },
+    "preview": {
+      "distribution": "internal",
+      "node": "22.18.0",
+      "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "preview"
+    },
+    "production": {
+      "autoIncrement": true,
+      "node": "22.18.0",
+      "environment": "production",
+      "channel": "production",
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

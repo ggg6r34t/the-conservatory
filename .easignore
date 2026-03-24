@@ -1,0 +1,84 @@
+# dependencies
+
+node_modules/
+
+# Expo / build output
+
+.expo/
+.expo-shared/
+dist/
+web-build/
+coverage/
+.nyc_output/
+
+# generated native folders (managed workflow)
+
+/ios
+/android
+
+# native build artifacts
+
+.gradle/
+.kotlin/
+build/
+ios/build/
+android/build/
+android/.gradle/
+android/app/build/
+android/app/release/
+_.apk
+_.aab
+
+# logs and caches
+
+npm-debug._
+yarn-debug._
+yarn-error.\*
+\*.log
+.cache/
+.eslintcache
+.swc/
+.turbo/
+.parcel-cache/
+
+# local env / secrets
+
+.env
+.env.\*
+!.env.example
+
+# OS / editor noise
+
+.DS*Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+\_.swo
+
+# temporary watcher files
+
+.metro-health-check\*
+
+# keys / certs / provisioning
+
+_.jks
+_.keystore
+_.p8
+_.p12
+_.key
+_.mobileprovision
+
+# local database files
+
+_.db
+_.db-shm
+_.db-wal
+_.sqlite
+\*.sqlite3
+
+# optional non-build assets
+
+docs/
+tests/
+scripts/

@@ -35,6 +35,9 @@ yarn-error.*
 .env.*
 !.env.example
 
+# EAS
+# Note: .easignore should be tracked, not ignored
+
 # typescript
 *.tsbuildinfo
 
