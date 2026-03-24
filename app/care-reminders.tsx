@@ -2,27 +2,21 @@ import { useMemo } from "react";
 
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
-import { useAlert } from "@/hooks/useAlert";
-import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import { useSetReminder } from "@/features/notifications/hooks/useSetReminder";
 import { usePlants } from "@/features/plants/hooks/usePlants";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import type { CareReminder } from "@/types/models";
 
 function formatReminderCopy(reminder?: CareReminder, fallbackDays = 7) {
@@ -228,7 +222,8 @@ export default function CareRemindersScreen() {
                 { color: colors.onSurfaceVariant },
               ]}
             >
-              Stay updated on your plant&apos;s needs
+              Stay updated on your plant&apos;s needs. This switch only changes
+              reminders on this device.
             </Text>
           </View>
 
@@ -506,6 +501,22 @@ const styles = StyleSheet.create({
   notificationsBody: {
     fontFamily: "Manrope_500Medium",
     fontSize: 13,
+    lineHeight: 18,
+  },
+  scopeCard: {
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    gap: 6,
+  },
+  scopeLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    letterSpacing: 1.8,
+  },
+  scopeBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 12,
     lineHeight: 18,
   },
   toggleTrack: {

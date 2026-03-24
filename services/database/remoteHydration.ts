@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
 import { supabase } from "@/config/supabase";
+import { resolveConflict } from "@/services/database/conflictResolver";
 import { getDatabase } from "@/services/database/sqlite";
 import {
   getStorageAssetUrl,
@@ -167,14 +168,16 @@ async function shouldReplaceLocalRow(
     return true;
   }
 
-  if (localRow.pending === 1) {
-    return false;
-  }
+  const result = resolveConflict({
+    entity: table,
+    entityId: row.id,
+    strategy: "last-write-wins",
+    localUpdatedAt: localRow.updated_at,
+    remoteUpdatedAt: row.updated_at,
+    localPending: localRow.pending === 1,
+  });
 
-  return (
-    new Date(row.updated_at).getTime() >=
-    new Date(localRow.updated_at).getTime()
-  );
+  return result.winner === "remote";
 }
 
 async function reconcileRemoteDeletions(params: {

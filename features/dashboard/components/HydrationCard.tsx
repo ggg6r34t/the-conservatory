@@ -5,21 +5,79 @@ import { useTheme } from "@/components/design-system/useTheme";
 
 interface HydrationCardProps {
   dueToday: number;
+  overdue: number;
 }
 
-export function HydrationCard({ dueToday }: HydrationCardProps) {
-  const { colors } = useTheme();
+function countLabel(value: number) {
+  const rounded = Math.max(0, Math.floor(value));
+  const words = [
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+    "twenty",
+  ] as const;
 
-  const statusCopy =
-    dueToday === 0
-      ? "All specimens are comfortably hydrated."
-      : "All specimens are within safe moisture levels.";
-  const cycleCopy =
-    dueToday === 0
-      ? "Next cycle begins tomorrow."
-      : `Next cycle in ${Math.max(1, dueToday)}${
-          dueToday === 1 ? " hour" : " hours"
-        }.`;
+  if (rounded <= 20) {
+    return words[rounded];
+  }
+
+  return String(rounded);
+}
+
+function capitalize(value: string) {
+  if (!value.length) {
+    return value;
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export function HydrationCard({ dueToday, overdue }: HydrationCardProps) {
+  const { colors } = useTheme();
+  const dueTodayCount = Math.max(0, Math.floor(dueToday));
+  const overdueCount = Math.max(0, Math.floor(overdue));
+  const hasOverdue = overdueCount > 0;
+  const hasDueSoon = dueTodayCount > 0;
+  const hasNoTimeLeft = dueTodayCount === 0;
+
+  let statusCopy = "";
+
+  if (hasOverdue) {
+    statusCopy = `${capitalize(countLabel(overdueCount))} ${overdueCount === 1 ? "specimen needs" : "specimens need"} attention today. ${capitalize(countLabel(dueTodayCount))} ${dueTodayCount === 1 ? "care window opens" : "care windows open"} in the next day.`;
+  } else if (hasNoTimeLeft) {
+    statusCopy = "All specimens are comfortably hydrated.";
+  } else {
+    statusCopy = `${capitalize(countLabel(dueTodayCount))} ${dueTodayCount === 1 ? "specimen is" : "specimens are"} due for care within the next day.`;
+  }
+
+  let cycleCopy = "";
+
+  if (hasNoTimeLeft || hasOverdue) {
+    cycleCopy = "A gentle watering pass today should keep your rhythm steady.";
+  } else if (hasDueSoon) {
+    cycleCopy = `Next cycle in ${Math.max(1, dueTodayCount)}${
+      dueTodayCount === 1 ? " hour" : " hours"
+    }.`;
+  } else {
+    cycleCopy = "Next cycle begins tomorrow.";
+  }
 
   return (
     <View
@@ -38,12 +96,14 @@ export function HydrationCard({ dueToday }: HydrationCardProps) {
           Hydration
         </Text>
       </View>
-      <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
-        {statusCopy}
-      </Text>
-      <Text style={[styles.meta, { color: colors.onSurfaceVariant }]}>
-        {cycleCopy}
-      </Text>
+      <View>
+        <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
+          {statusCopy}
+        </Text>
+        <Text style={[styles.meta, { color: colors.onSurfaceVariant }]}>
+          {cycleCopy}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -72,12 +132,12 @@ const styles = StyleSheet.create({
   },
   body: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 22,
   },
   meta: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 22,
   },
 });

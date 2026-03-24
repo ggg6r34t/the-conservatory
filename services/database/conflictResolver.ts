@@ -2,9 +2,42 @@ export interface ConflictRecord {
   entity: string;
   entityId: string;
   strategy: "last-write-wins";
+  localUpdatedAt: string | null;
+  remoteUpdatedAt: string;
+  localPending: boolean;
 }
 
-export function resolveConflict(record: ConflictRecord) {
-  console.warn("resolveConflict is a Phase 3 placeholder.", record);
-  return record;
+export type ConflictWinner = "local" | "remote";
+
+export interface ConflictResolutionResult {
+  winner: ConflictWinner;
+  reason: "local-pending" | "remote-newer" | "local-newer-or-equal";
+}
+
+export function resolveConflict(
+  record: ConflictRecord,
+): ConflictResolutionResult {
+  if (record.localPending) {
+    return {
+      winner: "local",
+      reason: "local-pending",
+    };
+  }
+
+  const localUpdatedAt = record.localUpdatedAt
+    ? new Date(record.localUpdatedAt).getTime()
+    : Number.NEGATIVE_INFINITY;
+  const remoteUpdatedAt = new Date(record.remoteUpdatedAt).getTime();
+
+  if (remoteUpdatedAt > localUpdatedAt) {
+    return {
+      winner: "remote",
+      reason: "remote-newer",
+    };
+  }
+
+  return {
+    winner: "local",
+    reason: "local-newer-or-equal",
+  };
 }

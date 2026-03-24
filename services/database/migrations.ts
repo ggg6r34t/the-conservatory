@@ -161,7 +161,21 @@ async function ensureColumn(
   );
 }
 
+async function removeOrphanedPlantChildren(database: SQLiteDatabase) {
+  // Tier-2 guardrail: current tables were created without FK constraints.
+  // Until a full table-rebuild migration is scheduled, clean obvious orphans
+  // so child tables do not retain references to deleted plants.
+  await database.execAsync(`
+DELETE FROM photos WHERE plant_id NOT IN (SELECT id FROM plants);
+DELETE FROM care_logs WHERE plant_id NOT IN (SELECT id FROM plants);
+DELETE FROM care_reminders WHERE plant_id NOT IN (SELECT id FROM plants);
+DELETE FROM graveyard_plants WHERE plant_id NOT IN (SELECT id FROM plants);
+`);
+}
+
 export async function runDatabaseMigrations(database: SQLiteDatabase) {
   await database.execAsync(bootstrapSql);
+  await database.execAsync("PRAGMA foreign_keys = ON;");
   await ensureColumn(database, "care_logs", "current_condition", "TEXT");
+  await removeOrphanedPlantChildren(database);
 }

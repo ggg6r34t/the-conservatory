@@ -5,6 +5,16 @@ import type { ObservationTag } from "@/features/ai/types/ai";
 import type { CareLogType } from "@/types/models";
 
 const NOTE_TAG_MARKER = "\n\nTags: ";
+const NOTE_META_PREFIX = "\n\n[meta:";
+const NOTE_META_SUFFIX = "]";
+const VALID_OBSERVATION_TAGS: ObservationTag[] = [
+  "new growth",
+  "yellowing leaves",
+  "dry soil",
+  "pest concern",
+  "pruning",
+  "stable condition",
+];
 
 const TAG_PATTERNS: Array<{ tag: ObservationTag; patterns: RegExp[] }> = [
   {
@@ -39,6 +49,39 @@ function sentenceCase(value: string) {
   }
 
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function normalizeObservationTags(values: string[]) {
+  const unique = new Set(
+    values
+      .map((value) => value.trim().toLowerCase())
+      .filter((value): value is ObservationTag =>
+        VALID_OBSERVATION_TAGS.includes(value as ObservationTag),
+      ),
+  );
+
+  return Array.from(unique);
+}
+
+function parseMetaEnvelope(raw: string) {
+  const markerIndex = raw.lastIndexOf(NOTE_META_PREFIX);
+  if (markerIndex === -1 || !raw.endsWith(NOTE_META_SUFFIX)) {
+    return null;
+  }
+
+  const body = raw.slice(0, markerIndex).trim();
+  const payload = raw.slice(
+    markerIndex + NOTE_META_PREFIX.length,
+    raw.length - NOTE_META_SUFFIX.length,
+  );
+
+  try {
+    const parsed = JSON.parse(payload) as { tags?: string[] };
+    const tags = normalizeObservationTags(parsed.tags ?? []);
+    return { body, tags };
+  } catch {
+    return null;
+  }
 }
 
 export function extractObservationTags(note: string, logType: CareLogType) {
@@ -82,6 +125,11 @@ export function parseStructuredCareLogNote(note?: string | null) {
     return { body: "", tags: [] as ObservationTag[] };
   }
 
+  const metaEnvelope = parseMetaEnvelope(raw);
+  if (metaEnvelope) {
+    return metaEnvelope;
+  }
+
   const markerIndex = raw.lastIndexOf(NOTE_TAG_MARKER);
   if (markerIndex === -1) {
     return { body: raw, tags: [] as ObservationTag[] };
@@ -89,19 +137,7 @@ export function parseStructuredCareLogNote(note?: string | null) {
 
   const body = raw.slice(0, markerIndex).trim();
   const tagSection = raw.slice(markerIndex + NOTE_TAG_MARKER.length);
-  const tags = tagSection
-    .split(",")
-    .map((value) => value.trim().toLowerCase())
-    .filter((value): value is ObservationTag =>
-      [
-        "new growth",
-        "yellowing leaves",
-        "dry soil",
-        "pest concern",
-        "pruning",
-        "stable condition",
-      ].includes(value),
-    );
+  const tags = normalizeObservationTags(tagSection.split(","));
 
   return { body, tags };
 }
@@ -111,11 +147,13 @@ export function formatCareLogNoteForStorage(input: {
   tags: ObservationTag[];
 }) {
   const body = input.note.trim();
-  if (!input.tags.length) {
+  const tags = normalizeObservationTags(input.tags);
+
+  if (!tags.length) {
     return body;
   }
 
-  return `${body}${NOTE_TAG_MARKER}${input.tags.join(", ")}`.trim();
+  return `${body}${NOTE_META_PREFIX}${JSON.stringify({ tags })}${NOTE_META_SUFFIX}`.trim();
 }
 
 export function buildCareLogNoteForSave(input: {

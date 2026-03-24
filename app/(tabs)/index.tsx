@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
 import { useQueries } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import {
   RefreshControl,
   ScrollView,
@@ -19,8 +19,8 @@ import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMet
 import { queryKeys } from "@/config/constants";
 import { DashboardInsightCard } from "@/features/ai/components/DashboardInsightCard";
 import { useDashboardInsight } from "@/features/ai/hooks/useDashboardInsight";
-import { decideDashboardPresentation } from "@/features/ai/services/dashboardPresentationService";
 import { useStreakRecoveryNudge } from "@/features/ai/hooks/useStreakRecoveryNudge";
+import { decideDashboardPresentation } from "@/features/ai/services/dashboardPresentationService";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { listCareLogs } from "@/features/care-logs/api/careLogsClient";
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
@@ -28,6 +28,7 @@ import { HydrationCard } from "@/features/dashboard/components/HydrationCard";
 import { StreakSummary } from "@/features/dashboard/components/StreakSummary";
 import { UpcomingCare } from "@/features/dashboard/components/UpcomingCare";
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
+import { buildDashboardHeroCopy } from "@/features/dashboard/services/dashboardHeroCopy";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 
@@ -43,6 +44,34 @@ export default function HomeScreen() {
   const plantPhotoUris = dashboard.plants
     .map((plant) => plant.primaryPhotoUri)
     .filter((uri): uri is string => Boolean(uri));
+  const now = Date.now();
+  const overdueCount = dashboard.plants.filter((plant) => {
+    if (!plant.nextWaterDueAt) {
+      return false;
+    }
+
+    return new Date(plant.nextWaterDueAt).getTime() <= now;
+  }).length;
+  const upcomingCareCount = dashboard.plants.filter((plant) => {
+    if (!plant.nextWaterDueAt) {
+      return false;
+    }
+
+    const dueAt = new Date(plant.nextWaterDueAt).getTime();
+    return (
+      dueAt > now + 24 * 60 * 60 * 1000 && dueAt <= now + 72 * 60 * 60 * 1000
+    );
+  }).length;
+  const activeReminderCount = (remindersQuery.data ?? []).filter(
+    (reminder) => reminder.enabled,
+  ).length;
+  const heroCopy = buildDashboardHeroCopy({
+    totalPlants: dashboard.plants.length,
+    dueToday: dashboard.dueToday.length,
+    overdue: overdueCount,
+    upcomingCare: upcomingCareCount,
+    activeReminders: activeReminderCount,
+  });
   const logQueries = useQueries({
     queries: dashboard.plants.map((plant) => ({
       queryKey: queryKeys.careLogs(plant.id),
@@ -95,7 +124,7 @@ export default function HomeScreen() {
         <View style={styles.heroBlock}>
           <View style={styles.copyColumn}>
             <Text style={[styles.eyebrow, { color: colors.secondary }]}>
-              YOUR LIVING GALLERY
+              {heroCopy.eyebrow}
             </Text>
             <View style={styles.titleBlock}>
               <Text style={[styles.title, { color: colors.primary }]}>
@@ -111,8 +140,7 @@ export default function HomeScreen() {
               </Text>
             </View>
             <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
-              Welcome back. Your indoor sanctuary is looking lush today. Three
-              specimens are currently ready for hydration.
+              {heroCopy.body}
             </Text>
           </View>
           <PrimaryButton
@@ -123,7 +151,10 @@ export default function HomeScreen() {
           />
         </View>
 
-        <HydrationCard dueToday={dashboard.dueToday.length} />
+        <HydrationCard
+          dueToday={dashboard.dueToday.length}
+          overdue={overdueCount}
+        />
 
         {presentation.primaryInsight ? (
           <DashboardInsightCard insight={presentation.primaryInsight} />

@@ -16,7 +16,7 @@ export function SettingsForm() {
     <View>
       <PreferenceControl
         label="Watering Alerts"
-        description="Stay updated on your plants' needs with local reminders."
+        description="Stay updated on your plants' needs with reminders saved on this device."
         value={settingsQuery.data.remindersEnabled}
         onValueChange={(next) => {
           updateSettings.mutate({ remindersEnabled: next });

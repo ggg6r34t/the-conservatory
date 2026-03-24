@@ -626,6 +626,12 @@ const styles = StyleSheet.create({
     letterSpacing: 2.1,
     paddingHorizontal: 8,
   },
+  sectionDetail: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 12,
+    lineHeight: 19,
+    paddingHorizontal: 8,
+  },
   groupCard: {
     borderRadius: 28,
     paddingHorizontal: 18,

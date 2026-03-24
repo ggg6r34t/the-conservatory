@@ -58,4 +58,15 @@ describe("observationTaggingService", () => {
       tags: ["stable condition"],
     });
   });
+
+  it("parses legacy tag marker envelopes for backward compatibility", () => {
+    const parsed = parseStructuredCareLogNote(
+      "Checked leaves and wiped dust.\n\nTags: stable condition, new growth",
+    );
+
+    expect(parsed).toEqual({
+      body: "Checked leaves and wiped dust.",
+      tags: ["stable condition", "new growth"],
+    });
+  });
 });

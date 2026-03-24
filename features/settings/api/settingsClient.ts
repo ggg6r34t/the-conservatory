@@ -1,6 +1,9 @@
 import { getDatabase } from "@/services/database/sqlite";
 import type { UserPreferences } from "@/types/models";
 
+// Product decision: user preferences remain device-local for this release.
+// They are scoped by signed-in user_id locally, but they are not synced to remote.
+
 function defaultPreferences(userId: string): UserPreferences {
   const now = new Date().toISOString();
   return {
@@ -55,7 +58,7 @@ export async function getUserPreferences(userId: string) {
     }>("SELECT * FROM user_preferences WHERE user_id = ? LIMIT 1;", userId);
 
   const row = await readPreferences();
- 
+
   if (row) {
     return mapPreferences(row);
   }

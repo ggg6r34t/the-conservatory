@@ -50,8 +50,10 @@ describe("DataBackupScreen", () => {
       photos: 4,
       careLogs: 6,
       reminders: 2,
-      pendingSync: 1,
-      failedSync: 0,
+      pendingSyncUser: 1,
+      failedSyncUser: 0,
+      pendingSyncDevice: 3,
+      failedSyncDevice: 1,
       processingSync: 0,
       completedSync: 3,
     });

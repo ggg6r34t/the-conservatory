@@ -8,10 +8,20 @@ export interface BackupSummary {
   photos: number;
   careLogs: number;
   reminders: number;
-  pendingSync: number;
-  failedSync: number;
+  pendingSyncUser: number;
+  failedSyncUser: number;
+  pendingSyncDevice: number;
+  failedSyncDevice: number;
   processingSync: number;
   completedSync: number;
+}
+
+function sumCounts(
+  values: Array<{
+    count: number;
+  } | null>,
+) {
+  return values.reduce((total, value) => total + (value?.count ?? 0), 0);
 }
 
 export async function getBackupSummary(userId: string): Promise<BackupSummary> {
@@ -23,8 +33,18 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     photos,
     careLogs,
     reminders,
-    pendingSync,
-    failedSync,
+    pendingPlants,
+    pendingPhotos,
+    pendingCareLogs,
+    pendingReminders,
+    pendingMemorials,
+    failedPlants,
+    failedPhotos,
+    failedCareLogs,
+    failedReminders,
+    failedMemorials,
+    pendingSyncDevice,
+    failedSyncDevice,
     processingSync,
     completedSync,
   ] = await Promise.all([
@@ -49,6 +69,46 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
       userId,
     ),
     database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM plants WHERE user_id = ? AND pending = 1;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM photos WHERE user_id = ? AND pending = 1;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM care_logs WHERE user_id = ? AND pending = 1;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM care_reminders WHERE user_id = ? AND pending = 1;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM graveyard_plants WHERE user_id = ? AND pending = 1;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM plants WHERE user_id = ? AND sync_error IS NOT NULL;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM photos WHERE user_id = ? AND sync_error IS NOT NULL;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM care_logs WHERE user_id = ? AND sync_error IS NOT NULL;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM care_reminders WHERE user_id = ? AND sync_error IS NOT NULL;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM graveyard_plants WHERE user_id = ? AND sync_error IS NOT NULL;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
       "SELECT COUNT(*) AS count FROM sync_queue WHERE status = 'pending';",
     ),
     database.getFirstAsync<{ count: number }>(
@@ -68,8 +128,22 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     photos: photos?.count ?? 0,
     careLogs: careLogs?.count ?? 0,
     reminders: reminders?.count ?? 0,
-    pendingSync: pendingSync?.count ?? 0,
-    failedSync: failedSync?.count ?? 0,
+    pendingSyncUser: sumCounts([
+      pendingPlants,
+      pendingPhotos,
+      pendingCareLogs,
+      pendingReminders,
+      pendingMemorials,
+    ]),
+    failedSyncUser: sumCounts([
+      failedPlants,
+      failedPhotos,
+      failedCareLogs,
+      failedReminders,
+      failedMemorials,
+    ]),
+    pendingSyncDevice: pendingSyncDevice?.count ?? 0,
+    failedSyncDevice: failedSyncDevice?.count ?? 0,
     processingSync: processingSync?.count ?? 0,
     completedSync: completedSync?.count ?? 0,
   };

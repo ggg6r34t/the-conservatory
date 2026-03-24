@@ -4,6 +4,10 @@ import { z } from "zod";
 const envSchema = z.object({
   expoPublicSupabaseUrl: z.string().url().optional(),
   expoPublicSupabaseAnonKey: z.string().min(1).optional(),
+  expoPublicEnableAnalytics: z
+    .string()
+    .optional()
+    .transform((value) => value === "true"),
   expoPublicEnableSyncTrials: z
     .string()
     .optional()
@@ -17,6 +21,9 @@ const parsed = envSchema.safeParse({
   expoPublicSupabaseAnonKey:
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
     Constants.expoConfig?.extra?.expoPublicSupabaseAnonKey,
+  expoPublicEnableAnalytics:
+    process.env.EXPO_PUBLIC_ENABLE_ANALYTICS ??
+    Constants.expoConfig?.extra?.expoPublicEnableAnalytics,
   expoPublicEnableSyncTrials:
     process.env.EXPO_PUBLIC_ENABLE_SYNC_TRIALS ??
     Constants.expoConfig?.extra?.expoPublicEnableSyncTrials,
@@ -27,6 +34,7 @@ const safeEnv: z.infer<typeof envSchema> = parsed.success
   : {
       expoPublicSupabaseUrl: undefined,
       expoPublicSupabaseAnonKey: undefined,
+      expoPublicEnableAnalytics: false,
       expoPublicEnableSyncTrials: false,
     };
 
@@ -45,5 +53,6 @@ export const env = {
   isSupabaseConfigured: Boolean(
     safeEnv.expoPublicSupabaseUrl && safeEnv.expoPublicSupabaseAnonKey,
   ),
+  enableAnalytics: Boolean(safeEnv.expoPublicEnableAnalytics),
   enableSyncTrials: Boolean(safeEnv.expoPublicEnableSyncTrials),
 };

@@ -108,7 +108,7 @@ export default function DataBackupScreen() {
               : "Remote backup unavailable",
         description:
           backendConfiguration.mode === "cloud"
-            ? "Validating Supabase reachability for this session."
+            ? "Checking whether online backup is currently reachable."
             : backendConfiguration.description,
         canSync: false,
       });
@@ -117,7 +117,7 @@ export default function DataBackupScreen() {
     <ProfileScreenScaffold
       title="Data Backup"
       subtitle="Sync & recovery"
-      description="Review how much of your conservatory is stored locally, how many sync operations are waiting, and manually pull the latest remote data when needed."
+      description="Review what is saved to your account, what is still waiting on this device, and refresh from online backup when needed."
     >
       <View
         style={[
@@ -149,8 +149,22 @@ export default function DataBackupScreen() {
           <BackupMetric label="Memorials" value={summary.archivedPlants} />
           <BackupMetric label="Photos" value={summary.photos} />
           <BackupMetric label="Care logs" value={summary.careLogs} />
-          <BackupMetric label="Pending sync" value={summary.pendingSync} />
-          <BackupMetric label="Failed sync" value={summary.failedSync} />
+          <BackupMetric
+            label="Waiting to upload (account)"
+            value={summary.pendingSyncUser}
+          />
+          <BackupMetric
+            label="Upload issues (account)"
+            value={summary.failedSyncUser}
+          />
+          <BackupMetric
+            label="Waiting on this device"
+            value={summary.pendingSyncDevice}
+          />
+          <BackupMetric
+            label="Issues on this device"
+            value={summary.failedSyncDevice}
+          />
         </View>
       ) : null}
 

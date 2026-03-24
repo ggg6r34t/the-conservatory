@@ -29,10 +29,7 @@ export default function InterfaceThemeScreen() {
           ]}
         >
           <View
-            style={[
-              styles.previewHeader,
-              { backgroundColor: colors.surface },
-            ]}
+            style={[styles.previewHeader, { backgroundColor: colors.surface }]}
           />
           <View style={styles.previewBody}>
             <View
@@ -61,10 +58,7 @@ export default function InterfaceThemeScreen() {
         </View>
 
         <View
-          style={[
-            styles.selectedChip,
-            { backgroundColor: colors.primary },
-          ]}
+          style={[styles.selectedChip, { backgroundColor: colors.primary }]}
         >
           <Icon name="check" size={16} color={colors.surfaceBright} />
           <Text style={[styles.selectedLabel, { color: colors.surfaceBright }]}>
