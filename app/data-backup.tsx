@@ -158,11 +158,19 @@ export default function DataBackupScreen() {
             value={summary.failedSyncUser}
           />
           <BackupMetric
-            label="Waiting on this device"
+            label="Queue waiting (account)"
+            value={summary.pendingSyncQueueAccount}
+          />
+          <BackupMetric
+            label="Queue issues (account)"
+            value={summary.failedSyncQueueAccount}
+          />
+          <BackupMetric
+            label="Waiting on this device (all accounts)"
             value={summary.pendingSyncDevice}
           />
           <BackupMetric
-            label="Issues on this device"
+            label="Issues on this device (all accounts)"
             value={summary.failedSyncDevice}
           />
         </View>

@@ -3,7 +3,10 @@ import { upsertReminder } from "@/features/notifications/api/remindersClient";
 import { getPlantById } from "@/features/plants/api/plantsClient";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import { getDatabase } from "@/services/database/sqlite";
-import { enqueueSyncOperation } from "@/services/database/sync";
+import {
+  runAtomicMutationWithSyncOutbox,
+  type SyncOutboxOperation,
+} from "@/services/database/syncOutbox";
 import type { CareLog, CareLogCondition, CareLogType } from "@/types/models";
 import { createId } from "@/utils/id";
 
@@ -79,100 +82,137 @@ export async function createCareLog(input: {
   const database = await getDatabase();
   const now = new Date().toISOString();
   const logId = createId("log");
-
-  await database.runAsync(
-    `INSERT INTO care_logs (
-      id, user_id, plant_id, log_type, current_condition, notes, logged_at, created_at, updated_at, updated_by,
-      pending, synced_at, sync_error
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-    logId,
-    input.userId,
-    input.plantId,
-    input.logType,
-    input.currentCondition ?? null,
-    input.notes ?? null,
-    now,
-    now,
-    now,
-    input.userId,
-    1,
-    null,
-    null,
-  );
-
-  await enqueueSyncOperation({
-    entity: "care_logs",
-    entityId: logId,
-    operation: "insert",
-    payload: {
-      userId: input.userId,
-      plantId: input.plantId,
-      logType: input.logType,
-      currentCondition: input.currentCondition ?? null,
-    },
-  });
-
-  if (input.logType === "water") {
-    const plant = await getPlantById(input.userId, input.plantId);
-    if (plant) {
-      const nextWaterDueAt = computeNextWaterDueAt(
-        now,
-        plant.plant.wateringIntervalDays,
-      );
-      const preferences = await getUserPreferences(input.userId);
-      const optimized = optimizeReminderTiming({
-        plantName: plant.plant.name,
-        speciesName: plant.plant.speciesName,
-        wateringIntervalDays: plant.plant.wateringIntervalDays,
-        nextDueAt: nextWaterDueAt,
-        lastWateredAt: now,
-        reminderEnabled: true,
-        lastTriggeredAt: plant.reminders[0]?.lastTriggeredAt ?? null,
-        defaultWateringHour: preferences.defaultWateringHour,
-      });
+  const execution = (await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: now,
+    perform: async (transactionNowIso) => {
       await database.runAsync(
-        "UPDATE plants SET last_watered_at = ?, next_water_due_at = ?, updated_at = ?, updated_by = ?, pending = 1 WHERE id = ?;",
-        now,
-        optimized.nextDueAt,
-        now,
+        `INSERT INTO care_logs (
+          id, user_id, plant_id, log_type, current_condition, notes, logged_at, created_at, updated_at, updated_by,
+          pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        logId,
         input.userId,
         input.plantId,
+        input.logType,
+        input.currentCondition ?? null,
+        input.notes ?? null,
+        transactionNowIso,
+        transactionNowIso,
+        transactionNowIso,
+        input.userId,
+        1,
+        null,
+        null,
       );
-      await enqueueSyncOperation({
-        entity: "plants",
-        entityId: input.plantId,
-        operation: "update",
-        payload: {
-          userId: input.userId,
-          lastWateredAt: now,
-          nextWaterDueAt: optimized.nextDueAt,
+
+      const operations: SyncOutboxOperation[] = [
+        {
+          entity: "care_logs",
+          entityId: logId,
+          operation: "insert",
+          payload: {
+            userId: input.userId,
+            plantId: input.plantId,
+            logType: input.logType,
+            currentCondition: input.currentCondition ?? null,
+          },
         },
-      });
-      await upsertReminder({
-        userId: input.userId,
-        plantId: input.plantId,
-        frequencyDays: plant.plant.wateringIntervalDays,
-        nextDueAt: optimized.nextDueAt,
-        enabled: true,
-      });
-    }
+      ];
+
+      let reminderInput: {
+        frequencyDays: number;
+        nextDueAt: string;
+      } | null = null;
+
+      if (input.logType === "water") {
+        const plant = await getPlantById(input.userId, input.plantId);
+        if (plant) {
+          const nextWaterDueAt = computeNextWaterDueAt(
+            transactionNowIso,
+            plant.plant.wateringIntervalDays,
+          );
+          const preferences = await getUserPreferences(input.userId);
+          const optimized = optimizeReminderTiming({
+            plantName: plant.plant.name,
+            speciesName: plant.plant.speciesName,
+            wateringIntervalDays: plant.plant.wateringIntervalDays,
+            nextDueAt: nextWaterDueAt,
+            lastWateredAt: transactionNowIso,
+            reminderEnabled: true,
+            lastTriggeredAt: plant.reminders[0]?.lastTriggeredAt ?? null,
+            defaultWateringHour: preferences.defaultWateringHour,
+          });
+
+          await database.runAsync(
+            "UPDATE plants SET last_watered_at = ?, next_water_due_at = ?, updated_at = ?, updated_by = ?, pending = 1 WHERE id = ?;",
+            transactionNowIso,
+            optimized.nextDueAt,
+            transactionNowIso,
+            input.userId,
+            input.plantId,
+          );
+
+          operations.push({
+            entity: "plants",
+            entityId: input.plantId,
+            operation: "update",
+            payload: {
+              userId: input.userId,
+              lastWateredAt: transactionNowIso,
+              nextWaterDueAt: optimized.nextDueAt,
+            },
+          });
+
+          if (optimized.nextDueAt) {
+            reminderInput = {
+              frequencyDays: plant.plant.wateringIntervalDays,
+              nextDueAt: optimized.nextDueAt,
+            };
+          }
+        }
+      }
+
+      const created = await database.getFirstAsync<{
+        id: string;
+        user_id: string;
+        plant_id: string;
+        log_type: CareLogType;
+        current_condition: CareLogCondition | null;
+        notes: string | null;
+        logged_at: string;
+        created_at: string;
+        updated_at: string;
+        updated_by: string | null;
+        pending: number;
+        synced_at: string | null;
+        sync_error: string | null;
+      }>("SELECT * FROM care_logs WHERE id = ? LIMIT 1;", logId);
+
+      return {
+        result: {
+          careLog: mapCareLog(created!),
+          reminderInput,
+        },
+        operations,
+      };
+    },
+  })) as {
+    careLog: CareLog;
+    reminderInput: {
+      frequencyDays: number;
+      nextDueAt: string;
+    } | null;
+  };
+
+  if (execution.reminderInput) {
+    await upsertReminder({
+      userId: input.userId,
+      plantId: input.plantId,
+      frequencyDays: execution.reminderInput.frequencyDays,
+      nextDueAt: execution.reminderInput.nextDueAt,
+      enabled: true,
+    });
   }
 
-  const created = await database.getFirstAsync<{
-    id: string;
-    user_id: string;
-    plant_id: string;
-    log_type: CareLogType;
-    current_condition: CareLogCondition | null;
-    notes: string | null;
-    logged_at: string;
-    created_at: string;
-    updated_at: string;
-    updated_by: string | null;
-    pending: number;
-    synced_at: string | null;
-    sync_error: string | null;
-  }>("SELECT * FROM care_logs WHERE id = ? LIMIT 1;", logId);
-
-  return mapCareLog(created!);
+  return execution.careLog;
 }

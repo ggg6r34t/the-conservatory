@@ -3,7 +3,10 @@ import { upsertReminder } from "@/features/notifications/api/remindersClient";
 import { cancelReminderNotification } from "@/features/notifications/services/notificationService";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import { getDatabase } from "@/services/database/sqlite";
-import { enqueueSyncOperation } from "@/services/database/sync";
+import {
+  insertSyncOutboxOperationInTransaction,
+  runAtomicMutationWithSyncOutbox,
+} from "@/services/database/syncOutbox";
 import { getStorageAssetUrl } from "@/services/supabase/storage";
 import type {
   CareLogCondition,
@@ -16,10 +19,6 @@ import type {
 import type { PlantLibraryFilter, PlantSortOption } from "@/types/ui";
 import { createId } from "@/utils/id";
 
-function serializeQueuePayload(payload: Record<string, unknown>) {
-  return JSON.stringify(payload);
-}
-
 async function queueSyncDeleteInTransaction(
   database: Awaited<ReturnType<typeof getDatabase>>,
   input: {
@@ -29,23 +28,15 @@ async function queueSyncDeleteInTransaction(
     nowIso: string;
   },
 ) {
-  await database.runAsync(
-    `INSERT INTO sync_queue (
-      id, entity, entity_id, operation, payload, status, attempt_count,
-      last_error, next_retry_at, queued_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-    createId("sync"),
-    input.entity,
-    input.entityId,
-    "delete",
-    serializeQueuePayload(input.payload),
-    "pending",
-    0,
-    null,
-    null,
-    input.nowIso,
-    input.nowIso,
-  );
+  await insertSyncOutboxOperationInTransaction(database, {
+    nowIso: input.nowIso,
+    operation: {
+      entity: input.entity,
+      entityId: input.entityId,
+      operation: "delete",
+      payload: input.payload,
+    },
+  });
 }
 
 interface PlantRow {
@@ -508,81 +499,98 @@ export async function createPlant(input: {
     defaultWateringHour: preferences.defaultWateringHour,
   }).nextDueAt;
 
-  await database.runAsync(
-    `INSERT INTO plants (
-      id, user_id, name, species_name, nickname, status, location, watering_interval_days,
-      last_watered_at, next_water_due_at, notes, created_at, updated_at, updated_by,
-      pending, synced_at, sync_error
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-    plantId,
-    input.userId,
-    input.name,
-    input.speciesName,
-    input.nickname ?? null,
-    "active",
-    input.location ?? null,
-    input.wateringIntervalDays,
-    now,
-    nextWaterDueAt,
-    input.notes ?? null,
-    now,
-    now,
-    input.userId,
-    1,
-    null,
-    null,
-  );
-
-  if (input.photoUri) {
-    const photoId = createId("photo");
-    const storagePath = buildPhotoStoragePath(
-      input.userId,
-      plantId,
-      photoId,
-      input.photoUri,
-    );
-    await database.runAsync(
-      `INSERT INTO photos (
-        id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
-        taken_at, is_primary, created_at, updated_at, pending, synced_at, sync_error
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-      photoId,
-      input.userId,
-      plantId,
-      input.photoUri,
-      null,
-      storagePath,
-      "image/jpeg",
-      null,
-      null,
-      now,
-      1,
-      now,
-      now,
-      1,
-      null,
-      null,
-    );
-
-    await enqueueSyncOperation({
-      entity: "photos",
-      entityId: photoId,
-      operation: "insert",
-      payload: {
-        userId: input.userId,
+  await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: now,
+    perform: async (transactionNowIso) => {
+      await database.runAsync(
+        `INSERT INTO plants (
+          id, user_id, name, species_name, nickname, status, location, watering_interval_days,
+          last_watered_at, next_water_due_at, notes, created_at, updated_at, updated_by,
+          pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         plantId,
-      },
-    });
-  }
+        input.userId,
+        input.name,
+        input.speciesName,
+        input.nickname ?? null,
+        "active",
+        input.location ?? null,
+        input.wateringIntervalDays,
+        transactionNowIso,
+        nextWaterDueAt,
+        input.notes ?? null,
+        transactionNowIso,
+        transactionNowIso,
+        input.userId,
+        1,
+        null,
+        null,
+      );
 
-  await enqueueSyncOperation({
-    entity: "plants",
-    entityId: plantId,
-    operation: "insert",
-    payload: {
-      userId: input.userId,
-      name: input.name,
-      speciesName: input.speciesName,
+      const operations: {
+        entity: string;
+        entityId: string;
+        operation: "insert" | "update" | "delete";
+        payload?: Record<string, unknown>;
+      }[] = [
+        {
+          entity: "plants",
+          entityId: plantId,
+          operation: "insert",
+          payload: {
+            userId: input.userId,
+            name: input.name,
+            speciesName: input.speciesName,
+          },
+        },
+      ];
+
+      if (input.photoUri) {
+        const photoId = createId("photo");
+        const storagePath = buildPhotoStoragePath(
+          input.userId,
+          plantId,
+          photoId,
+          input.photoUri,
+        );
+        await database.runAsync(
+          `INSERT INTO photos (
+            id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
+            taken_at, is_primary, created_at, updated_at, pending, synced_at, sync_error
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+          photoId,
+          input.userId,
+          plantId,
+          input.photoUri,
+          null,
+          storagePath,
+          "image/jpeg",
+          null,
+          null,
+          transactionNowIso,
+          1,
+          transactionNowIso,
+          transactionNowIso,
+          1,
+          null,
+          null,
+        );
+
+        operations.push({
+          entity: "photos",
+          entityId: photoId,
+          operation: "insert",
+          payload: {
+            userId: input.userId,
+            plantId,
+          },
+        });
+      }
+
+      return {
+        result: plantId,
+        operations,
+      };
     },
   });
 
@@ -618,36 +626,46 @@ export async function addPlantProgressPhoto(input: {
     input.photoUri,
   );
 
-  await database.runAsync(
-    `INSERT INTO photos (
-      id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
-      taken_at, is_primary, created_at, updated_at, pending, synced_at, sync_error
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-    photoId,
-    input.userId,
-    input.plantId,
-    input.photoUri,
-    null,
-    storagePath,
-    "image/jpeg",
-    null,
-    null,
-    now,
-    0,
-    now,
-    now,
-    1,
-    null,
-    null,
-  );
+  await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: now,
+    perform: async (transactionNowIso) => {
+      await database.runAsync(
+        `INSERT INTO photos (
+          id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
+          taken_at, is_primary, created_at, updated_at, pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        photoId,
+        input.userId,
+        input.plantId,
+        input.photoUri,
+        null,
+        storagePath,
+        "image/jpeg",
+        null,
+        null,
+        transactionNowIso,
+        0,
+        transactionNowIso,
+        transactionNowIso,
+        1,
+        null,
+        null,
+      );
 
-  await enqueueSyncOperation({
-    entity: "photos",
-    entityId: photoId,
-    operation: "insert",
-    payload: {
-      userId: input.userId,
-      plantId: input.plantId,
+      return {
+        result: photoId,
+        operations: [
+          {
+            entity: "photos",
+            entityId: photoId,
+            operation: "insert",
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+            },
+          },
+        ],
+      };
     },
   });
 
@@ -692,95 +710,128 @@ export async function updatePlant(input: {
     defaultWateringHour: preferences.defaultWateringHour,
   }).nextDueAt;
 
-  await database.runAsync(
-    `UPDATE plants
-     SET name = ?, species_name = ?, nickname = ?, location = ?, watering_interval_days = ?,
-         notes = ?, next_water_due_at = ?, updated_at = ?, updated_by = ?, pending = 1
-     WHERE id = ?;`,
-    input.patch.name,
-    input.patch.speciesName,
-    input.patch.nickname ?? null,
-    input.patch.location ?? null,
-    input.patch.wateringIntervalDays,
-    input.patch.notes ?? null,
-    nextWaterDueAt,
-    updatedAt,
-    input.userId,
-    input.plantId,
-  );
-
-  if (input.patch.photoUri) {
-    const existingPhoto = current.photos.find((photo) => photo.isPrimary === 1);
-    if (existingPhoto) {
-      const storagePath =
-        existingPhoto.storagePath ??
-        buildPhotoStoragePath(
-          input.userId,
-          input.plantId,
-          existingPhoto.id,
-          input.patch.photoUri,
-        );
+  await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: updatedAt,
+    perform: async (transactionNowIso) => {
       await database.runAsync(
-        "UPDATE photos SET local_uri = ?, remote_url = ?, storage_path = ?, mime_type = ?, updated_at = ?, pending = 1 WHERE id = ?;",
-        input.patch.photoUri,
-        null,
-        storagePath,
-        "image/jpeg",
-        updatedAt,
-        existingPhoto.id,
+        `UPDATE plants
+         SET name = ?, species_name = ?, nickname = ?, location = ?, watering_interval_days = ?,
+             notes = ?, next_water_due_at = ?, updated_at = ?, updated_by = ?, pending = 1
+         WHERE id = ?;`,
+        input.patch.name,
+        input.patch.speciesName,
+        input.patch.nickname ?? null,
+        input.patch.location ?? null,
+        input.patch.wateringIntervalDays,
+        input.patch.notes ?? null,
+        nextWaterDueAt,
+        transactionNowIso,
+        input.userId,
+        input.plantId,
       );
 
-      await enqueueSyncOperation({
-        entity: "photos",
-        entityId: existingPhoto.id,
+      const operations: {
+        entity: string;
+        entityId: string;
+        operation: "insert" | "update" | "delete";
+        payload?: Record<string, unknown>;
+      }[] = [];
+
+      if (input.patch.photoUri) {
+        const existingPhoto = current.photos.find(
+          (photo) => photo.isPrimary === 1,
+        );
+        if (existingPhoto) {
+          const storagePath =
+            existingPhoto.storagePath ??
+            buildPhotoStoragePath(
+              input.userId,
+              input.plantId,
+              existingPhoto.id,
+              input.patch.photoUri,
+            );
+          await database.runAsync(
+            "UPDATE photos SET local_uri = ?, remote_url = ?, storage_path = ?, mime_type = ?, updated_at = ?, pending = 1 WHERE id = ?;",
+            input.patch.photoUri,
+            null,
+            storagePath,
+            "image/jpeg",
+            transactionNowIso,
+            existingPhoto.id,
+          );
+
+          operations.push({
+            entity: "photos",
+            entityId: existingPhoto.id,
+            operation: "update",
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+            },
+          });
+        } else {
+          const photoId = createId("photo");
+          const storagePath = buildPhotoStoragePath(
+            input.userId,
+            input.plantId,
+            photoId,
+            input.patch.photoUri,
+          );
+          await database.runAsync(
+            `INSERT INTO photos (
+              id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
+              taken_at, is_primary, created_at, updated_at, pending, synced_at, sync_error
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+            photoId,
+            input.userId,
+            input.plantId,
+            input.patch.photoUri,
+            null,
+            storagePath,
+            "image/jpeg",
+            null,
+            null,
+            transactionNowIso,
+            1,
+            transactionNowIso,
+            transactionNowIso,
+            1,
+            null,
+            null,
+          );
+
+          operations.push({
+            entity: "photos",
+            entityId: photoId,
+            operation: "insert",
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+            },
+          });
+        }
+      }
+
+      operations.push({
+        entity: "plants",
+        entityId: input.plantId,
         operation: "update",
         payload: {
           userId: input.userId,
-          plantId: input.plantId,
+          patch: {
+            name: input.patch.name,
+            speciesName: input.patch.speciesName,
+            wateringIntervalDays: input.patch.wateringIntervalDays,
+          },
         },
       });
-    } else {
-      const photoId = createId("photo");
-      const storagePath = buildPhotoStoragePath(
-        input.userId,
-        input.plantId,
-        photoId,
-        input.patch.photoUri,
-      );
-      await database.runAsync(
-        `INSERT INTO photos (
-          id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
-          taken_at, is_primary, created_at, updated_at, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-        photoId,
-        input.userId,
-        input.plantId,
-        input.patch.photoUri,
-        null,
-        storagePath,
-        "image/jpeg",
-        null,
-        null,
-        updatedAt,
-        1,
-        updatedAt,
-        updatedAt,
-        1,
-        null,
-        null,
-      );
 
-      await enqueueSyncOperation({
-        entity: "photos",
-        entityId: photoId,
-        operation: "insert",
-        payload: {
-          userId: input.userId,
-          plantId: input.plantId,
-        },
-      });
-    }
-  }
+      return {
+        result: input.plantId,
+        operations,
+      };
+    },
+  });
 
   await upsertReminder({
     userId: input.userId,
@@ -788,20 +839,6 @@ export async function updatePlant(input: {
     frequencyDays: input.patch.wateringIntervalDays,
     nextDueAt: nextWaterDueAt ?? null,
     enabled: true,
-  });
-
-  await enqueueSyncOperation({
-    entity: "plants",
-    entityId: input.plantId,
-    operation: "update",
-    payload: {
-      userId: input.userId,
-      patch: {
-        name: input.patch.name,
-        speciesName: input.patch.speciesName,
-        wateringIntervalDays: input.patch.wateringIntervalDays,
-      },
-    },
   });
 
   const updated = await getPlantById(input.userId, input.plantId);
@@ -938,94 +975,102 @@ export async function archivePlant(input: {
     input.plantId,
   );
   const graveyardId = existingArchive?.id ?? createId("graveyard");
+  const reminderIds = reminders.map((reminder) => reminder.id);
 
-  await database.withTransactionAsync(async () => {
-    await database.runAsync(
-      `UPDATE plants
-       SET status = 'graveyard', updated_at = ?, updated_by = ?, pending = 1
-       WHERE id = ? AND user_id = ?;`,
-      now,
-      input.userId,
-      input.plantId,
-      input.userId,
-    );
-
-    await database.runAsync(
-      `UPDATE care_reminders
-       SET enabled = 0, next_due_at = NULL, notification_id = NULL, updated_at = ?, updated_by = ?, pending = 1
-       WHERE plant_id = ?;`,
-      now,
-      input.userId,
-      input.plantId,
-    );
-
-    if (existingArchive) {
+  await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: now,
+    perform: async (transactionNowIso) => {
       await database.runAsync(
-        `UPDATE graveyard_plants
-         SET cause_of_passing = ?, memorial_note = ?, archived_at = ?, updated_at = ?, updated_by = ?, pending = 1
-         WHERE id = ?;`,
-        input.causeOfPassing ?? null,
-        input.memorialNote ?? plant.plant.notes ?? null,
-        now,
-        now,
-        input.userId,
-        graveyardId,
-      );
-    } else {
-      await database.runAsync(
-        `INSERT INTO graveyard_plants (
-          id, user_id, plant_id, cause_of_passing, memorial_note, archived_at, created_at, updated_at, updated_by,
-          pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-        graveyardId,
+        `UPDATE plants
+         SET status = 'graveyard', updated_at = ?, updated_by = ?, pending = 1
+         WHERE id = ? AND user_id = ?;`,
+        transactionNowIso,
         input.userId,
         input.plantId,
-        input.causeOfPassing ?? null,
-        input.memorialNote ?? plant.plant.notes ?? null,
-        now,
-        now,
-        now,
         input.userId,
-        1,
-        null,
-        null,
       );
-    }
+
+      await database.runAsync(
+        `UPDATE care_reminders
+         SET enabled = 0, next_due_at = NULL, notification_id = NULL, updated_at = ?, updated_by = ?, pending = 1
+         WHERE plant_id = ?;`,
+        transactionNowIso,
+        input.userId,
+        input.plantId,
+      );
+
+      if (existingArchive) {
+        await database.runAsync(
+          `UPDATE graveyard_plants
+           SET cause_of_passing = ?, memorial_note = ?, archived_at = ?, updated_at = ?, updated_by = ?, pending = 1
+           WHERE id = ?;`,
+          input.causeOfPassing ?? null,
+          input.memorialNote ?? plant.plant.notes ?? null,
+          transactionNowIso,
+          transactionNowIso,
+          input.userId,
+          graveyardId,
+        );
+      } else {
+        await database.runAsync(
+          `INSERT INTO graveyard_plants (
+            id, user_id, plant_id, cause_of_passing, memorial_note, archived_at, created_at, updated_at, updated_by,
+            pending, synced_at, sync_error
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+          graveyardId,
+          input.userId,
+          input.plantId,
+          input.causeOfPassing ?? null,
+          input.memorialNote ?? plant.plant.notes ?? null,
+          transactionNowIso,
+          transactionNowIso,
+          transactionNowIso,
+          input.userId,
+          1,
+          null,
+          null,
+        );
+      }
+
+      return {
+        result: graveyardId,
+        operations: [
+          ...reminderIds.map((reminderId) => ({
+            entity: "care_reminders",
+            entityId: reminderId,
+            operation: "update" as const,
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+              enabled: false,
+            },
+          })),
+          {
+            entity: "plants",
+            entityId: input.plantId,
+            operation: "update" as const,
+            payload: {
+              userId: input.userId,
+              status: "graveyard",
+            },
+          },
+          {
+            entity: "graveyard_plants",
+            entityId: graveyardId,
+            operation: existingArchive ? "update" : ("insert" as const),
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+            },
+          },
+        ],
+      };
+    },
   });
 
   for (const reminder of reminders) {
     await cancelReminderNotification(reminder.notification_id);
-    await enqueueSyncOperation({
-      entity: "care_reminders",
-      entityId: reminder.id,
-      operation: "update",
-      payload: {
-        userId: input.userId,
-        plantId: input.plantId,
-        enabled: false,
-      },
-    });
   }
-
-  await enqueueSyncOperation({
-    entity: "plants",
-    entityId: input.plantId,
-    operation: "update",
-    payload: {
-      userId: input.userId,
-      status: "graveyard",
-    },
-  });
-
-  await enqueueSyncOperation({
-    entity: "graveyard_plants",
-    entityId: graveyardId,
-    operation: existingArchive ? "update" : "insert",
-    payload: {
-      userId: input.userId,
-      plantId: input.plantId,
-    },
-  });
 
   return graveyardId;
 }
@@ -1052,24 +1097,34 @@ export async function updateGraveyardMemorial(input: {
 
   const updatedAt = new Date().toISOString();
 
-  await database.runAsync(
-    `UPDATE graveyard_plants
-     SET cause_of_passing = ?, memorial_note = ?, updated_at = ?, updated_by = ?, pending = 1
-     WHERE id = ?;`,
-    input.causeOfPassing?.trim() || null,
-    input.memorialNote?.trim() || null,
-    updatedAt,
-    input.userId,
-    input.graveyardId,
-  );
+  await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: updatedAt,
+    perform: async (transactionNowIso) => {
+      await database.runAsync(
+        `UPDATE graveyard_plants
+         SET cause_of_passing = ?, memorial_note = ?, updated_at = ?, updated_by = ?, pending = 1
+         WHERE id = ?;`,
+        input.causeOfPassing?.trim() || null,
+        input.memorialNote?.trim() || null,
+        transactionNowIso,
+        input.userId,
+        input.graveyardId,
+      );
 
-  await enqueueSyncOperation({
-    entity: "graveyard_plants",
-    entityId: input.graveyardId,
-    operation: "update",
-    payload: {
-      userId: input.userId,
-      plantId: existing.plant_id,
+      return {
+        result: input.graveyardId,
+        operations: [
+          {
+            entity: "graveyard_plants",
+            entityId: input.graveyardId,
+            operation: "update" as const,
+            payload: {
+              userId: input.userId,
+              plantId: existing.plant_id,
+            },
+          },
+        ],
+      };
     },
   });
 

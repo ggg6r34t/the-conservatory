@@ -1,4 +1,7 @@
-import { resolveConflict } from "@/services/database/conflictResolver";
+import {
+  buildConflictTelemetryMeta,
+  resolveConflict,
+} from "@/services/database/conflictResolver";
 
 describe("conflictResolver", () => {
   it("keeps local record when local row is pending", () => {
@@ -38,5 +41,50 @@ describe("conflictResolver", () => {
     });
 
     expect(result).toEqual({ winner: "local", reason: "local-newer-or-equal" });
+  });
+
+  it("builds telemetry metadata with conflict class and source", () => {
+    const record = {
+      entity: "plants",
+      entityId: "plant-1",
+      strategy: "last-write-wins" as const,
+      localUpdatedAt: "2026-03-24T10:00:00.000Z",
+      remoteUpdatedAt: "2026-03-24T10:02:00.000Z",
+      localPending: false,
+    };
+    const result = resolveConflict(record);
+
+    const telemetry = buildConflictTelemetryMeta({
+      record,
+      result,
+      source: "remote-hydration",
+    });
+
+    expect(telemetry).toEqual({
+      conflictClass: "remote-newer",
+      clockSkewSuspected: false,
+      source: "remote-hydration",
+    });
+  });
+
+  it("marks telemetry as clock-skew suspected when drift exceeds threshold", () => {
+    const record = {
+      entity: "plants",
+      entityId: "plant-1",
+      strategy: "last-write-wins" as const,
+      localUpdatedAt: "2026-03-24T10:00:00.000Z",
+      remoteUpdatedAt: "2026-03-24T10:15:01.000Z",
+      localPending: false,
+    };
+    const result = resolveConflict(record);
+
+    const telemetry = buildConflictTelemetryMeta({
+      record,
+      result,
+      source: "remote-hydration",
+    });
+
+    expect(telemetry.clockSkewSuspected).toBe(true);
+    expect(telemetry.conflictClass).toBe("remote-newer");
   });
 });

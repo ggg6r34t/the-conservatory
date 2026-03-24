@@ -14,6 +14,14 @@ export interface ConflictResolutionResult {
   reason: "local-pending" | "remote-newer" | "local-newer-or-equal";
 }
 
+export interface ConflictTelemetryMeta {
+  conflictClass: "local-pending" | "remote-newer" | "local-newer-or-equal";
+  clockSkewSuspected: boolean;
+  source: string;
+}
+
+const CLOCK_SKEW_SUSPECT_MS = 5 * 60 * 1000;
+
 export function resolveConflict(
   record: ConflictRecord,
 ): ConflictResolutionResult {
@@ -39,5 +47,28 @@ export function resolveConflict(
   return {
     winner: "local",
     reason: "local-newer-or-equal",
+  };
+}
+
+export function buildConflictTelemetryMeta(input: {
+  record: ConflictRecord;
+  result: ConflictResolutionResult;
+  source: string;
+}): ConflictTelemetryMeta {
+  const localUpdatedAtMs = input.record.localUpdatedAt
+    ? new Date(input.record.localUpdatedAt).getTime()
+    : Number.NEGATIVE_INFINITY;
+  const remoteUpdatedAtMs = new Date(input.record.remoteUpdatedAt).getTime();
+  const timestampDriftMs = Math.abs(remoteUpdatedAtMs - localUpdatedAtMs);
+
+  const clockSkewSuspected =
+    Number.isFinite(localUpdatedAtMs) &&
+    Number.isFinite(remoteUpdatedAtMs) &&
+    timestampDriftMs > CLOCK_SKEW_SUSPECT_MS;
+
+  return {
+    conflictClass: input.result.reason,
+    clockSkewSuspected,
+    source: input.source,
   };
 }

@@ -29,6 +29,8 @@ describe("profileClient.getBackupSummary", () => {
       .mockResolvedValueOnce({ count: 0 }) // failedCareLogs
       .mockResolvedValueOnce({ count: 2 }) // failedReminders
       .mockResolvedValueOnce({ count: 0 }) // failedMemorials
+      .mockResolvedValueOnce({ count: 5 }) // pendingSyncQueueAccount
+      .mockResolvedValueOnce({ count: 1 }) // failedSyncQueueAccount
       .mockResolvedValueOnce({ count: 7 }) // pendingSyncDevice
       .mockResolvedValueOnce({ count: 2 }) // failedSyncDevice
       .mockResolvedValueOnce({ count: 1 }) // processingSync
@@ -40,6 +42,8 @@ describe("profileClient.getBackupSummary", () => {
 
     expect(summary.pendingSyncUser).toBe(4);
     expect(summary.failedSyncUser).toBe(3);
+    expect(summary.pendingSyncQueueAccount).toBe(5);
+    expect(summary.failedSyncQueueAccount).toBe(1);
     expect(summary.pendingSyncDevice).toBe(7);
     expect(summary.failedSyncDevice).toBe(2);
   });

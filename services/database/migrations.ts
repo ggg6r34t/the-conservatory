@@ -67,7 +67,8 @@ CREATE TABLE IF NOT EXISTS photos (
   updated_at TEXT NOT NULL,
   pending INTEGER NOT NULL DEFAULT 1,
   synced_at TEXT,
-  sync_error TEXT
+  sync_error TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS care_logs (
@@ -83,7 +84,8 @@ CREATE TABLE IF NOT EXISTS care_logs (
   updated_by TEXT,
   pending INTEGER NOT NULL DEFAULT 1,
   synced_at TEXT,
-  sync_error TEXT
+  sync_error TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS care_reminders (
@@ -101,7 +103,8 @@ CREATE TABLE IF NOT EXISTS care_reminders (
   updated_by TEXT,
   pending INTEGER NOT NULL DEFAULT 1,
   synced_at TEXT,
-  sync_error TEXT
+  sync_error TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS graveyard_plants (
@@ -116,7 +119,8 @@ CREATE TABLE IF NOT EXISTS graveyard_plants (
   updated_by TEXT,
   pending INTEGER NOT NULL DEFAULT 1,
   synced_at TEXT,
-  sync_error TEXT
+  sync_error TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS sync_queue (
@@ -173,9 +177,202 @@ DELETE FROM graveyard_plants WHERE plant_id NOT IN (SELECT id FROM plants);
 `);
 }
 
+interface ForeignKeyRow {
+  table: string;
+  from: string;
+  to: string;
+  on_delete: string;
+}
+
+async function hasPlantCascadeForeignKey(
+  database: SQLiteDatabase,
+  table: string,
+  column: string,
+) {
+  const rows = await database.getAllAsync<ForeignKeyRow>(
+    `PRAGMA foreign_key_list(${table});`,
+  );
+
+  return rows.some(
+    (row) =>
+      row.table === "plants" &&
+      row.from === column &&
+      row.to === "id" &&
+      row.on_delete.toUpperCase() === "CASCADE",
+  );
+}
+
+async function rebuildPlantChildTablesWithForeignKeys(
+  database: SQLiteDatabase,
+) {
+  await database.execAsync("PRAGMA foreign_keys = OFF;");
+
+  try {
+    await database.execAsync(`
+DROP TABLE IF EXISTS photos_v2;
+DROP TABLE IF EXISTS care_logs_v2;
+DROP TABLE IF EXISTS care_reminders_v2;
+DROP TABLE IF EXISTS graveyard_plants_v2;
+
+CREATE TABLE IF NOT EXISTS photos_v2 (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  local_uri TEXT,
+  remote_url TEXT,
+  storage_path TEXT,
+  mime_type TEXT,
+  width INTEGER,
+  height INTEGER,
+  taken_at TEXT,
+  is_primary INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+
+INSERT INTO photos_v2 (
+  id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type,
+  width, height, taken_at, is_primary, created_at, updated_at,
+  pending, synced_at, sync_error
+)
+SELECT
+  id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type,
+  width, height, taken_at, is_primary, created_at, updated_at,
+  pending, synced_at, sync_error
+FROM photos;
+
+CREATE TABLE IF NOT EXISTS care_logs_v2 (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  log_type TEXT NOT NULL,
+  current_condition TEXT,
+  notes TEXT,
+  logged_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+
+INSERT INTO care_logs_v2 (
+  id, user_id, plant_id, log_type, current_condition, notes,
+  logged_at, created_at, updated_at, updated_by,
+  pending, synced_at, sync_error
+)
+SELECT
+  id, user_id, plant_id, log_type, current_condition, notes,
+  logged_at, created_at, updated_at, updated_by,
+  pending, synced_at, sync_error
+FROM care_logs;
+
+CREATE TABLE IF NOT EXISTS care_reminders_v2 (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  reminder_type TEXT NOT NULL,
+  frequency_days INTEGER NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  next_due_at TEXT,
+  last_triggered_at TEXT,
+  notification_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+
+INSERT INTO care_reminders_v2 (
+  id, user_id, plant_id, reminder_type, frequency_days, enabled,
+  next_due_at, last_triggered_at, notification_id,
+  created_at, updated_at, updated_by,
+  pending, synced_at, sync_error
+)
+SELECT
+  id, user_id, plant_id, reminder_type, frequency_days, enabled,
+  next_due_at, last_triggered_at, notification_id,
+  created_at, updated_at, updated_by,
+  pending, synced_at, sync_error
+FROM care_reminders;
+
+CREATE TABLE IF NOT EXISTS graveyard_plants_v2 (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  cause_of_passing TEXT,
+  memorial_note TEXT,
+  archived_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+
+INSERT INTO graveyard_plants_v2 (
+  id, user_id, plant_id, cause_of_passing, memorial_note,
+  archived_at, created_at, updated_at, updated_by,
+  pending, synced_at, sync_error
+)
+SELECT
+  id, user_id, plant_id, cause_of_passing, memorial_note,
+  archived_at, created_at, updated_at, updated_by,
+  pending, synced_at, sync_error
+FROM graveyard_plants;
+
+DROP TABLE photos;
+ALTER TABLE photos_v2 RENAME TO photos;
+
+DROP TABLE care_logs;
+ALTER TABLE care_logs_v2 RENAME TO care_logs;
+
+DROP TABLE care_reminders;
+ALTER TABLE care_reminders_v2 RENAME TO care_reminders;
+
+DROP TABLE graveyard_plants;
+ALTER TABLE graveyard_plants_v2 RENAME TO graveyard_plants;
+
+CREATE INDEX IF NOT EXISTS idx_photos_plant_id ON photos(plant_id);
+CREATE INDEX IF NOT EXISTS idx_care_logs_plant_id ON care_logs(plant_id);
+CREATE INDEX IF NOT EXISTS idx_care_reminders_plant_id ON care_reminders(plant_id);
+`);
+  } finally {
+    await database.execAsync("PRAGMA foreign_keys = ON;");
+  }
+}
+
+async function ensurePlantChildForeignKeys(database: SQLiteDatabase) {
+  const [photosFk, careLogsFk, careRemindersFk, graveyardFk] =
+    await Promise.all([
+      hasPlantCascadeForeignKey(database, "photos", "plant_id"),
+      hasPlantCascadeForeignKey(database, "care_logs", "plant_id"),
+      hasPlantCascadeForeignKey(database, "care_reminders", "plant_id"),
+      hasPlantCascadeForeignKey(database, "graveyard_plants", "plant_id"),
+    ]);
+
+  if (photosFk && careLogsFk && careRemindersFk && graveyardFk) {
+    return;
+  }
+
+  await removeOrphanedPlantChildren(database);
+  await rebuildPlantChildTablesWithForeignKeys(database);
+}
+
 export async function runDatabaseMigrations(database: SQLiteDatabase) {
   await database.execAsync(bootstrapSql);
   await database.execAsync("PRAGMA foreign_keys = ON;");
   await ensureColumn(database, "care_logs", "current_condition", "TEXT");
-  await removeOrphanedPlantChildren(database);
+  await ensurePlantChildForeignKeys(database);
 }

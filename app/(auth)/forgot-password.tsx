@@ -18,6 +18,8 @@ export default function ForgotPasswordScreen() {
   const snackbar = useSnackbar();
   const { requestPasswordReset } = useAuth();
   const backend = getBackendConfigurationSummary();
+  const canRequestReset =
+    backend.mode === "cloud" && backend.authActionsEnabled;
   const { redirectTo } = useLocalSearchParams<{ redirectTo?: string }>();
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,8 +35,12 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    if (!backend.authActionsEnabled) {
-      setError(backend.description);
+    if (!canRequestReset) {
+      setError(
+        backend.mode === "local-development"
+          ? "Password reset emails are unavailable in local-only development mode."
+          : backend.description,
+      );
       return;
     }
 
@@ -113,7 +119,7 @@ export default function ForgotPasswordScreen() {
           label="Send Reset Link"
           onPress={handleSubmit}
           loading={isSubmitting}
-          disabled={isSubmitting || !backend.authActionsEnabled}
+          disabled={isSubmitting || !canRequestReset}
         />
       </View>
     </AuthScreenScaffold>

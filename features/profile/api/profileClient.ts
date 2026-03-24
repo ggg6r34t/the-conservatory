@@ -10,6 +10,8 @@ export interface BackupSummary {
   reminders: number;
   pendingSyncUser: number;
   failedSyncUser: number;
+  pendingSyncQueueAccount: number;
+  failedSyncQueueAccount: number;
   pendingSyncDevice: number;
   failedSyncDevice: number;
   processingSync: number;
@@ -17,9 +19,9 @@ export interface BackupSummary {
 }
 
 function sumCounts(
-  values: Array<{
+  values: ({
     count: number;
-  } | null>,
+  } | null)[],
 ) {
   return values.reduce((total, value) => total + (value?.count ?? 0), 0);
 }
@@ -43,6 +45,8 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     failedCareLogs,
     failedReminders,
     failedMemorials,
+    pendingSyncQueueAccount,
+    failedSyncQueueAccount,
     pendingSyncDevice,
     failedSyncDevice,
     processingSync,
@@ -109,6 +113,22 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
       userId,
     ),
     database.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) AS count
+       FROM sync_queue
+       WHERE status = 'pending'
+         AND payload IS NOT NULL
+         AND payload LIKE ?;`,
+      `%"userId":"${userId}"%`,
+    ),
+    database.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) AS count
+       FROM sync_queue
+       WHERE status = 'failed'
+         AND payload IS NOT NULL
+         AND payload LIKE ?;`,
+      `%"userId":"${userId}"%`,
+    ),
+    database.getFirstAsync<{ count: number }>(
       "SELECT COUNT(*) AS count FROM sync_queue WHERE status = 'pending';",
     ),
     database.getFirstAsync<{ count: number }>(
@@ -142,6 +162,8 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
       failedReminders,
       failedMemorials,
     ]),
+    pendingSyncQueueAccount: pendingSyncQueueAccount?.count ?? 0,
+    failedSyncQueueAccount: failedSyncQueueAccount?.count ?? 0,
     pendingSyncDevice: pendingSyncDevice?.count ?? 0,
     failedSyncDevice: failedSyncDevice?.count ?? 0,
     processingSync: processingSync?.count ?? 0,

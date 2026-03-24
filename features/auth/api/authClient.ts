@@ -660,6 +660,11 @@ export async function requestPasswordReset(email: string) {
       ),
     );
   }
+
+  throw createAuthError(
+    "password_reset_local_only",
+    "This build is running in local-only mode, so email password reset delivery is unavailable.",
+  );
 }
 
 export async function updateProfileIdentity(

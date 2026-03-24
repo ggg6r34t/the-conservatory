@@ -1,7 +1,7 @@
-import { createId } from "@/utils/id";
 import { getDatabase } from "@/services/database/sqlite";
-import { enqueueSyncOperation } from "@/services/database/sync";
+import { runAtomicMutationWithSyncOutbox } from "@/services/database/syncOutbox";
 import type { CareReminder } from "@/types/models";
+import { createId } from "@/utils/id";
 
 function mapReminder(row: {
   id: string;
@@ -102,105 +102,121 @@ export async function upsertReminder(input: {
   const now = new Date().toISOString();
 
   if (existing) {
-    await database.runAsync(
-      `UPDATE care_reminders
-       SET frequency_days = ?, next_due_at = ?, enabled = ?, updated_at = ?, updated_by = ?, pending = 1
-       WHERE id = ?;`,
-      input.frequencyDays,
-      input.nextDueAt,
-      Number(input.enabled),
-      now,
-      input.userId,
-      existing.id,
-    );
+    return runAtomicMutationWithSyncOutbox(database, {
+      nowIso: now,
+      perform: async (transactionNowIso) => {
+        await database.runAsync(
+          `UPDATE care_reminders
+           SET frequency_days = ?, next_due_at = ?, enabled = ?, updated_at = ?, updated_by = ?, pending = 1
+           WHERE id = ?;`,
+          input.frequencyDays,
+          input.nextDueAt,
+          Number(input.enabled),
+          transactionNowIso,
+          input.userId,
+          existing.id,
+        );
 
-    const updated = await database.getFirstAsync<{
-      id: string;
-      user_id: string;
-      plant_id: string;
-      reminder_type: "water" | "mist" | "feed";
-      frequency_days: number;
-      enabled: number;
-      next_due_at: string | null;
-      last_triggered_at: string | null;
-      notification_id: string | null;
-      created_at: string;
-      updated_at: string;
-      updated_by: string | null;
-      pending: number;
-      synced_at: string | null;
-      sync_error: string | null;
-    }>("SELECT * FROM care_reminders WHERE id = ? LIMIT 1;", existing.id);
+        const updated = await database.getFirstAsync<{
+          id: string;
+          user_id: string;
+          plant_id: string;
+          reminder_type: "water" | "mist" | "feed";
+          frequency_days: number;
+          enabled: number;
+          next_due_at: string | null;
+          last_triggered_at: string | null;
+          notification_id: string | null;
+          created_at: string;
+          updated_at: string;
+          updated_by: string | null;
+          pending: number;
+          synced_at: string | null;
+          sync_error: string | null;
+        }>("SELECT * FROM care_reminders WHERE id = ? LIMIT 1;", existing.id);
 
-    await enqueueSyncOperation({
-      entity: "care_reminders",
-      entityId: existing.id,
-      operation: "update",
-      payload: {
-        userId: input.userId,
-        plantId: input.plantId,
-        frequencyDays: input.frequencyDays,
-        enabled: input.enabled,
+        return {
+          result: mapReminder(updated!),
+          operations: [
+            {
+              entity: "care_reminders",
+              entityId: existing.id,
+              operation: "update" as const,
+              payload: {
+                userId: input.userId,
+                plantId: input.plantId,
+                frequencyDays: input.frequencyDays,
+                enabled: input.enabled,
+              },
+            },
+          ],
+        };
       },
     });
-
-    return mapReminder(updated!);
   }
 
   const reminderId = createId("reminder");
-  await database.runAsync(
-    `INSERT INTO care_reminders (
-      id, user_id, plant_id, reminder_type, frequency_days, enabled, next_due_at, last_triggered_at,
-      notification_id, created_at, updated_at, updated_by, pending, synced_at, sync_error
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-    reminderId,
-    input.userId,
-    input.plantId,
-    "water",
-    input.frequencyDays,
-    Number(input.enabled),
-    input.nextDueAt,
-    null,
-    null,
-    now,
-    now,
-    input.userId,
-    1,
-    null,
-    null,
-  );
+  return runAtomicMutationWithSyncOutbox(database, {
+    nowIso: now,
+    perform: async (transactionNowIso) => {
+      await database.runAsync(
+        `INSERT INTO care_reminders (
+          id, user_id, plant_id, reminder_type, frequency_days, enabled, next_due_at, last_triggered_at,
+          notification_id, created_at, updated_at, updated_by, pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        reminderId,
+        input.userId,
+        input.plantId,
+        "water",
+        input.frequencyDays,
+        Number(input.enabled),
+        input.nextDueAt,
+        null,
+        null,
+        transactionNowIso,
+        transactionNowIso,
+        input.userId,
+        1,
+        null,
+        null,
+      );
 
-  const reminder = await database.getFirstAsync<{
-    id: string;
-    user_id: string;
-    plant_id: string;
-    reminder_type: "water" | "mist" | "feed";
-    frequency_days: number;
-    enabled: number;
-    next_due_at: string | null;
-    last_triggered_at: string | null;
-    notification_id: string | null;
-    created_at: string;
-    updated_at: string;
-    updated_by: string | null;
-    pending: number;
-    synced_at: string | null;
-    sync_error: string | null;
-  }>("SELECT * FROM care_reminders WHERE id = ? LIMIT 1;", reminderId);
+      const reminder = await database.getFirstAsync<{
+        id: string;
+        user_id: string;
+        plant_id: string;
+        reminder_type: "water" | "mist" | "feed";
+        frequency_days: number;
+        enabled: number;
+        next_due_at: string | null;
+        last_triggered_at: string | null;
+        notification_id: string | null;
+        created_at: string;
+        updated_at: string;
+        updated_by: string | null;
+        pending: number;
+        synced_at: string | null;
+        sync_error: string | null;
+      }>("SELECT * FROM care_reminders WHERE id = ? LIMIT 1;", reminderId);
 
-  await enqueueSyncOperation({
-    entity: "care_reminders",
-    entityId: reminderId,
-    operation: "insert",
-    payload: {
-      userId: input.userId,
-      plantId: input.plantId,
-      frequencyDays: input.frequencyDays,
-      enabled: input.enabled,
+      return {
+        result: mapReminder(reminder!),
+        operations: [
+          {
+            entity: "care_reminders",
+            entityId: reminderId,
+            operation: "insert" as const,
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+              frequencyDays: input.frequencyDays,
+              enabled: input.enabled,
+            },
+          },
+        ],
+      };
     },
   });
-
-  return mapReminder(reminder!);
 }
 
 export async function updateReminderNotificationId(
@@ -208,19 +224,31 @@ export async function updateReminderNotificationId(
   notificationId: string | null,
 ) {
   const database = await getDatabase();
-  await database.runAsync(
-    "UPDATE care_reminders SET notification_id = ?, updated_at = ? WHERE id = ?;",
-    notificationId,
-    new Date().toISOString(),
-    reminderId,
-  );
+  const updatedAt = new Date().toISOString();
 
-  await enqueueSyncOperation({
-    entity: "care_reminders",
-    entityId: reminderId,
-    operation: "update",
-    payload: {
-      notificationId,
+  await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: updatedAt,
+    perform: async (transactionNowIso) => {
+      await database.runAsync(
+        "UPDATE care_reminders SET notification_id = ?, updated_at = ?, pending = 1 WHERE id = ?;",
+        notificationId,
+        transactionNowIso,
+        reminderId,
+      );
+
+      return {
+        result: reminderId,
+        operations: [
+          {
+            entity: "care_reminders",
+            entityId: reminderId,
+            operation: "update" as const,
+            payload: {
+              notificationId,
+            },
+          },
+        ],
+      };
     },
   });
 }

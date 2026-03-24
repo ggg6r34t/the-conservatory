@@ -52,6 +52,8 @@ describe("DataBackupScreen", () => {
       reminders: 2,
       pendingSyncUser: 1,
       failedSyncUser: 0,
+      pendingSyncQueueAccount: 2,
+      failedSyncQueueAccount: 1,
       pendingSyncDevice: 3,
       failedSyncDevice: 1,
       processingSync: 0,
@@ -91,6 +93,11 @@ describe("DataBackupScreen", () => {
     await waitFor(() => {
       expect(screen.getByText("Remote backup available")).toBeTruthy();
     });
+
+    expect(screen.getByText("Queue waiting (account)")).toBeTruthy();
+    expect(
+      screen.getByText("Waiting on this device (all accounts)"),
+    ).toBeTruthy();
 
     expect(mockPrimaryButton).toHaveBeenLastCalledWith(
       expect.objectContaining({ label: "Run Sync Now", disabled: false }),

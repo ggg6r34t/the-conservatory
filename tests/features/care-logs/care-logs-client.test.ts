@@ -1,13 +1,7 @@
 const mockGetDatabase = jest.fn();
-const mockEnqueueSyncOperation = jest.fn().mockResolvedValue(undefined);
 
 jest.mock("@/services/database/sqlite", () => ({
   getDatabase: (...args: unknown[]) => mockGetDatabase(...args),
-}));
-
-jest.mock("@/services/database/sync", () => ({
-  enqueueSyncOperation: (...args: unknown[]) =>
-    mockEnqueueSyncOperation(...args),
 }));
 
 jest.mock("@/features/plants/api/plantsClient", () => ({
@@ -29,6 +23,9 @@ describe("care logs client", () => {
 
   it("persists current condition when creating a care log", async () => {
     const runAsync = jest.fn().mockResolvedValue(undefined);
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
     const getFirstAsync = jest.fn().mockResolvedValue({
       id: "log-1",
       user_id: "user-1",
@@ -48,6 +45,7 @@ describe("care logs client", () => {
     mockGetDatabase.mockResolvedValue({
       runAsync,
       getFirstAsync,
+      withTransactionAsync,
     });
 
     const {
@@ -78,13 +76,68 @@ describe("care logs client", () => {
       null,
       null,
     );
-    expect(mockEnqueueSyncOperation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        entity: "care_logs",
-        payload: expect.objectContaining({ currentCondition: "Declining" }),
-      }),
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO sync_queue"),
+      expect.any(String),
+      "care_logs",
+      expect.any(String),
+      "insert",
+      expect.stringContaining('"currentCondition":"Declining"'),
+      "pending",
+      0,
+      null,
+      null,
+      expect.any(String),
+      expect.any(String),
     );
     expect(result.currentCondition).toBe("Declining");
+  });
+
+  it("rolls back create when outbox insert fails", async () => {
+    const runAsync = jest
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("sync queue unavailable"));
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
+    const getFirstAsync = jest.fn().mockResolvedValue({
+      id: "log-1",
+      user_id: "user-1",
+      plant_id: "plant-1",
+      log_type: "note",
+      current_condition: "Declining",
+      notes: "Leaves softened near the base.",
+      logged_at: "2026-03-24T10:00:00.000Z",
+      created_at: "2026-03-24T10:00:00.000Z",
+      updated_at: "2026-03-24T10:00:00.000Z",
+      updated_by: "user-1",
+      pending: 1,
+      synced_at: null,
+      sync_error: null,
+    });
+
+    mockGetDatabase.mockResolvedValue({
+      runAsync,
+      getFirstAsync,
+      withTransactionAsync,
+    });
+
+    const {
+      createCareLog,
+    } = require("@/features/care-logs/api/careLogsClient");
+
+    await expect(
+      createCareLog({
+        userId: "user-1",
+        plantId: "plant-1",
+        logType: "note",
+        currentCondition: "Declining",
+        notes: "Leaves softened near the base.",
+      }),
+    ).rejects.toThrow("sync queue unavailable");
+
+    expect(getFirstAsync).toHaveBeenCalled();
   });
 
   it("maps stored current condition when listing care logs", async () => {

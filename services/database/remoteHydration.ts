@@ -1,7 +1,10 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
 import { supabase } from "@/config/supabase";
-import { resolveConflict } from "@/services/database/conflictResolver";
+import {
+  buildConflictTelemetryMeta,
+  resolveConflict,
+} from "@/services/database/conflictResolver";
 import { getDatabase } from "@/services/database/sqlite";
 import {
   getStorageAssetUrl,
@@ -175,6 +178,26 @@ async function shouldReplaceLocalRow(
     localUpdatedAt: localRow.updated_at,
     remoteUpdatedAt: row.updated_at,
     localPending: localRow.pending === 1,
+  });
+
+  const telemetry = buildConflictTelemetryMeta({
+    record: {
+      entity: table,
+      entityId: row.id,
+      strategy: "last-write-wins",
+      localUpdatedAt: localRow.updated_at,
+      remoteUpdatedAt: row.updated_at,
+      localPending: localRow.pending === 1,
+    },
+    result,
+    source: "remote-hydration",
+  });
+
+  logger.info("sync.conflict.observed", {
+    entity: table,
+    entityId: row.id,
+    winner: result.winner,
+    ...telemetry,
   });
 
   return result.winner === "remote";
