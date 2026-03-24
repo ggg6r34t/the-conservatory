@@ -82,7 +82,7 @@ export function buildDashboardHeroCopy(
       "specimen",
     )} are coming due in the next day. A light check-in keeps the collection steady.`;
   } else if (input.upcomingCare > 0) {
-    stateClause = `No care is due today. ${numberToWord(input.upcomingCare)} ${pluralize(
+    stateClause = `No care is due today. ${capitalize(numberToWord(input.upcomingCare))} ${pluralize(
       input.upcomingCare,
       "specimen",
     )} are approaching their next window.`;

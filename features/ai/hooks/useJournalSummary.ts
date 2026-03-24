@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { getJournalMonthlySummary } from "@/features/ai/services/journalSummaryService";
+import {
+  buildJournalSummaryStateSignature,
+  getJournalMonthlySummary,
+} from "@/features/ai/services/journalSummaryService";
 import type { CareLog, Plant } from "@/types/models";
 
 export function useJournalSummary(input: {
@@ -10,6 +13,11 @@ export function useJournalSummary(input: {
   photoCount: number;
 }) {
   const monthKey = new Date().toISOString().slice(0, 7);
+  const signature = buildJournalSummaryStateSignature({
+    logs: input.logs,
+    plants: input.plants,
+    photoCount: input.photoCount,
+  });
 
   return useQuery({
     queryKey: [
@@ -17,9 +25,7 @@ export function useJournalSummary(input: {
       "journal-summary",
       input.userId ?? "guest",
       monthKey,
-      input.logs.length,
-      input.photoCount,
-      input.plants.length,
+      signature,
     ],
     enabled: Boolean(input.userId),
     staleTime: 1000 * 60 * 30,

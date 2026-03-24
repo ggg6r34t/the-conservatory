@@ -8,6 +8,7 @@ export function useDashboardInsight(input: {
   plants: Plant[];
   reminders: CareReminder[];
   currentStreakDays: number;
+  enabled?: boolean;
 }) {
   return useQuery({
     queryKey: [
@@ -18,9 +19,11 @@ export function useDashboardInsight(input: {
       input.plants.length,
       input.reminders.length,
       input.currentStreakDays,
-      input.plants.map((plant) => `${plant.id}:${plant.nextWaterDueAt ?? "none"}`).join("|"),
+      input.plants
+        .map((plant) => `${plant.id}:${plant.nextWaterDueAt ?? "none"}`)
+        .join("|"),
     ],
-    enabled: Boolean(input.userId),
+    enabled: Boolean(input.userId) && (input.enabled ?? true),
     staleTime: 1000 * 60 * 15,
     queryFn: () =>
       getDashboardInsight({

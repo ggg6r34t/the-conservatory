@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import {
   Image,
@@ -15,9 +15,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
-import { queryKeys } from "@/config/constants";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { listCareLogs } from "@/features/care-logs/api/careLogsClient";
+import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { usePlants } from "@/features/plants/hooks/usePlants";
 import { useSettings } from "@/features/settings/hooks/useSettings";
@@ -181,21 +180,18 @@ export default function ProfileScreen() {
   const remindersEnabled = settingsQuery.data?.remindersEnabled ?? true;
   const themeLabel = formatThemeLabel(settingsQuery.data?.preferredTheme);
 
-  const careLogQueries = useQueries({
-    queries: plants.map((plant) => ({
-      queryKey: queryKeys.careLogs(plant.id),
-      queryFn: () => listCareLogs(plant.id),
-      enabled: plants.length > 0,
-    })),
+  const plantIds = plants.map((plant) => plant.id);
+  const careLogsQuery = useQuery({
+    queryKey: ["care-logs", "batch", plantIds.join("|")],
+    queryFn: () => listCareLogsForPlants(plantIds),
+    enabled: plantIds.length > 0,
   });
 
   const streakDays = useMemo(() => {
-    const allLoggedAt = careLogQueries.flatMap(
-      (query) => query.data?.map((log) => log.loggedAt) ?? [],
-    );
+    const allLoggedAt = (careLogsQuery.data ?? []).map((log) => log.loggedAt);
 
     return computeCareStreak(allLoggedAt);
-  }, [careLogQueries]);
+  }, [careLogsQuery.data]);
 
   const displayName = user?.displayName ?? "Elowen Thorne";
   const email = user?.email ?? "elowen.garden@botany.io";

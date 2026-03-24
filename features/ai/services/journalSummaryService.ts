@@ -11,12 +11,44 @@ import type { CareLog, Plant } from "@/types/models";
 
 const MONTH_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
-function buildJournalCacheKey(userId: string, monthKey: string) {
-  return `ai:journal:${userId}:${monthKey}`;
+function buildJournalCacheKey(
+  userId: string,
+  monthKey: string,
+  signature: string,
+) {
+  return `ai:journal:${userId}:${monthKey}:${signature}`;
 }
 
 function inMonth(value: string, monthKey: string) {
   return value.startsWith(monthKey);
+}
+
+export function buildJournalSummaryStateSignature(input: {
+  logs: CareLog[];
+  plants: Plant[];
+  photoCount: number;
+}) {
+  const latestLogAt = [...input.logs].sort((left, right) =>
+    right.loggedAt.localeCompare(left.loggedAt),
+  )[0]?.loggedAt;
+  const plantSignature = [...input.plants]
+    .map((plant) =>
+      [
+        plant.id,
+        plant.updatedAt,
+        plant.lastWateredAt ?? "none",
+        plant.nextWaterDueAt ?? "none",
+      ].join(":"),
+    )
+    .sort()
+    .join("|");
+
+  return [
+    input.logs.length,
+    latestLogAt ?? "none",
+    input.photoCount,
+    plantSignature,
+  ].join("::");
 }
 
 export function buildLocalMonthlySummary(input: {
@@ -92,7 +124,12 @@ export async function getJournalMonthlySummary(input: {
   now?: Date;
 }) {
   const monthKey = buildMonthKey(input.now);
-  const cacheKey = buildJournalCacheKey(input.userId, monthKey);
+  const signature = buildJournalSummaryStateSignature({
+    logs: input.logs,
+    plants: input.plants,
+    photoCount: input.photoCount,
+  });
+  const cacheKey = buildJournalCacheKey(input.userId, monthKey, signature);
   const cached = await getCachedValue<JournalMonthlySummary>(cacheKey);
   if (cached) {
     return cached;

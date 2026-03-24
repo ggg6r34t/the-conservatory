@@ -1,4 +1,4 @@
-import { useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Link } from "expo-router";
 import {
@@ -17,13 +17,12 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
+import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
 import { JournalSummaryCard } from "@/features/ai/components/JournalSummaryCard";
 import { useJournalSummary } from "@/features/ai/hooks/useJournalSummary";
 import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
-import { queryKeys } from "@/config/constants";
-import { listCareLogs } from "@/features/care-logs/api/careLogsClient";
+import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { usePlants } from "@/features/plants/hooks/usePlants";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
@@ -31,7 +30,7 @@ import type { CareLog } from "@/types/models";
 
 type JournalEntry = {
   log: CareLog;
-  plant: PlantListItem;
+  plant: PlantListItem & { primaryPhotoUri: string | null };
 };
 
 function formatMonthYear(value: Date) {
@@ -200,21 +199,32 @@ export default function JournalScreen() {
   const featuredPlant = plants[0];
   const fabBottomOffset = getFloatingActionBottomOffset(insets.bottom);
 
-  const logQueries = useQueries({
-    queries: plants.map((plant) => ({
-      queryKey: queryKeys.careLogs(plant.id),
-      queryFn: () => listCareLogs(plant.id),
-      enabled: Boolean(plant.id),
-    })),
+  const plantIds = plants.map((plant) => plant.id);
+  const logsQuery = useQuery({
+    queryKey: ["care-logs", "batch", plantIds.join("|")],
+    queryFn: () => listCareLogsForPlants(plantIds),
+    enabled: plantIds.length > 0,
   });
+  const plantsById = new Map(
+    plants.map((plant) => [
+      plant.id,
+      {
+        ...plant,
+        primaryPhotoUri: plant.primaryPhotoUri ?? null,
+      },
+    ]),
+  );
 
-  const entries = logQueries
-    .flatMap((query, index) =>
-      (query.data ?? []).map((log) => ({
-        log,
-        plant: plants[index],
-      })),
-    )
+  const entries = (logsQuery.data ?? [])
+    .reduce<JournalEntry[]>((acc, log) => {
+      const plant = plantsById.get(log.plantId);
+      if (!plant) {
+        return acc;
+      }
+
+      acc.push({ log, plant });
+      return acc;
+    }, [])
     .sort((left, right) => right.log.loggedAt.localeCompare(left.log.loggedAt));
 
   const sections = buildSections(entries);

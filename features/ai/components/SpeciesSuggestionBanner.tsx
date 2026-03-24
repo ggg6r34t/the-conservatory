@@ -9,12 +9,26 @@ interface SpeciesSuggestionBannerProps {
   onDismiss: () => void;
 }
 
+function confidenceQualifier(confidence: number) {
+  if (confidence >= 0.8) {
+    return "High confidence";
+  }
+
+  if (confidence >= 0.65) {
+    return "Moderate confidence";
+  }
+
+  return "Low confidence";
+}
+
 export function SpeciesSuggestionBanner({
   suggestion,
   onAccept,
   onDismiss,
 }: SpeciesSuggestionBannerProps) {
   const { colors } = useTheme();
+  const qualifier = confidenceQualifier(suggestion.confidence);
+  const confidenceText = `Confidence: ${Math.round(suggestion.confidence * 100)}%`;
 
   return (
     <View
@@ -30,11 +44,13 @@ export function SpeciesSuggestionBanner({
         QUIET SUGGESTION
       </Text>
       <Text style={[styles.title, { color: colors.onSurface }]}>
-        Likely {suggestion.species}
+        Likely {suggestion.species} · {qualifier}
       </Text>
       <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
-        {suggestion.careProfileHint ??
-          `Confidence ${Math.round(suggestion.confidence * 100)}%. Use it as a starting point only.`}
+        {suggestion.careProfileHint ?? "Use it as a starting point only."}
+      </Text>
+      <Text style={[styles.confidenceMeta, { color: colors.onSurfaceVariant }]}>
+        {confidenceText}
       </Text>
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" onPress={onAccept}>
@@ -43,7 +59,9 @@ export function SpeciesSuggestionBanner({
           </Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={onDismiss}>
-          <Text style={[styles.actionLabel, { color: colors.onSurfaceVariant }]}>
+          <Text
+            style={[styles.actionLabel, { color: colors.onSurfaceVariant }]}
+          >
             NOT NOW
           </Text>
         </Pressable>
@@ -75,6 +93,12 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 13,
     lineHeight: 20,
+  },
+  confidenceMeta: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 11,
+    lineHeight: 16,
+    letterSpacing: 0.2,
   },
   actions: {
     flexDirection: "row",

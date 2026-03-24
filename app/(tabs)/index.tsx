@@ -1,4 +1,4 @@
-import { useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import {
   RefreshControl,
@@ -16,13 +16,13 @@ import {
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
-import { queryKeys } from "@/config/constants";
 import { DashboardInsightCard } from "@/features/ai/components/DashboardInsightCard";
 import { useDashboardInsight } from "@/features/ai/hooks/useDashboardInsight";
 import { useStreakRecoveryNudge } from "@/features/ai/hooks/useStreakRecoveryNudge";
 import { decideDashboardPresentation } from "@/features/ai/services/dashboardPresentationService";
+import { calculateCurrentStreakDays } from "@/features/ai/services/streakNudgeService";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { listCareLogs } from "@/features/care-logs/api/careLogsClient";
+import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
 import { HydrationCard } from "@/features/dashboard/components/HydrationCard";
 import { StreakSummary } from "@/features/dashboard/components/StreakSummary";
@@ -45,6 +45,23 @@ export default function HomeScreen() {
     .map((plant) => plant.primaryPhotoUri)
     .filter((uri): uri is string => Boolean(uri));
   const now = Date.now();
+  const nowDate = new Date();
+  const endOfToday = new Date(
+    nowDate.getFullYear(),
+    nowDate.getMonth(),
+    nowDate.getDate(),
+    23,
+    59,
+    59,
+    999,
+  ).getTime();
+  const hasCurrentWateringNeed = dashboard.plants.some((plant) => {
+    if (!plant.nextWaterDueAt) {
+      return false;
+    }
+
+    return new Date(plant.nextWaterDueAt).getTime() <= endOfToday;
+  });
   const overdueCount = dashboard.plants.filter((plant) => {
     if (!plant.nextWaterDueAt) {
       return false;
@@ -72,19 +89,20 @@ export default function HomeScreen() {
     upcomingCare: upcomingCareCount,
     activeReminders: activeReminderCount,
   });
-  const logQueries = useQueries({
-    queries: dashboard.plants.map((plant) => ({
-      queryKey: queryKeys.careLogs(plant.id),
-      queryFn: () => listCareLogs(plant.id),
-      enabled: Boolean(plant.id),
-    })),
+  const plantIds = dashboard.plants.map((plant) => plant.id);
+  const logsQuery = useQuery({
+    queryKey: ["care-logs", "batch", plantIds.join("|")],
+    queryFn: () => listCareLogsForPlants(plantIds),
+    enabled: plantIds.length > 0,
   });
-  const logs = logQueries.flatMap((query) => query.data ?? []);
+  const logs = logsQuery.data ?? [];
+  const currentStreakDays = calculateCurrentStreakDays(logs);
   const insightQuery = useDashboardInsight({
     userId: user?.id,
     plants: dashboard.plants,
     reminders: remindersQuery.data ?? [],
-    currentStreakDays: 0,
+    currentStreakDays,
+    enabled: hasCurrentWateringNeed,
   });
   const streakNudgeQuery = useStreakRecoveryNudge({
     userId: user?.id,
@@ -157,7 +175,7 @@ export default function HomeScreen() {
           nextCycleHours={dashboard.nextCycleHours}
         />
 
-        {presentation.primaryInsight ? (
+        {presentation.primaryInsight && hasCurrentWateringNeed ? (
           <DashboardInsightCard insight={presentation.primaryInsight} />
         ) : null}
 
