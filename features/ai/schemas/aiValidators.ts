@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   clampConfidence,
   normalizeSpeciesLabel,
-} from "@/features/ai/utils/aiMappers";
+} from "@/features/ai/schemas/aiMappers";
 import type {
   ArchiveCuratedPair,
   DashboardInsight,
@@ -128,11 +128,11 @@ export function parseRefinedCareLogResponse(
 export function parseArchiveCurationResponse(
   response:
     | {
-        pairs?: Array<Omit<ArchiveCuratedPair, "source">> | null;
+        pairs?: Omit<ArchiveCuratedPair, "source">[] | null;
       }
     | null
     | undefined,
-): Array<Omit<ArchiveCuratedPair, "source">> {
+): Omit<ArchiveCuratedPair, "source">[] {
   const parsed = z.array(archivePairSchema).safeParse(response?.pairs ?? []);
   return parsed.success ? parsed.data : [];
 }

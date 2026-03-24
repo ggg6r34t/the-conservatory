@@ -1,9 +1,12 @@
 import { requestJournalSummary } from "@/features/ai/api/aiClient";
+import {
+  buildMonthKey,
+  withSummarySource,
+} from "@/features/ai/schemas/aiMappers";
+import { parseJournalSummaryResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import { selectDeterministicVariant } from "@/features/ai/services/editorialVoiceService";
 import type { JournalMonthlySummary } from "@/features/ai/types/ai";
-import { buildMonthKey, withSummarySource } from "@/features/ai/utils/aiMappers";
-import { parseJournalSummaryResponse } from "@/features/ai/utils/aiValidators";
 import type { CareLog, Plant } from "@/types/models";
 
 const MONTH_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7;
@@ -22,21 +25,30 @@ export function buildLocalMonthlySummary(input: {
   photoCount: number;
   plantsById: Map<string, Plant>;
 }): Omit<JournalMonthlySummary, "monthKey" | "source"> | null {
-  const monthLogs = input.logs.filter((log) => inMonth(log.loggedAt, input.monthKey));
+  const monthLogs = input.logs.filter((log) =>
+    inMonth(log.loggedAt, input.monthKey),
+  );
 
   if (monthLogs.length < 2) {
     return null;
   }
 
-  const wateredCount = monthLogs.filter((log) => log.logType === "water").length;
-  const mostActivePlantId = monthLogs.reduce<Record<string, number>>((acc, log) => {
-    acc[log.plantId] = (acc[log.plantId] ?? 0) + 1;
-    return acc;
-  }, {});
+  const wateredCount = monthLogs.filter(
+    (log) => log.logType === "water",
+  ).length;
+  const mostActivePlantId = monthLogs.reduce<Record<string, number>>(
+    (acc, log) => {
+      acc[log.plantId] = (acc[log.plantId] ?? 0) + 1;
+      return acc;
+    },
+    {},
+  );
   const topPlantId = Object.entries(mostActivePlantId).sort(
     (left, right) => right[1] - left[1],
   )[0]?.[0];
-  const topPlantName = topPlantId ? input.plantsById.get(topPlantId)?.name : null;
+  const topPlantName = topPlantId
+    ? input.plantsById.get(topPlantId)?.name
+    : null;
 
   const body =
     wateredCount >= 3
@@ -99,10 +111,13 @@ export async function getJournalMonthlySummary(input: {
   }
 
   const monthLogs = input.logs.filter((log) => inMonth(log.loggedAt, monthKey));
-  const mostActivePlantId = monthLogs.reduce<Record<string, number>>((acc, log) => {
-    acc[log.plantId] = (acc[log.plantId] ?? 0) + 1;
-    return acc;
-  }, {});
+  const mostActivePlantId = monthLogs.reduce<Record<string, number>>(
+    (acc, log) => {
+      acc[log.plantId] = (acc[log.plantId] ?? 0) + 1;
+      return acc;
+    },
+    {},
+  );
   const topPlantId = Object.entries(mostActivePlantId).sort(
     (left, right) => right[1] - left[1],
   )[0]?.[0];
@@ -114,7 +129,9 @@ export async function getJournalMonthlySummary(input: {
       wateredCount: monthLogs.filter((log) => log.logType === "water").length,
       photoCount: input.photoCount,
       activePlantCount: input.plants.length,
-      mostActivePlantName: topPlantId ? plantsById.get(topPlantId)?.name : undefined,
+      mostActivePlantName: topPlantId
+        ? plantsById.get(topPlantId)?.name
+        : undefined,
     },
     fallback,
   });

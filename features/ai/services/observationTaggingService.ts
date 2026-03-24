@@ -1,10 +1,7 @@
 import { requestCareLogRefinement } from "@/features/ai/api/aiClient";
-import type {
-  ObservationTag,
-  RefinedCareLogSuggestion,
-} from "@/features/ai/types/ai";
-import { withRefinedCareLogSource } from "@/features/ai/utils/aiMappers";
-import { parseRefinedCareLogResponse } from "@/features/ai/utils/aiValidators";
+import { withRefinedCareLogSource } from "@/features/ai/schemas/aiMappers";
+import { parseRefinedCareLogResponse } from "@/features/ai/schemas/aiValidators";
+import type { ObservationTag } from "@/features/ai/types/ai";
 import type { CareLogType } from "@/types/models";
 
 const NOTE_TAG_MARKER = "\n\nTags: ";

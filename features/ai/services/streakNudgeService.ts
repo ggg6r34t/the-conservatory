@@ -1,9 +1,12 @@
 import { requestStreakNudge } from "@/features/ai/api/aiClient";
+import {
+  buildDayKey,
+  withStreakNudgeSource,
+} from "@/features/ai/schemas/aiMappers";
+import { parseStreakNudgeResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import { selectDeterministicVariant } from "@/features/ai/services/editorialVoiceService";
 import type { StreakRecoveryNudge } from "@/features/ai/types/ai";
-import { buildDayKey, withStreakNudgeSource } from "@/features/ai/utils/aiMappers";
-import { parseStreakNudgeResponse } from "@/features/ai/utils/aiValidators";
 import type { CareLog, Plant } from "@/types/models";
 
 const STREAK_NUDGE_TTL_MS = 1000 * 60 * 60 * 8;
@@ -84,7 +87,9 @@ function daysSince(value?: string | null) {
     return null;
   }
 
-  return Math.floor((Date.now() - new Date(value).getTime()) / (24 * 60 * 60 * 1000));
+  return Math.floor(
+    (Date.now() - new Date(value).getTime()) / (24 * 60 * 60 * 1000),
+  );
 }
 
 export function buildLocalStreakNudge(input: {
@@ -93,16 +98,20 @@ export function buildLocalStreakNudge(input: {
   logs: CareLog[];
 }): Omit<StreakRecoveryNudge, "source"> | null {
   const overdueCount = input.plants.filter((plant) =>
-    plant.nextWaterDueAt ? new Date(plant.nextWaterDueAt).getTime() <= Date.now() : false,
+    plant.nextWaterDueAt
+      ? new Date(plant.nextWaterDueAt).getTime() <= Date.now()
+      : false,
   ).length;
   const dueSoonCount = input.plants.filter((plant) =>
     plant.nextWaterDueAt
-      ? new Date(plant.nextWaterDueAt).getTime() <= Date.now() + 24 * 60 * 60 * 1000
+      ? new Date(plant.nextWaterDueAt).getTime() <=
+        Date.now() + 24 * 60 * 60 * 1000
       : false,
   ).length;
   const daysSinceLastLog = daysSince(
-    [...input.logs].sort((left, right) => right.loggedAt.localeCompare(left.loggedAt))[0]
-      ?.loggedAt,
+    [...input.logs].sort((left, right) =>
+      right.loggedAt.localeCompare(left.loggedAt),
+    )[0]?.loggedAt,
   );
 
   if (daysSinceLastLog === null || daysSinceLastLog <= 0) {
@@ -174,11 +183,14 @@ export async function getStreakRecoveryNudge(input: {
   }
 
   const overdueCount = input.plants.filter((plant) =>
-    plant.nextWaterDueAt ? new Date(plant.nextWaterDueAt).getTime() <= Date.now() : false,
+    plant.nextWaterDueAt
+      ? new Date(plant.nextWaterDueAt).getTime() <= Date.now()
+      : false,
   ).length;
   const dueSoonCount = input.plants.filter((plant) =>
     plant.nextWaterDueAt
-      ? new Date(plant.nextWaterDueAt).getTime() <= Date.now() + 24 * 60 * 60 * 1000
+      ? new Date(plant.nextWaterDueAt).getTime() <=
+        Date.now() + 24 * 60 * 60 * 1000
       : false,
   ).length;
   const latestLog = [...input.logs].sort((left, right) =>

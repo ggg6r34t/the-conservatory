@@ -1,10 +1,10 @@
 import { requestHealthInsight } from "@/features/ai/api/aiClient";
+import { withHealthInsightSource } from "@/features/ai/schemas/aiMappers";
+import { parseHealthInsightResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
-import { buildHealthSignalAnalysis } from "@/features/ai/services/healthSignalAnalysisService";
 import { enforceHealthInsightSafety } from "@/features/ai/services/healthInsightSafetyService";
+import { buildHealthSignalAnalysis } from "@/features/ai/services/healthSignalAnalysisService";
 import type { HealthInsight } from "@/features/ai/types/ai";
-import { withHealthInsightSource } from "@/features/ai/utils/aiMappers";
-import { parseHealthInsightResponse } from "@/features/ai/utils/aiValidators";
 import type { PlantWithRelations } from "@/types/models";
 
 const HEALTH_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
@@ -65,7 +65,8 @@ export async function getHealthInsight(input: {
         ? Math.max(
             0,
             Math.round(
-              (Date.now() - new Date(input.data.plant.nextWaterDueAt).getTime()) /
+              (Date.now() -
+                new Date(input.data.plant.nextWaterDueAt).getTime()) /
                 (24 * 60 * 60 * 1000),
             ),
           )

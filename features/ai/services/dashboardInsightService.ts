@@ -1,9 +1,12 @@
 import { requestDashboardInsight } from "@/features/ai/api/aiClient";
+import {
+  buildDayKey,
+  withInsightSource,
+} from "@/features/ai/schemas/aiMappers";
+import { parseDashboardInsightResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import { selectDeterministicVariant } from "@/features/ai/services/editorialVoiceService";
 import type { DashboardInsight } from "@/features/ai/types/ai";
-import { buildDayKey, withInsightSource } from "@/features/ai/utils/aiMappers";
-import { parseDashboardInsightResponse } from "@/features/ai/utils/aiValidators";
 import type { CareReminder, Plant } from "@/types/models";
 
 const DAY_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
@@ -37,7 +40,9 @@ export function buildDashboardStateSignature(input: {
     .sort()
     .join("|");
 
-  return [plantSignature, reminderSignature, input.currentStreakDays].join("::");
+  return [plantSignature, reminderSignature, input.currentStreakDays].join(
+    "::",
+  );
 }
 
 function buildDashboardCacheKey(
@@ -81,8 +86,9 @@ export function buildLocalInsight(input: {
   const ranked = rankPlants(input.plants);
   const overdue = ranked.filter((plant) => plant.overdue);
   const dueSoon = ranked.filter((plant) => !plant.overdue && plant.dueSoon);
-  const activeReminderCount = input.reminders.filter((reminder) => reminder.enabled)
-    .length;
+  const activeReminderCount = input.reminders.filter(
+    (reminder) => reminder.enabled,
+  ).length;
 
   if (overdue.length > 0) {
     const plant = overdue[0];
@@ -133,21 +139,22 @@ export function buildLocalInsight(input: {
 
   return {
     title: "Today in your conservatory",
-    body: activeReminderCount > 0
-      ? selectDeterministicVariant(
-          [
-            "The collection feels settled today. It can rest between care moments.",
-            "The conservatory is holding its balance today. There is room to let things settle.",
-          ],
-          `${activeReminderCount}:balanced`,
-        )
-      : selectDeterministicVariant(
-          [
-            "The gallery is quiet today. Your plants can settle without interruption.",
-            "Nothing urgent is asking for attention today. The collection can stay at ease.",
-          ],
-          "quiet-day",
-        ),
+    body:
+      activeReminderCount > 0
+        ? selectDeterministicVariant(
+            [
+              "The collection feels settled today. It can rest between care moments.",
+              "The conservatory is holding its balance today. There is room to let things settle.",
+            ],
+            `${activeReminderCount}:balanced`,
+          )
+        : selectDeterministicVariant(
+            [
+              "The gallery is quiet today. Your plants can settle without interruption.",
+              "Nothing urgent is asking for attention today. The collection can stay at ease.",
+            ],
+            "quiet-day",
+          ),
   };
 }
 

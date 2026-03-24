@@ -1,8 +1,8 @@
 import { requestArchiveCuration } from "@/features/ai/api/aiClient";
+import { withCuratedArchivePairSource } from "@/features/ai/schemas/aiMappers";
+import { parseArchiveCurationResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import type { ArchiveCuratedPair } from "@/features/ai/types/ai";
-import { withCuratedArchivePairSource } from "@/features/ai/utils/aiMappers";
-import { parseArchiveCurationResponse } from "@/features/ai/utils/aiValidators";
 
 const ARCHIVE_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 
@@ -22,7 +22,10 @@ function uniqueUris(uris: string[]) {
 
 function buildRevision(items: ArchiveCurationItem[]) {
   return items
-    .map((item) => `${item.plantId}:${item.photoUris.length}:${item.photoUris[0] ?? "none"}`)
+    .map(
+      (item) =>
+        `${item.plantId}:${item.photoUris.length}:${item.photoUris[0] ?? "none"}`,
+    )
     .join("|");
 }
 

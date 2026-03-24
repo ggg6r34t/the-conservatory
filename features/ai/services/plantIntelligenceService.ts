@@ -1,15 +1,15 @@
 import { requestPlantIdentification } from "@/features/ai/api/aiClient";
+import {
+  createCacheKeyHash,
+  normalizeSpeciesLabel,
+  withSpeciesSource,
+} from "@/features/ai/schemas/aiMappers";
+import { parseSpeciesSuggestionResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import type {
   IdentifyPlantResponse,
   SpeciesSuggestion,
 } from "@/features/ai/types/ai";
-import {
-  createCacheKeyHash,
-  normalizeSpeciesLabel,
-  withSpeciesSource,
-} from "@/features/ai/utils/aiMappers";
-import { parseSpeciesSuggestionResponse } from "@/features/ai/utils/aiValidators";
 
 const SPECIES_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 const SPECIES_CACHE_PREFIX = "ai:species:";
@@ -24,19 +24,22 @@ const URI_KEYWORDS: Array<{
     keywords: ["monstera", "deliciosa"],
     species: "Monstera Deliciosa",
     confidence: 0.72,
-    careProfileHint: "A bright indirect position usually keeps its rhythm steady.",
+    careProfileHint:
+      "A bright indirect position usually keeps its rhythm steady.",
   },
   {
     keywords: ["pothos", "epipremnum"],
     species: "Pothos",
     confidence: 0.7,
-    careProfileHint: "A forgiving first rhythm with moderate drying between waterings.",
+    careProfileHint:
+      "A forgiving first rhythm with moderate drying between waterings.",
   },
   {
     keywords: ["ficus", "fiddle"],
     species: "Fiddle Leaf Fig",
     confidence: 0.68,
-    careProfileHint: "A steady window position and even watering tend to work best.",
+    careProfileHint:
+      "A steady window position and even watering tend to work best.",
   },
   {
     keywords: ["snake", "sansevieria", "dracaena"],

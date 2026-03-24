@@ -3,11 +3,11 @@ import {
   parseDashboardInsightResponse,
   parseHealthInsightResponse,
   parseJournalSummaryResponse,
-  parseReminderOptimizationResponse,
   parseRefinedCareLogResponse,
+  parseReminderOptimizationResponse,
   parseSpeciesSuggestionResponse,
   parseStreakNudgeResponse,
-} from "@/features/ai/utils/aiValidators";
+} from "@/features/ai/schemas/aiValidators";
 
 describe("aiValidators", () => {
   it("parses species suggestions safely", () => {
