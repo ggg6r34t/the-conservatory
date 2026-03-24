@@ -69,10 +69,7 @@ export function buildDashboardHeroCopy(
     };
   }
 
-  const eyebrow = `YOUR LIVING GALLERY · ${numberToWord(input.totalPlants).toUpperCase()} ${pluralize(
-    input.totalPlants,
-    "SPECIMEN",
-  ).toUpperCase()}`;
+  const eyebrow = "YOUR LIVING GALLERY";
 
   let stateClause = "";
 

@@ -26,7 +26,7 @@ describe("dashboardHeroCopy", () => {
       activeReminders: 2,
     });
 
-    expect(copy.eyebrow).toContain("FIVE SPECIMENS");
+    expect(copy.eyebrow).toBe("YOUR LIVING GALLERY");
     expect(copy.body).toContain(
       "Welcome back. Your indoor sanctuary is looking lush today.",
     );
@@ -56,7 +56,7 @@ describe("dashboardHeroCopy", () => {
       activeReminders: 3,
     });
 
-    expect(copy.eyebrow).toContain("24 SPECIMENS");
+    expect(copy.eyebrow).toBe("YOUR LIVING GALLERY");
     expect(copy.body).toContain(
       "24 specimens are approaching their next window",
     );
