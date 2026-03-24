@@ -3,6 +3,8 @@ import { StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { useArchiveCuration } from "@/features/ai/hooks/useArchiveCuration";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 
@@ -16,8 +18,13 @@ function formatArchiveDate(value: string) {
 
 export default function ArchiveGalleryScreen() {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const graveyardQuery = useGraveyard();
   const memorials = graveyardQuery.data ?? [];
+  const curationQuery = useArchiveCuration({
+    userId: user?.id,
+    memorials,
+  });
 
   return (
     <ProfileScreenScaffold
@@ -25,6 +32,47 @@ export default function ArchiveGalleryScreen() {
       subtitle="Memorial archive"
       description="A compact catalog of your remembered specimens, preserved with their memorial notes and archive dates."
     >
+      {curationQuery.data.length ? (
+        <View style={styles.curatedSection}>
+          <Text style={[styles.curatedLabel, { color: colors.secondary }]}>
+            QUIET PAIRS
+          </Text>
+          {curationQuery.data.map((pair) => (
+            <View
+              key={pair.plantId}
+              style={[
+                styles.curatedCard,
+                { backgroundColor: colors.surfaceContainerLow },
+              ]}
+            >
+              <View style={styles.curatedHeader}>
+                <Text style={[styles.curatedTitle, { color: colors.primary }]}>
+                  {pair.plantName}
+                </Text>
+                <Text
+                  style={[styles.curatedCaption, { color: colors.onSurfaceVariant }]}
+                >
+                  {pair.caption}
+                </Text>
+              </View>
+
+              <View style={styles.curatedImageRow}>
+                <Image
+                  source={{ uri: pair.beforeUri }}
+                  style={styles.curatedImage}
+                  contentFit="cover"
+                />
+                <Image
+                  source={{ uri: pair.afterUri }}
+                  style={styles.curatedImage}
+                  contentFit="cover"
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       {memorials.length ? (
         memorials.map((memorial) => (
           <View
@@ -85,6 +133,42 @@ export default function ArchiveGalleryScreen() {
 }
 
 const styles = StyleSheet.create({
+  curatedSection: {
+    gap: 12,
+  },
+  curatedLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 2,
+  },
+  curatedCard: {
+    borderRadius: 24,
+    padding: 16,
+    gap: 12,
+  },
+  curatedHeader: {
+    gap: 4,
+  },
+  curatedTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  curatedCaption: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  curatedImageRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  curatedImage: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: 18,
+  },
   card: {
     borderRadius: 26,
     padding: 16,

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
 import type { CareLog } from "@/types/models";
 
 interface CareLogItemProps {
@@ -9,6 +10,7 @@ interface CareLogItemProps {
 
 export function CareLogItem({ log }: CareLogItemProps) {
   const { colors } = useTheme();
+  const parsedNote = parseStructuredCareLogNote(log.notes);
 
   return (
     <View
@@ -21,7 +23,7 @@ export function CareLogItem({ log }: CareLogItemProps) {
         {log.logType.toUpperCase()}
       </Text>
       <Text style={[styles.notes, { color: colors.onSurfaceVariant }]}>
-        {log.notes || "No notes recorded."}
+        {parsedNote.body || "No notes recorded."}
       </Text>
       <Text style={[styles.time, { color: colors.onSurfaceVariant }]}>
         {new Date(log.loggedAt).toLocaleString()}

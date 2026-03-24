@@ -17,6 +17,10 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
+import { JournalSummaryCard } from "@/features/ai/components/JournalSummaryCard";
+import { useJournalSummary } from "@/features/ai/hooks/useJournalSummary";
+import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
 import { queryKeys } from "@/config/constants";
 import { listCareLogs } from "@/features/care-logs/api/careLogsClient";
@@ -82,8 +86,9 @@ function formatTime(value: string) {
 }
 
 function formatEntryCopy(log: CareLog, plantName: string) {
-  if (log.notes?.trim()) {
-    return log.notes.trim();
+  const parsedNote = parseStructuredCareLogNote(log.notes);
+  if (parsedNote.body) {
+    return parsedNote.body;
   }
 
   switch (log.logType) {
@@ -187,6 +192,7 @@ function buildSections(entries: JournalEntry[]) {
 
 export default function JournalScreen() {
   const { colors, spacing } = useTheme();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { onRefresh, refreshing } = usePullToRefreshSync();
   const plantsQuery = usePlants();
@@ -228,6 +234,12 @@ export default function JournalScreen() {
         dateLabel: formatHighlightDate(latestLog?.loggedAt ?? plant.updatedAt),
       };
     });
+  const summaryQuery = useJournalSummary({
+    userId: user?.id,
+    logs: entries.map((entry) => entry.log),
+    plants,
+    photoCount: monthlyHighlights.length,
+  });
 
   return (
     <SafeAreaView
@@ -299,6 +311,10 @@ export default function JournalScreen() {
                 </Link>
               ))}
             </ScrollView>
+
+            {summaryQuery.data ? (
+              <JournalSummaryCard summary={summaryQuery.data} />
+            ) : null}
 
             {sections.length ? (
               <View style={styles.sections}>

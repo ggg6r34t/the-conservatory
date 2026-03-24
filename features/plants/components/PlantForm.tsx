@@ -14,6 +14,10 @@ import {
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { SpeciesSuggestionBanner } from "@/features/ai/components/SpeciesSuggestionBanner";
+import { useSpeciesSuggestion } from "@/features/ai/hooks/useSpeciesSuggestion";
+import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
+import type { LightCondition, SpeciesSuggestion } from "@/features/ai/types/ai";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAddPlant } from "@/features/plants/hooks/useAddPlant";
@@ -40,6 +44,8 @@ const SPECIES_SUGGESTIONS = ["Swiss Cheese Plant", "Fiddle Leaf", "Pothos"];
 const HYDRATION_MIN = 3;
 const HYDRATION_MAX = 21;
 const LEGACY_DEFAULT_NOTES = "bright indirect light";
+const DEFAULT_LIGHT_CONDITION: LightCondition = "indirect";
+export const REMINDER_TIMING_COPY = "Adaptive reminders based on care rhythm";
 
 function clampHydration(value: number) {
   return Math.min(HYDRATION_MAX, Math.max(HYDRATION_MIN, Math.round(value)));
@@ -151,6 +157,16 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   const [locationOpen, setLocationOpen] = useState(false);
   const [sliderWidth, setSliderWidth] = useState(0);
   const lastHydratedEditPlantId = useRef<string | undefined>(undefined);
+  const [lightCondition, setLightCondition] =
+    useState<LightCondition>(DEFAULT_LIGHT_CONDITION);
+  const [hasManualWateringOverride, setHasManualWateringOverride] = useState(
+    mode === "edit",
+  );
+  const [dismissedSuggestionUri, setDismissedSuggestionUri] = useState<string | null>(
+    null,
+  );
+  const [acceptedSuggestion, setAcceptedSuggestion] =
+    useState<SpeciesSuggestion | null>(null);
 
   const [values, setValues] = useState<PlantFormInput>({
     name: initialValues?.name ?? "",
@@ -162,6 +178,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
     photoUri: initialValues?.photoUri,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const speciesSuggestionQuery = useSpeciesSuggestion(values.photoUri);
 
   useEffect(() => {
     if (mode !== "create") {
@@ -204,6 +221,17 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   }, [draftLoaded, mode, values]);
 
   useEffect(() => {
+    if (!values.photoUri) {
+      setDismissedSuggestionUri(null);
+      return;
+    }
+
+    if (dismissedSuggestionUri && dismissedSuggestionUri !== values.photoUri) {
+      setDismissedSuggestionUri(null);
+    }
+  }, [dismissedSuggestionUri, values.photoUri]);
+
+  useEffect(() => {
     if (mode !== "edit" || !plantId || lastHydratedEditPlantId.current === plantId) {
       return;
     }
@@ -233,6 +261,32 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   }, [initialValues, mode, plantId]);
 
   const remindersEnabled = settingsQuery.data?.remindersEnabled ?? true;
+  const visibleSuggestion =
+    values.photoUri && dismissedSuggestionUri !== values.photoUri
+      ? speciesSuggestionQuery.data
+      : null;
+  const careDefaults = buildCareDefaults({
+    speciesName: values.speciesName || acceptedSuggestion?.species || values.name,
+    lightCondition,
+    acceptedSuggestion,
+  });
+
+  useEffect(() => {
+    if (hasManualWateringOverride) {
+      return;
+    }
+
+    setValues((current) => {
+      if (current.wateringIntervalDays === careDefaults.wateringIntervalDays) {
+        return current;
+      }
+
+      return {
+        ...current,
+        wateringIntervalDays: careDefaults.wateringIntervalDays,
+      };
+    });
+  }, [careDefaults.wateringIntervalDays, hasManualWateringOverride]);
 
   const handlePickImage = async () => {
     try {
@@ -311,6 +365,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
 
       const ratio = Math.min(1, Math.max(0, positionX / sliderWidth));
       const value = HYDRATION_MIN + ratio * (HYDRATION_MAX - HYDRATION_MIN);
+      setHasManualWateringOverride(true);
       setValues((current) => ({
         ...current,
         wateringIntervalDays: clampHydration(value),
@@ -340,6 +395,17 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
 
   const handleSliderLayout = (event: LayoutChangeEvent) => {
     setSliderWidth(event.nativeEvent.layout.width);
+  };
+
+  const applySpeciesSuggestion = (suggestion: SpeciesSuggestion) => {
+    setAcceptedSuggestion(suggestion);
+    setDismissedSuggestionUri(null);
+    setHasManualWateringOverride(false);
+    setValues((current) => ({
+      ...current,
+      speciesName: suggestion.species,
+      name: current.name.trim() ? current.name : suggestion.species,
+    }));
   };
 
   return (
@@ -402,10 +468,21 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
         value={values.speciesName}
         placeholder="e.g. Monstera Deliciosa"
         icon="search"
-        onChangeText={(text) =>
-          setValues((current) => ({ ...current, speciesName: text, name: text }))
-        }
+        onChangeText={(text) => {
+          setAcceptedSuggestion(null);
+          setValues((current) => ({ ...current, speciesName: text, name: text }));
+        }}
       />
+
+      {visibleSuggestion ? (
+        <SpeciesSuggestionBanner
+          suggestion={visibleSuggestion}
+          onAccept={() => applySpeciesSuggestion(visibleSuggestion)}
+          onDismiss={() => {
+            setDismissedSuggestionUri(values.photoUri ?? null);
+          }}
+        />
+      ) : null}
 
       <View style={styles.suggestionRow}>
         {SPECIES_SUGGESTIONS.map((suggestion) => (
@@ -513,6 +590,9 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
         <Text style={[styles.editorialTitle, { color: colors.onSurface }]}>
           Maintenance Protocol
         </Text>
+        <Text style={[styles.editorialBody, { color: colors.onSurfaceVariant }]}>
+          {careDefaults.explanation}
+        </Text>
       </View>
 
       <View style={[styles.protocolCard, { backgroundColor: colors.surfaceContainerLowest }]}>
@@ -545,6 +625,9 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
           </Text>
           <Text style={[styles.frequencyUnit, { color: colors.onSurface }]}>Days</Text>
         </View>
+        <Text style={[styles.protocolHint, { color: colors.onSurfaceVariant }]}>
+          {careDefaults.careProfileHint}
+        </Text>
 
         <View
           style={styles.sliderTrackWrap}
@@ -590,12 +673,48 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
         <View style={styles.exposureRow}>
           <View style={[styles.exposureDot, { backgroundColor: colors.secondary }]} />
           <Text style={[styles.exposureTitle, { color: colors.onSurface }]}>
-            Bright Indirect Light
+            {lightCondition === "low"
+              ? "Low Light"
+              : lightCondition === "direct"
+                ? "Direct Light"
+                : "Bright Indirect Light"}
           </Text>
         </View>
         <Text style={[styles.exposureBody, { color: colors.onSurfaceVariant }]}>
-          Place within 3-5 feet of a window with sheer curtains.
+          {careDefaults.lightSummary}
         </Text>
+        <View style={styles.lightSelectorRow}>
+          {(["low", "indirect", "direct"] as const).map((option) => {
+            const isActive = option === lightCondition;
+            return (
+              <Pressable
+                key={option}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
+                onPress={() => setLightCondition(option)}
+                style={[
+                  styles.lightChip,
+                  {
+                    backgroundColor: isActive
+                      ? colors.tertiaryContainer
+                      : colors.surfaceContainerHigh,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.lightChipLabel,
+                    {
+                      color: isActive ? colors.surfaceBright : colors.onSurface,
+                    },
+                  ]}
+                >
+                  {option.toUpperCase()}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       <View style={[styles.notificationCard, { backgroundColor: colors.surfaceContainerLow }]}>
@@ -607,7 +726,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
             Push Notifications
           </Text>
           <Text style={[styles.notificationBody, { color: colors.onSurfaceVariant }]}>
-            Smart alerts based on local humidity
+            {REMINDER_TIMING_COPY}
           </Text>
         </View>
         <NotificationToggle
@@ -836,6 +955,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 3,
   },
+  protocolHint: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 20,
+    maxWidth: 280,
+  },
   sliderTrackWrap: {
     position: "relative",
     height: 24,
@@ -875,6 +1000,25 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 13,
     lineHeight: 22,
+  },
+  lightSelectorRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 4,
+  },
+  lightChip: {
+    minHeight: 36,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lightChipLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.2,
   },
   notificationCard: {
     borderRadius: 22,

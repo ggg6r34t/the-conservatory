@@ -6,11 +6,13 @@ import { useTheme } from "@/components/design-system/useTheme";
 interface StreakSummaryProps {
   activePlants: number;
   plantPhotoUris: string[];
+  nudge?: string | null;
 }
 
 export function StreakSummary({
   activePlants,
   plantPhotoUris,
+  nudge,
 }: StreakSummaryProps) {
   const { colors } = useTheme();
   const thumbnails = plantPhotoUris.slice(0, 3);
@@ -26,6 +28,11 @@ export function StreakSummary({
         <Text style={[styles.label, { color: colors.surfaceBright }]}>
           ACTIVE SPECIES
         </Text>
+        {nudge ? (
+          <Text style={[styles.nudge, { color: colors.surfaceBright }]}>
+            {nudge}
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.cluster}>
@@ -67,6 +74,13 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_700Bold",
     fontSize: 9,
     letterSpacing: 2.4,
+  },
+  nudge: {
+    marginTop: 6,
+    maxWidth: 186,
+    fontFamily: "Manrope_500Medium",
+    fontSize: 12,
+    lineHeight: 18,
   },
   cluster: {
     width: 86,

@@ -1,6 +1,8 @@
 import { STORAGE_BUCKET } from "@/config/constants";
+import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
 import { upsertReminder } from "@/features/notifications/api/remindersClient";
 import { cancelReminderNotification } from "@/features/notifications/services/notificationService";
+import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import { getDatabase } from "@/services/database/sqlite";
 import { enqueueSyncOperation } from "@/services/database/sync";
 import { getStorageAssetUrl } from "@/services/supabase/storage";
@@ -457,7 +459,16 @@ export async function createPlant(input: {
   const database = await getDatabase();
   const now = new Date().toISOString();
   const plantId = createId("plant");
-  const nextWaterDueAt = computeNextWaterDueAt(now, input.wateringIntervalDays);
+  const preferences = await getUserPreferences(input.userId);
+  const nextWaterDueAt = optimizeReminderTiming({
+    plantName: input.name,
+    speciesName: input.speciesName,
+    wateringIntervalDays: input.wateringIntervalDays,
+    nextDueAt: computeNextWaterDueAt(now, input.wateringIntervalDays),
+    lastWateredAt: now,
+    reminderEnabled: true,
+    defaultWateringHour: preferences.defaultWateringHour,
+  }).nextDueAt;
 
   await database.runAsync(
     `INSERT INTO plants (
@@ -625,12 +636,23 @@ export async function updatePlant(input: {
   }
 
   const updatedAt = new Date().toISOString();
-  const nextWaterDueAt = current.plant.lastWateredAt
+  const preferences = await getUserPreferences(input.userId);
+  const nextWaterSeed = current.plant.lastWateredAt
     ? computeNextWaterDueAt(
         current.plant.lastWateredAt,
         input.patch.wateringIntervalDays,
       )
     : (current.plant.nextWaterDueAt ?? null);
+  const nextWaterDueAt = optimizeReminderTiming({
+    plantName: input.patch.name,
+    speciesName: input.patch.speciesName,
+    wateringIntervalDays: input.patch.wateringIntervalDays,
+    nextDueAt: nextWaterSeed,
+    lastWateredAt: current.plant.lastWateredAt ?? null,
+    reminderEnabled: true,
+    lastTriggeredAt: current.reminders[0]?.lastTriggeredAt ?? null,
+    defaultWateringHour: preferences.defaultWateringHour,
+  }).nextDueAt;
 
   await database.runAsync(
     `UPDATE plants

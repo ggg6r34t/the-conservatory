@@ -17,6 +17,9 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHealthInsight";
+import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
+import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
@@ -145,8 +148,10 @@ function getLogHeading(logType: CareLogType) {
 }
 
 function getLogBody(logType: CareLogType, notes?: string | null) {
-  if (notes?.trim()) {
-    return notes.trim();
+  const parsedNote = parseStructuredCareLogNote(notes);
+
+  if (parsedNote.body) {
+    return parsedNote.body;
   }
 
   switch (logType) {
@@ -197,11 +202,16 @@ function getLogIconFamily(_logType: CareLogType): "MaterialIcons" {
 }
 
 function buildCareGuide(plant: Plant): CareGuideCard[] {
+  const defaults = buildCareDefaults({
+    speciesName: plant.speciesName,
+    lightCondition: "indirect",
+  });
+
   return [
     {
       key: "light",
-      title: "Bright Indirect",
-      body: "Place near a south-facing window with a sheer curtain to prevent leaf burn.",
+      title: "Editorial Light",
+      body: defaults.lightSummary,
       icon: "wb-sunny",
       iconFamily: "MaterialIcons",
       tone: "light",
@@ -209,8 +219,8 @@ function buildCareGuide(plant: Plant): CareGuideCard[] {
     },
     {
       key: "water",
-      title: "Weekly Hydration",
-      body: `Water every ${plant.wateringIntervalDays}-10 days when the top 2 inches of soil feel dry to the touch.`,
+      title: "Hydration Rhythm",
+      body: `${defaults.careProfileHint} Begin near every ${plant.wateringIntervalDays} days, then refine gently from the journal.`,
       icon: "opacity",
       iconFamily: "MaterialIcons",
       tone: "dark",
@@ -218,8 +228,8 @@ function buildCareGuide(plant: Plant): CareGuideCard[] {
     },
     {
       key: "humidity",
-      title: "High Humidity",
-      body: "Prefers 60%+ levels. Mist regularly or use a pebble tray during winter months.",
+      title: "Steady Conditions",
+      body: "Consistency matters more than intervention. Let light, moisture, and routine settle into a calm pattern.",
       icon: "air",
       iconFamily: "MaterialIcons",
       tone: "light",
@@ -681,6 +691,8 @@ export function PlantDetail({ data }: PlantDetailProps) {
           onPress={() => router.push(`/care-log/${data.plant.id}` as const)}
         />
       </View>
+
+      <PlantDetailHealthInsight plantId={data.plant.id} data={data} />
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>

@@ -16,6 +16,8 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
+import { SpeciesSuggestionBanner } from "@/features/ai/components/SpeciesSuggestionBanner";
+import { useSpeciesSuggestion } from "@/features/ai/hooks/useSpeciesSuggestion";
 import {
   markOnboardingAction,
   markOnboardingCompletedAt,
@@ -99,6 +101,14 @@ export default function QuickStartScreen({
   const [lightCondition, setLightCondition] =
     useState<LightCondition>("indirect");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dismissedSuggestionUri, setDismissedSuggestionUri] = useState<string | null>(
+    null,
+  );
+  const speciesSuggestionQuery = useSpeciesSuggestion(photoUri);
+  const visibleSuggestion =
+    photoUri && dismissedSuggestionUri !== photoUri
+      ? speciesSuggestionQuery.data
+      : null;
 
   useEffect(() => {
     void markQuickStartViewed();
@@ -124,9 +134,10 @@ export default function QuickStartScreen({
         return;
       }
 
-      setPhotoUri(asset.uri);
-      await markOnboardingAction("quick_start_photo_added");
-      trackEvent("onboarding_quick_start_photo_added");
+       setPhotoUri(asset.uri);
+       setDismissedSuggestionUri(null);
+       await markOnboardingAction("quick_start_photo_added");
+       trackEvent("onboarding_quick_start_photo_added");
     } catch (error) {
       Alert.alert(
         "Unable to add plant photo",
@@ -300,12 +311,26 @@ export default function QuickStartScreen({
               placeholder="e.g. Monstera Deliciosa"
               placeholderTextColor="#c6cbc5"
               value={speciesName}
-              onChangeText={setSpeciesName}
+              onChangeText={(value) => {
+                setSpeciesName(value);
+              }}
               editable={!isSubmitting}
               style={[styles.input, { color: colors.onSurface }]}
             />
           </View>
         </View>
+
+        {visibleSuggestion ? (
+          <SpeciesSuggestionBanner
+            suggestion={visibleSuggestion}
+            onAccept={() => {
+              setSpeciesName(visibleSuggestion.species);
+            }}
+            onDismiss={() => {
+              setDismissedSuggestionUri(photoUri ?? null);
+            }}
+          />
+        ) : null}
 
         <View style={styles.fieldBlock}>
           <Text style={[styles.fieldLabel, { color: colors.secondary }]}>

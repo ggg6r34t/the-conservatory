@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -264,6 +265,17 @@ export default function CareRemindersScreen() {
               reminder,
               plant.wateringIntervalDays,
             );
+            const optimizedReminder = optimizeReminderTiming({
+              plantName: plant.name,
+              speciesName: plant.speciesName,
+              wateringIntervalDays:
+                reminder?.frequencyDays ?? plant.wateringIntervalDays,
+              nextDueAt: reminder?.nextDueAt ?? plant.nextWaterDueAt ?? null,
+              lastWateredAt: plant.lastWateredAt ?? null,
+              lastTriggeredAt: reminder?.lastTriggeredAt ?? null,
+              reminderEnabled: Boolean(reminder?.enabled ?? remindersEnabled),
+              defaultWateringHour: settingsQuery.data?.defaultWateringHour ?? 9,
+            });
 
             return (
               <View key={plant.id} style={styles.reminderItemWrap}>
@@ -326,6 +338,16 @@ export default function CareRemindersScreen() {
                         )}
                       </Text>
                     </View>
+                    {optimizedReminder.explanation ? (
+                      <Text
+                        style={[
+                          styles.reminderHint,
+                          { color: colors.onSurfaceVariant },
+                        ]}
+                      >
+                        {optimizedReminder.explanation}
+                      </Text>
+                    ) : null}
                   </View>
 
                   <Icon
@@ -385,6 +407,8 @@ export default function CareRemindersScreen() {
                   frequencyDays: nextPlantWithoutReminder.wateringIntervalDays,
                   nextDueAt,
                   enabled: remindersEnabled,
+                  speciesName: nextPlantWithoutReminder.speciesName,
+                  lastWateredAt: nextPlantWithoutReminder.lastWateredAt ?? null,
                 })
                 .then(() => {
                   snackbar.success(
@@ -544,6 +568,11 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 14,
     lineHeight: 20,
+  },
+  reminderHint: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 12,
+    lineHeight: 18,
   },
   rowRule: {
     height: 1,

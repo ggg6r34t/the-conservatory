@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useQueries } from "@tanstack/react-query";
 import {
   RefreshControl,
   ScrollView,
@@ -15,11 +16,19 @@ import {
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
+import { queryKeys } from "@/config/constants";
+import { DashboardInsightCard } from "@/features/ai/components/DashboardInsightCard";
+import { useDashboardInsight } from "@/features/ai/hooks/useDashboardInsight";
+import { decideDashboardPresentation } from "@/features/ai/services/dashboardPresentationService";
+import { useStreakRecoveryNudge } from "@/features/ai/hooks/useStreakRecoveryNudge";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { listCareLogs } from "@/features/care-logs/api/careLogsClient";
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
 import { HydrationCard } from "@/features/dashboard/components/HydrationCard";
 import { StreakSummary } from "@/features/dashboard/components/StreakSummary";
 import { UpcomingCare } from "@/features/dashboard/components/UpcomingCare";
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
+import { useReminders } from "@/features/notifications/hooks/useReminders";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 
 export default function HomeScreen() {
@@ -27,11 +36,36 @@ export default function HomeScreen() {
   const { colors, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const dashboard = useDashboard();
+  const { user } = useAuth();
+  const remindersQuery = useReminders();
   const { onRefresh, refreshing } = usePullToRefreshSync();
   const fabBottomOffset = getFloatingActionBottomOffset(insets.bottom);
   const plantPhotoUris = dashboard.plants
     .map((plant) => plant.primaryPhotoUri)
     .filter((uri): uri is string => Boolean(uri));
+  const logQueries = useQueries({
+    queries: dashboard.plants.map((plant) => ({
+      queryKey: queryKeys.careLogs(plant.id),
+      queryFn: () => listCareLogs(plant.id),
+      enabled: Boolean(plant.id),
+    })),
+  });
+  const logs = logQueries.flatMap((query) => query.data ?? []);
+  const insightQuery = useDashboardInsight({
+    userId: user?.id,
+    plants: dashboard.plants,
+    reminders: remindersQuery.data ?? [],
+    currentStreakDays: 0,
+  });
+  const streakNudgeQuery = useStreakRecoveryNudge({
+    userId: user?.id,
+    plants: dashboard.plants,
+    logs,
+  });
+  const presentation = decideDashboardPresentation({
+    insight: insightQuery.data ?? null,
+    streakNudge: streakNudgeQuery.data ?? null,
+  });
 
   return (
     <SafeAreaView
@@ -91,9 +125,14 @@ export default function HomeScreen() {
 
         <HydrationCard dueToday={dashboard.dueToday.length} />
 
+        {presentation.primaryInsight ? (
+          <DashboardInsightCard insight={presentation.primaryInsight} />
+        ) : null}
+
         <StreakSummary
           activePlants={dashboard.plants.length}
           plantPhotoUris={plantPhotoUris}
+          nudge={presentation.streakNudge?.body}
         />
 
         <UpcomingCare plants={dashboard.plants} />

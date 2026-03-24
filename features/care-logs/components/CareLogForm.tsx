@@ -13,6 +13,11 @@ import {
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useObservationTagging } from "@/features/ai/hooks/useObservationTagging";
+import {
+  buildCareLogNoteForSave,
+} from "@/features/ai/services/observationTaggingService";
+import type { ObservationTag } from "@/features/ai/types/ai";
 import { useAddLog } from "@/features/care-logs/hooks/useAddLog";
 import type { CareLogType } from "@/types/models";
 
@@ -45,7 +50,12 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
   const [logType, setLogType] = useState<CareLogType>("water");
   const [condition, setCondition] =
     useState<(typeof conditionOptions)[number]>("Healthy");
+  const [suggestedRefinement, setSuggestedRefinement] = useState<string | null>(
+    null,
+  );
+  const [selectedTags, setSelectedTags] = useState<ObservationTag[]>([]);
   const addLog = useAddLog(plantId);
+  const observationTagging = useObservationTagging();
   const now = new Date();
   const timeLabel = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
@@ -55,7 +65,12 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
 
   const handleSubmit = async () => {
     try {
-      await addLog.mutateAsync({ logType, notes });
+      const finalNote = buildCareLogNoteForSave({
+        originalNote: notes,
+        acceptedRefinement: suggestedRefinement,
+        tags: selectedTags,
+      });
+      await addLog.mutateAsync({ logType, notes: finalNote });
       router.back();
     } catch (error) {
       Alert.alert(
@@ -63,6 +78,34 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
         error instanceof Error ? error.message : "Try again.",
       );
     }
+  };
+
+  const canAssist = notes.trim().length >= 8;
+
+  const handleRefineNote = async () => {
+    if (!canAssist) {
+      return;
+    }
+
+    const result = await observationTagging.mutateAsync({ note: notes, logType });
+    setSuggestedRefinement(result.refinedNote);
+  };
+
+  const handleAddTags = async () => {
+    if (!canAssist) {
+      return;
+    }
+
+    const result = await observationTagging.mutateAsync({ note: notes, logType });
+    setSelectedTags(result.suggestedTags);
+  };
+
+  const toggleTag = (tag: ObservationTag) => {
+    setSelectedTags((current) =>
+      current.includes(tag)
+        ? current.filter((value) => value !== tag)
+        : [...current, tag],
+    );
   };
 
   return (
@@ -123,7 +166,10 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
         <TextInput
           multiline
           value={notes}
-          onChangeText={setNotes}
+          onChangeText={(value) => {
+            setNotes(value);
+            setSuggestedRefinement(null);
+          }}
           placeholder="How is your plant doing today?"
           placeholderTextColor="#c6cbc5"
           textAlignVertical="top"
@@ -135,6 +181,93 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
             },
           ]}
         />
+        <View style={styles.assistRow}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              void handleRefineNote();
+            }}
+            disabled={!canAssist || observationTagging.isPending}
+            style={[
+              styles.assistChip,
+              {
+                backgroundColor: colors.surfaceContainerHigh,
+                opacity: !canAssist || observationTagging.isPending ? 0.55 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.assistLabel, { color: colors.onSurface }]}>
+              Refine Note
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              void handleAddTags();
+            }}
+            disabled={!canAssist || observationTagging.isPending}
+            style={[
+              styles.assistChip,
+              {
+                backgroundColor: colors.surfaceContainerHigh,
+                opacity: !canAssist || observationTagging.isPending ? 0.55 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.assistLabel, { color: colors.onSurface }]}>
+              Add Observation Tags
+            </Text>
+          </Pressable>
+        </View>
+
+        {suggestedRefinement ? (
+          <View
+            style={[
+              styles.suggestionCard,
+              { backgroundColor: colors.surfaceContainerLow },
+            ]}
+          >
+            <Text style={[styles.suggestionEyebrow, { color: colors.secondary }]}>
+              REFINED NOTE
+            </Text>
+            <Text style={[styles.suggestionBody, { color: colors.onSurface }]}>
+              {suggestedRefinement}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                setNotes(suggestedRefinement);
+                setSuggestedRefinement(null);
+              }}
+            >
+              <Text style={[styles.useSuggestionText, { color: colors.primary }]}>
+                Use refinement
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {selectedTags.length ? (
+          <View style={styles.tagWrap}>
+            {selectedTags.map((tag) => (
+              <Pressable
+                key={tag}
+                accessibilityRole="button"
+                onPress={() => toggleTag(tag)}
+                style={[
+                  styles.tagChip,
+                  { backgroundColor: colors.tertiaryContainer },
+                ]}
+              >
+                <Text
+                  style={[styles.tagLabel, { color: colors.surfaceBright }]}
+                >
+                  {tag}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
       </View>
 
       <View
@@ -213,6 +346,63 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 14,
+  },
+  assistRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  assistChip: {
+    minHeight: 34,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  assistLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.3,
+  },
+  suggestionCard: {
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  suggestionEyebrow: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.6,
+  },
+  suggestionBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  useSuggestionText: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  tagWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  tagChip: {
+    minHeight: 34,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tagLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 11,
+    lineHeight: 14,
   },
   sectionLabel: {
     fontFamily: "Manrope_700Bold",

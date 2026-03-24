@@ -1,5 +1,7 @@
+import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
 import { upsertReminder } from "@/features/notifications/api/remindersClient";
 import { getPlantById } from "@/features/plants/api/plantsClient";
+import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import { getDatabase } from "@/services/database/sqlite";
 import { enqueueSyncOperation } from "@/services/database/sync";
 import type { CareLog, CareLogType } from "@/types/models";
@@ -111,10 +113,21 @@ export async function createCareLog(input: {
         now,
         plant.plant.wateringIntervalDays,
       );
+      const preferences = await getUserPreferences(input.userId);
+      const optimized = optimizeReminderTiming({
+        plantName: plant.plant.name,
+        speciesName: plant.plant.speciesName,
+        wateringIntervalDays: plant.plant.wateringIntervalDays,
+        nextDueAt: nextWaterDueAt,
+        lastWateredAt: now,
+        reminderEnabled: true,
+        lastTriggeredAt: plant.reminders[0]?.lastTriggeredAt ?? null,
+        defaultWateringHour: preferences.defaultWateringHour,
+      });
       await database.runAsync(
         "UPDATE plants SET last_watered_at = ?, next_water_due_at = ?, updated_at = ?, updated_by = ?, pending = 1 WHERE id = ?;",
         now,
-        nextWaterDueAt,
+        optimized.nextDueAt,
         now,
         input.userId,
         input.plantId,
@@ -126,14 +139,14 @@ export async function createCareLog(input: {
         payload: {
           userId: input.userId,
           lastWateredAt: now,
-          nextWaterDueAt,
+          nextWaterDueAt: optimized.nextDueAt,
         },
       });
       await upsertReminder({
         userId: input.userId,
         plantId: input.plantId,
         frequencyDays: plant.plant.wateringIntervalDays,
-        nextDueAt: nextWaterDueAt,
+        nextDueAt: optimized.nextDueAt,
         enabled: true,
       });
     }
