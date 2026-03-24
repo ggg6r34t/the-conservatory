@@ -1,7 +1,7 @@
 import { openDatabaseAsync, type SQLiteDatabase } from "expo-sqlite";
 
 import { DATABASE_NAME } from "@/config/constants";
-import { bootstrapSql } from "@/services/database/migrations";
+import { runDatabaseMigrations } from "@/services/database/migrations";
 
 let databasePromise: Promise<SQLiteDatabase> | null = null;
 
@@ -12,7 +12,7 @@ async function openDatabase() {
     PRAGMA busy_timeout = 5000;
     PRAGMA foreign_keys = ON;
   `);
-  await database.execAsync(bootstrapSql);
+  await runDatabaseMigrations(database);
   return database;
 }
 

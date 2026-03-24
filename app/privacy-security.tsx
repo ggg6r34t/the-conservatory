@@ -2,17 +2,18 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
-import { env } from "@/config/env";
-import { useAlert } from "@/hooks/useAlert";
-import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
+import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 
 export default function PrivacySecurityScreen() {
   const { colors } = useTheme();
   const alert = useAlert();
   const snackbar = useSnackbar();
   const { user, requestPasswordReset } = useAuth();
+  const backend = getBackendConfigurationSummary();
 
   return (
     <ProfileScreenScaffold
@@ -38,27 +39,22 @@ export default function PrivacySecurityScreen() {
       </View>
 
       <View
-        style={[
-          styles.card,
-          { backgroundColor: colors.surfaceContainerLow },
-        ]}
+        style={[styles.card, { backgroundColor: colors.surfaceContainerLow }]}
       >
         <Text style={[styles.cardLabel, { color: colors.secondary }]}>
           AUTHENTICATION MODE
         </Text>
         <Text style={[styles.cardValue, { color: colors.primary }]}>
-          {env.isSupabaseConfigured ? "Supabase synced" : "Unavailable in this build"}
+          {backend.title}
         </Text>
         <Text style={[styles.cardBody, { color: colors.onSurfaceVariant }]}>
-          {env.isSupabaseConfigured
-            ? "Your account data is backed by Supabase and mirrored into local storage for fast offline access."
-            : "This build does not have a production auth provider configured, so password recovery is unavailable."}
+          {backend.description}
         </Text>
       </View>
 
       <PrimaryButton
         label="Send Password Reset"
-        disabled={!user?.email}
+        disabled={!user?.email || !backend.authActionsEnabled}
         onPress={async () => {
           try {
             await requestPasswordReset(user?.email ?? "");

@@ -9,6 +9,7 @@ export type CareLogType =
   | "inspect"
   | "pest"
   | "note";
+export type CareLogCondition = "Healthy" | "Needs Attention" | "Declining";
 export type ReminderType = "water" | "mist" | "feed";
 
 export interface AppUser {
@@ -75,6 +76,7 @@ export interface CareLog {
   userId: string;
   plantId: string;
   logType: CareLogType;
+  currentCondition?: CareLogCondition | null;
   notes?: string | null;
   loggedAt: string;
   createdAt: string;

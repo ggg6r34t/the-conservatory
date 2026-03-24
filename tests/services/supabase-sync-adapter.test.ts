@@ -164,7 +164,10 @@ describe("supabase sync adapter", () => {
     });
 
     expect(storageFrom).toHaveBeenCalledWith("photos");
-    expect(createSignedUrl).toHaveBeenCalledWith("user-1/plant-1/photo-1.jpg", 2592000);
+    expect(createSignedUrl).toHaveBeenCalledWith(
+      "user-1/plant-1/photo-1.jpg",
+      2592000,
+    );
     expect(upload).toHaveBeenCalledWith(
       "user-1/plant-1/photo-1.jpg",
       expect.any(Blob),
@@ -226,5 +229,94 @@ describe("supabase sync adapter", () => {
       }),
       { onConflict: "id" },
     );
+  });
+
+  it("should sync care log condition fields", async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    const from = require("@/config/supabase").supabase.from as jest.Mock;
+    from.mockReturnValue({ upsert });
+
+    require("@/services/database/sqlite").getDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn().mockResolvedValue({
+        id: "log-1",
+        user_id: "user-1",
+        plant_id: "plant-1",
+        log_type: "inspect",
+        current_condition: "Declining",
+        notes: "Leaves are softening.",
+        logged_at: "2026-03-21T10:00:00.000Z",
+        created_at: "2026-03-21T10:00:00.000Z",
+        updated_at: "2026-03-21T10:00:00.000Z",
+        updated_by: null,
+      }),
+      runAsync: jest.fn().mockResolvedValue(undefined),
+    });
+
+    const {
+      processSyncQueueItemWithSupabase,
+    } = require("@/services/database/supabaseSyncAdapter");
+
+    await processSyncQueueItemWithSupabase({
+      id: "sync-log-1",
+      entity: "care_logs",
+      entityId: "log-1",
+      operation: "insert",
+      payload: JSON.stringify({ userId: "user-1", plantId: "plant-1" }),
+      status: "pending",
+      attemptCount: 0,
+      lastError: null,
+      nextRetryAt: null,
+      queuedAt: "2026-03-21T10:00:00.000Z",
+      updatedAt: "2026-03-21T10:00:00.000Z",
+    });
+
+    expect(from).toHaveBeenCalledWith("care_logs");
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ current_condition: "Declining" }),
+      { onConflict: "id" },
+    );
+  });
+
+  it("removes photo storage assets before deleting remote photo metadata", async () => {
+    const remove = jest.fn().mockResolvedValue({ error: null });
+    const eqId = jest.fn().mockResolvedValue({ error: null });
+    const eqUser = jest.fn().mockReturnValue({ eq: eqId });
+    const deleteFn = jest.fn().mockReturnValue({ eq: eqUser });
+    const from = require("@/config/supabase").supabase.from as jest.Mock;
+    const storageFrom = require("@/config/supabase").supabase.storage
+      .from as jest.Mock;
+    from.mockReturnValue({ delete: deleteFn });
+    storageFrom.mockReturnValue({ remove });
+
+    require("@/services/database/sqlite").getDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn(),
+      runAsync: jest.fn(),
+    });
+
+    const {
+      processSyncQueueItemWithSupabase,
+    } = require("@/services/database/supabaseSyncAdapter");
+
+    await processSyncQueueItemWithSupabase({
+      id: "sync-photo-delete-1",
+      entity: "photos",
+      entityId: "photo-1",
+      operation: "delete",
+      payload: JSON.stringify({
+        userId: "user-1",
+        storagePath: "user-1/plant-1/photo-1.jpg",
+      }),
+      status: "pending",
+      attemptCount: 0,
+      lastError: null,
+      nextRetryAt: null,
+      queuedAt: "2026-03-21T10:00:00.000Z",
+      updatedAt: "2026-03-21T10:00:00.000Z",
+    });
+
+    expect(storageFrom).toHaveBeenCalledWith("photos");
+    expect(remove).toHaveBeenCalledWith(["user-1/plant-1/photo-1.jpg"]);
+    expect(from).toHaveBeenCalledWith("photos");
+    expect(deleteFn).toHaveBeenCalled();
   });
 });

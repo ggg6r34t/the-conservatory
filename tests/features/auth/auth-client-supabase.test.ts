@@ -1,6 +1,6 @@
 import {
-  mockSupabaseClient,
   mockSupabaseAuth,
+  mockSupabaseClient,
   mockSupabaseUsersTable,
   resetSupabaseMocks,
 } from "@/tests/__mocks__/supabase";
@@ -8,13 +8,19 @@ import {
 const mockWriteSession = jest.fn().mockResolvedValue(undefined);
 const mockReadSession = jest.fn().mockResolvedValue(null);
 const mockClearSession = jest.fn().mockResolvedValue(undefined);
-const mockSyncOnboardingStatusToAccount = jest.fn().mockResolvedValue("completed");
+const mockSyncOnboardingStatusToAccount = jest
+  .fn()
+  .mockResolvedValue("completed");
 
 jest.mock("@/config/env", () => ({
   env: {
     isSupabaseConfigured: true,
+    isDevelopmentBuild: false,
+    isProductionBuild: true,
+    missingSupabaseConfig: [],
     supabaseUrl: "https://example.supabase.co",
     supabaseAnonKey: "anon-key",
+    enableSyncTrials: true,
   },
 }));
 

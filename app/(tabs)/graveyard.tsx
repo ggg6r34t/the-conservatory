@@ -1,4 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -14,8 +15,12 @@ import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
+import { MemorialEntrySheet } from "@/features/plants/components/MemorialEntrySheet";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
+import { useUpdateGraveyardMemorial } from "@/features/plants/hooks/useUpdateGraveyardMemorial";
+import { useAlert } from "@/hooks/useAlert";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import { shadowScale } from "@/styles/shadows";
 
 function formatYearRange(memorial: GraveyardPlantListItem) {
@@ -92,9 +97,14 @@ function GrayscaleImage({
 
 export default function GraveyardScreen() {
   const { colors, spacing } = useTheme();
+  const alert = useAlert();
+  const snackbar = useSnackbar();
   const graveyardQuery = useGraveyard();
+  const updateMemorial = useUpdateGraveyardMemorial();
   const { onRefresh, refreshing } = usePullToRefreshSync();
   const memorials = graveyardQuery.data ?? [];
+  const [selectedMemorial, setSelectedMemorial] =
+    useState<GraveyardPlantListItem | null>(null);
 
   const featuredMemorial = getMemorialAt(memorials, 0);
   const reflectionMemorial = getMemorialAt(memorials, 1);
@@ -107,6 +117,31 @@ export default function GraveyardScreen() {
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
+      <MemorialEntrySheet
+        visible={Boolean(selectedMemorial)}
+        memorial={selectedMemorial}
+        loading={updateMemorial.isPending}
+        onClose={() => {
+          if (!updateMemorial.isPending) {
+            setSelectedMemorial(null);
+          }
+        }}
+        onConfirm={async (input) => {
+          try {
+            await updateMemorial.mutateAsync(input);
+            setSelectedMemorial(null);
+            snackbar.success("Memorial saved to the garden.");
+          } catch (error) {
+            await alert.show({
+              variant: "error",
+              title: "Unable to save memorial",
+              message: error instanceof Error ? error.message : "Try again.",
+              primaryAction: { label: "Close", tone: "danger" },
+            });
+          }
+        }}
+      />
+
       <ScrollView
         refreshControl={
           <RefreshControl
@@ -266,6 +301,7 @@ export default function GraveyardScreen() {
 
             <Pressable
               accessibilityRole="button"
+              onPress={() => setSelectedMemorial(tributeMemorial)}
               style={({ pressed }) => [
                 styles.memorialButtonPressable,
                 pressed && styles.memorialButtonPressed,
@@ -277,7 +313,11 @@ export default function GraveyardScreen() {
                 end={{ x: 0.88, y: 0.92 }}
                 style={styles.memorialButton}
               >
-                <Text style={styles.memorialButtonLabel}>Add Memorial</Text>
+                <Text style={styles.memorialButtonLabel}>
+                  {tributeMemorial.memorialNote?.trim()
+                    ? "Edit Memorial"
+                    : "Add Memorial"}
+                </Text>
               </LinearGradient>
             </Pressable>
           </View>

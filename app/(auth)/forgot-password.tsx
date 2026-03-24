@@ -10,12 +10,14 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { forgotPasswordSchema } from "@/features/auth/schemas/authValidation";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 
 export default function ForgotPasswordScreen() {
   const { colors } = useTheme();
   const alert = useAlert();
   const snackbar = useSnackbar();
   const { requestPasswordReset } = useAuth();
+  const backend = getBackendConfigurationSummary();
   const { redirectTo } = useLocalSearchParams<{ redirectTo?: string }>();
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,6 +30,11 @@ export default function ForgotPasswordScreen() {
 
   const handleSubmit = async () => {
     if (isSubmitting) {
+      return;
+    }
+
+    if (!backend.authActionsEnabled) {
+      setError(backend.description);
       return;
     }
 
@@ -106,7 +113,7 @@ export default function ForgotPasswordScreen() {
           label="Send Reset Link"
           onPress={handleSubmit}
           loading={isSubmitting}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !backend.authActionsEnabled}
         />
       </View>
     </AuthScreenScaffold>

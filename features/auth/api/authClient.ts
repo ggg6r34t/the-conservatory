@@ -1,14 +1,13 @@
 import { env } from "@/config/env";
 import { supabase } from "@/config/supabase";
+import { syncOnboardingStatusToAccount } from "@/features/onboarding/services/onboardingStorage";
 import {
   clearSession,
   readSession,
   writeSession,
 } from "@/services/auth/sessionManager";
 import { getDatabase } from "@/services/database/sqlite";
-import {
-  syncOnboardingStatusToAccount,
-} from "@/features/onboarding/services/onboardingStorage";
+import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 import type { AuthResult } from "@/types/api";
 import type { AppUser } from "@/types/models";
 import { logger } from "@/utils/logger";
@@ -54,7 +53,17 @@ function normalizeDisplayName(displayName: string) {
 }
 
 function isLocalAuthEnabled() {
-  return !env.isSupabaseConfigured && (__DEV__ || process.env.NODE_ENV === "test");
+  return !env.isSupabaseConfigured && env.isDevelopmentBuild;
+}
+
+function getBackendUnavailableMessage(fallbackMessage: string) {
+  const backend = getBackendConfigurationSummary();
+
+  if (backend.mode === "release-misconfigured") {
+    return backend.description;
+  }
+
+  return fallbackMessage;
 }
 
 function createAuthError(code: string, message: string, retryable = false) {
@@ -207,11 +216,16 @@ function isUniqueConstraintError(error: unknown) {
   }
 
   const normalized = error.message.toLowerCase();
-  return normalized.includes("unique") || normalized.includes("constraint failed");
+  return (
+    normalized.includes("unique") || normalized.includes("constraint failed")
+  );
 }
 
 function isDatabaseLockedError(error: unknown) {
-  return error instanceof Error && error.message.toLowerCase().includes("database is locked");
+  return (
+    error instanceof Error &&
+    error.message.toLowerCase().includes("database is locked")
+  );
 }
 
 function delay(ms: number) {
@@ -220,7 +234,10 @@ function delay(ms: number) {
   });
 }
 
-async function withDatabaseBusyRetry<T>(label: string, operation: () => Promise<T>) {
+async function withDatabaseBusyRetry<T>(
+  label: string,
+  operation: () => Promise<T>,
+) {
   let lastError: unknown;
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -241,7 +258,9 @@ async function withDatabaseBusyRetry<T>(label: string, operation: () => Promise<
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error("Database operation failed.");
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Database operation failed.");
 }
 
 function queueLocalUserWrite<T>(label: string, operation: () => Promise<T>) {
@@ -255,7 +274,10 @@ function queueLocalUserWrite<T>(label: string, operation: () => Promise<T>) {
         logger.warn("auth.local_user_write.failed", { label });
         throw error;
       } finally {
-        pendingLocalUserWriteCount = Math.max(0, pendingLocalUserWriteCount - 1);
+        pendingLocalUserWriteCount = Math.max(
+          0,
+          pendingLocalUserWriteCount - 1,
+        );
       }
     });
 
@@ -268,7 +290,9 @@ function queueLocalUserWrite<T>(label: string, operation: () => Promise<T>) {
 }
 
 function hasPendingAuthPersistence() {
-  return pendingLocalUserWriteCount > 0 || deferredLocalUserPersistRuns.size > 0;
+  return (
+    pendingLocalUserWriteCount > 0 || deferredLocalUserPersistRuns.size > 0
+  );
 }
 
 export async function waitForAuthPersistenceIdle(timeoutMs = 2500) {
@@ -528,7 +552,9 @@ export async function login(
   if (!isLocalAuthEnabled()) {
     throw createAuthError(
       "auth_unavailable",
-      "Sign-in isn't available in this build right now.",
+      getBackendUnavailableMessage(
+        "Sign-in isn't available in this build right now.",
+      ),
     );
   }
 
@@ -577,7 +603,10 @@ export async function signup(
     });
 
     if (error || !data.user) {
-      throw mapSupabaseAuthError(error, "Unable to create your account right now.");
+      throw mapSupabaseAuthError(
+        error,
+        "Unable to create your account right now.",
+      );
     }
 
     const user = createSupabaseUser(
@@ -596,7 +625,9 @@ export async function signup(
   if (!isLocalAuthEnabled()) {
     throw createAuthError(
       "signup_unavailable",
-      "Account creation isn't available in this build right now.",
+      getBackendUnavailableMessage(
+        "Account creation isn't available in this build right now.",
+      ),
     );
   }
 
@@ -610,7 +641,8 @@ export async function requestPasswordReset(email: string) {
   const normalizedEmail = normalizeEmail(email);
 
   if (env.isSupabaseConfigured && supabase) {
-    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail);
+    const { error } =
+      await supabase.auth.resetPasswordForEmail(normalizedEmail);
     if (error) {
       throw mapSupabaseAuthError(
         error,
@@ -623,7 +655,9 @@ export async function requestPasswordReset(email: string) {
   if (!isLocalAuthEnabled()) {
     throw createAuthError(
       "password_reset_unavailable",
-      "Password recovery isn't available in this build right now.",
+      getBackendUnavailableMessage(
+        "Password recovery isn't available in this build right now.",
+      ),
     );
   }
 }

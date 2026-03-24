@@ -20,15 +20,20 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHealthInsight";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
-import { useAlert } from "@/hooks/useAlert";
-import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
 import {
   capturePlantImage,
   pickPlantImage,
 } from "@/features/plants/services/photoService";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
-import type { CareLogType, Plant, PlantWithRelations } from "@/types/models";
+import type {
+  CareLogCondition,
+  CareLogType,
+  Plant,
+  PlantWithRelations,
+} from "@/types/models";
 
 interface PlantDetailProps {
   data: PlantWithRelations;
@@ -48,6 +53,7 @@ type ActivityCard = {
   id: string;
   title: string;
   body: string;
+  condition: CareLogCondition | null;
   stampPrimary: string;
   stampSecondary: string;
   logType: CareLogType;
@@ -175,6 +181,10 @@ function getLogBody(logType: CareLogType, notes?: string | null) {
   }
 }
 
+function formatConditionLabel(condition: CareLogCondition) {
+  return condition;
+}
+
 function getLogIcon(logType: CareLogType) {
   switch (logType) {
     case "water":
@@ -239,13 +249,14 @@ function buildCareGuide(plant: Plant): CareGuideCard[] {
 }
 
 function buildRecentActivity(data: PlantWithRelations): ActivityCard[] {
-  const cards = [...data.logs]
+  return [...data.logs]
     .sort((left, right) => right.loggedAt.localeCompare(left.loggedAt))
     .slice(0, 3)
     .map((log) => ({
       id: log.id,
       title: getLogHeading(log.logType),
       body: getLogBody(log.logType, log.notes),
+      condition: log.currentCondition ?? null,
       stampPrimary:
         formatStamp(log.loggedAt).toUpperCase() ===
         formatStamp(new Date().toISOString()).toUpperCase()
@@ -260,44 +271,6 @@ function buildRecentActivity(data: PlantWithRelations): ActivityCard[] {
       icon: getLogIcon(log.logType),
       iconFamily: getLogIconFamily(log.logType),
     }));
-
-  if (cards.length >= 3) {
-    return cards;
-  }
-
-  return [
-    ...cards,
-    {
-      id: "fallback-water",
-      title: "Full Soak &\nFertilize",
-      body: "Used organic liquid fertilizer at half-strength. Noticed fresh growth unfurling near the stem.",
-      stampPrimary: "TODAY,",
-      stampSecondary: "08:30 AM",
-      logType: "water" as CareLogType,
-      icon: "water",
-      iconFamily: "MaterialIcons" as const,
-    },
-    {
-      id: "fallback-prune",
-      title: "Propagation\nPruning",
-      body: "Removed two older leaves for propagation. Nodes were placed in distilled water for root development.",
-      stampPrimary: "OCT 12,",
-      stampSecondary: "2023",
-      logType: "prune" as CareLogType,
-      icon: "content-cut",
-      iconFamily: "MaterialIcons" as const,
-    },
-    {
-      id: "fallback-pest",
-      title: "Pest\nInspection",
-      body: "Cleaned leaves with neem oil. No signs of thrips or spider mites detected during routine check.",
-      stampPrimary: "OCT 05,",
-      stampSecondary: "2023",
-      logType: "pest" as CareLogType,
-      icon: "image-filter-center-focus-strong",
-      iconFamily: "MaterialIcons" as const,
-    },
-  ].slice(0, 3);
 }
 
 function getActivityBadgeStyle(
@@ -507,7 +480,10 @@ export function PlantDetail({ data }: PlantDetailProps) {
                 Add Progress Photo
               </Text>
               <Text
-                style={[styles.mediaSheetBody, { color: colors.onSurfaceVariant }]}
+                style={[
+                  styles.mediaSheetBody,
+                  { color: colors.onSurfaceVariant },
+                ]}
               >
                 Capture a fresh milestone or choose one from your library.
               </Text>
@@ -540,7 +516,9 @@ export function PlantDetail({ data }: PlantDetailProps) {
                     color={colors.secondary}
                   />
                 </View>
-                <Text style={[styles.mediaActionTitle, { color: colors.onSurface }]}>
+                <Text
+                  style={[styles.mediaActionTitle, { color: colors.onSurface }]}
+                >
                   Take Photo
                 </Text>
                 <Text
@@ -579,7 +557,9 @@ export function PlantDetail({ data }: PlantDetailProps) {
                     color={colors.primary}
                   />
                 </View>
-                <Text style={[styles.mediaActionTitle, { color: colors.onSurface }]}>
+                <Text
+                  style={[styles.mediaActionTitle, { color: colors.onSurface }]}
+                >
                   Photo Library
                 </Text>
                 <Text
@@ -656,10 +636,16 @@ export function PlantDetail({ data }: PlantDetailProps) {
 
       <View style={styles.identity}>
         <View
-          style={[styles.familyChip, { backgroundColor: colors.secondaryFixed }]}
+          style={[
+            styles.familyChip,
+            { backgroundColor: colors.secondaryFixed },
+          ]}
         >
           <View
-            style={[styles.familyChipDot, { backgroundColor: colors.secondary }]}
+            style={[
+              styles.familyChipDot,
+              { backgroundColor: colors.secondary },
+            ]}
           />
           <Text style={[styles.familyChipText, { color: colors.secondary }]}>
             {getFamilyLabel(data.plant.speciesName)}
@@ -672,7 +658,6 @@ export function PlantDetail({ data }: PlantDetailProps) {
         <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
           {getEditorialSubtitle(data.plant)}
         </Text>
-
       </View>
 
       <View style={styles.actions}>
@@ -787,62 +772,130 @@ export function PlantDetail({ data }: PlantDetailProps) {
         </View>
 
         <View style={styles.activityStack}>
-          {recentActivity.map((item, index) => {
-            const visualType = getActivityVisualType(item);
-            const badgeStyle = getActivityBadgeStyle(visualType, colors);
+          {recentActivity.length ? (
+            recentActivity.map((item, index) => {
+              const visualType = getActivityVisualType(item);
+              const badgeStyle = getActivityBadgeStyle(visualType, colors);
 
-            return (
-              <View key={item.id} style={styles.activityRow}>
-                <View style={styles.activityRail}>
-                  <View
-                    style={[
-                      styles.activityIconTile,
-                      { backgroundColor: badgeStyle.backgroundColor },
-                    ]}
-                  >
-                    <Icon
-                      family={getLogIconFamily(visualType)}
-                      name={getLogIcon(visualType)}
-                      size={18}
-                      color={badgeStyle.iconColor}
-                    />
-                  </View>
-                  {index < recentActivity.length - 1 ? (
+              return (
+                <View key={item.id} style={styles.activityRow}>
+                  <View style={styles.activityRail}>
                     <View
                       style={[
-                        styles.activityRailLine,
-                        { backgroundColor: colors.surfaceContainerHigh },
+                        styles.activityIconTile,
+                        { backgroundColor: badgeStyle.backgroundColor },
                       ]}
-                    />
-                  ) : null}
-                </View>
+                    >
+                      <Icon
+                        family={getLogIconFamily(visualType)}
+                        name={getLogIcon(visualType)}
+                        size={18}
+                        color={badgeStyle.iconColor}
+                      />
+                    </View>
+                    {index < recentActivity.length - 1 ? (
+                      <View
+                        style={[
+                          styles.activityRailLine,
+                          { backgroundColor: colors.surfaceContainerHigh },
+                        ]}
+                      />
+                    ) : null}
+                  </View>
 
-                <View style={styles.activityContent}>
-                  <Text
-                    style={[
-                      styles.activityStamp,
-                      { color: colors.onSurfaceVariant },
-                    ]}
-                  >
-                    {`${item.stampPrimary} ${item.stampSecondary}`}
-                  </Text>
-                  <Text
-                    style={[styles.activityTitle, { color: colors.primary }]}
-                  >
-                    {item.title.replace("\n", " ")}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.activityBody,
-                      { color: colors.onSurfaceVariant },
-                    ]}
-                  >
-                    {item.body}
-                  </Text>
+                  <View style={styles.activityContent}>
+                    <Text
+                      style={[
+                        styles.activityStamp,
+                        { color: colors.onSurfaceVariant },
+                      ]}
+                    >
+                      {`${item.stampPrimary} ${item.stampSecondary}`}
+                    </Text>
+                    <Text
+                      style={[styles.activityTitle, { color: colors.primary }]}
+                    >
+                      {item.title.replace("\n", " ")}
+                    </Text>
+                    {item.condition ? (
+                      <View
+                        style={[
+                          styles.activityConditionPill,
+                          { backgroundColor: colors.surfaceContainerHigh },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.activityConditionLabel,
+                            { color: colors.onSurface },
+                          ]}
+                        >
+                          {formatConditionLabel(item.condition)}
+                        </Text>
+                      </View>
+                    ) : null}
+                    <Text
+                      style={[
+                        styles.activityBody,
+                        { color: colors.onSurfaceVariant },
+                      ]}
+                    >
+                      {item.body}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            );
-          })}
+              );
+            })
+          ) : (
+            <View
+              style={[
+                styles.activityEmptyCard,
+                { backgroundColor: colors.surfaceContainerLow },
+              ]}
+            >
+              <Text
+                style={[styles.activityEmptyTitle, { color: colors.onSurface }]}
+              >
+                No care entries yet
+              </Text>
+              <Text
+                style={[
+                  styles.activityEmptyBody,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
+                This journal will begin to read like a real history once you log
+                watering, observations, and care rituals for this specimen.
+              </Text>
+            </View>
+          )}
+
+          {recentActivity.length > 0 && recentActivity.length < 3 ? (
+            <View
+              style={[
+                styles.activitySparseCard,
+                { backgroundColor: colors.surfaceContainerLow },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.activitySparseTitle,
+                  { color: colors.onSurface },
+                ]}
+              >
+                A young journal, honestly kept
+              </Text>
+              <Text
+                style={[
+                  styles.activitySparseBody,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
+                Only saved care logs appear here. Add a few more entries and
+                this timeline will fill in naturally.
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -1090,6 +1143,52 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 22,
     maxWidth: 250,
+  },
+  activityConditionPill: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 8,
+  },
+  activityConditionLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.6,
+  },
+  activityEmptyCard: {
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
+    gap: 8,
+  },
+  activityEmptyTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  activityEmptyBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  activitySparseCard: {
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    gap: 6,
+  },
+  activitySparseTitle: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 13,
+    lineHeight: 18,
+    letterSpacing: 0.6,
+  },
+  activitySparseBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 20,
   },
   growthGrid: {
     flexDirection: "row",

@@ -5,15 +5,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { queryKeys } from "@/config/constants";
-import { useAlert } from "@/hooks/useAlert";
-import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   getBackupSummary,
+  getRemoteBackupAvailability,
   runBackupSync,
 } from "@/features/profile/api/profileClient";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
+import { useAlert } from "@/hooks/useAlert";
 import { useNetworkState } from "@/hooks/useNetworkState";
+import { useSnackbar } from "@/hooks/useSnackbar";
+import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 
 function BackupMetric({
   label,
@@ -31,7 +33,9 @@ function BackupMetric({
         { backgroundColor: colors.surfaceContainerLowest },
       ]}
     >
-      <Text style={[styles.metricValue, { color: colors.primary }]}>{value}</Text>
+      <Text style={[styles.metricValue, { color: colors.primary }]}>
+        {value}
+      </Text>
       <Text style={[styles.metricLabel, { color: colors.onSurfaceVariant }]}>
         {label}
       </Text>
@@ -46,11 +50,19 @@ export default function DataBackupScreen() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const network = useNetworkState();
+  const backendConfiguration = getBackendConfigurationSummary();
 
   const backupSummary = useQuery({
     queryKey: ["profile-backup-summary", user?.id],
     enabled: Boolean(user?.id),
     queryFn: () => getBackupSummary(user!.id),
+  });
+
+  const remoteAvailability = useQuery({
+    queryKey: ["profile-backup-availability", user?.id, network.isOffline],
+    enabled: Boolean(user?.id) && !network.isOffline,
+    queryFn: () => getRemoteBackupAvailability(),
+    staleTime: 30_000,
   });
 
   const syncMutation = useMutation({
@@ -60,7 +72,9 @@ export default function DataBackupScreen() {
         queryClient.invalidateQueries({ queryKey: queryKeys.plants }),
         queryClient.invalidateQueries({ queryKey: queryKeys.graveyard }),
         queryClient.invalidateQueries({ queryKey: queryKeys.preferences }),
-        queryClient.invalidateQueries({ queryKey: ["profile-backup-summary", user?.id] }),
+        queryClient.invalidateQueries({
+          queryKey: ["profile-backup-summary", user?.id],
+        }),
       ]);
       snackbar.success("Your local backup summary has been refreshed.");
     },
@@ -78,6 +92,26 @@ export default function DataBackupScreen() {
   });
 
   const summary = backupSummary.data;
+  const systemStatus = network.isOffline
+    ? {
+        title: "Offline mode",
+        description:
+          "Remote backup cannot be reached until connectivity returns, but your local conservatory remains available on this device.",
+        canSync: false,
+      }
+    : (remoteAvailability.data ?? {
+        title:
+          backendConfiguration.mode === "cloud"
+            ? "Checking remote backup"
+            : backendConfiguration.mode === "local-development"
+              ? "Local device only"
+              : "Remote backup unavailable",
+        description:
+          backendConfiguration.mode === "cloud"
+            ? "Validating Supabase reachability for this session."
+            : backendConfiguration.description,
+        canSync: false,
+      });
 
   return (
     <ProfileScreenScaffold
@@ -95,13 +129,18 @@ export default function DataBackupScreen() {
           SYSTEM STATUS
         </Text>
         <Text style={[styles.statusValue, { color: colors.primary }]}>
-          {network.isOffline ? "Offline mode" : "Ready to sync"}
+          {systemStatus.title}
         </Text>
         <Text style={[styles.statusBody, { color: colors.onSurfaceVariant }]}>
-          {network.isOffline
-            ? "Remote pull is unavailable until connectivity returns, but local data remains accessible."
-            : "You can run a manual sync to push pending changes and hydrate the latest remote records into local storage."}
+          {systemStatus.description}
         </Text>
+        {remoteAvailability.data?.detail ? (
+          <Text
+            style={[styles.statusDetail, { color: colors.onSurfaceVariant }]}
+          >
+            {remoteAvailability.data.detail}
+          </Text>
+        ) : null}
       </View>
 
       {summary ? (
@@ -117,7 +156,7 @@ export default function DataBackupScreen() {
 
       <PrimaryButton
         label={syncMutation.isPending ? "Running Sync..." : "Run Sync Now"}
-        disabled={syncMutation.isPending || network.isOffline || !user?.id}
+        disabled={syncMutation.isPending || !user?.id || !systemStatus.canSync}
         loading={syncMutation.isPending}
         onPress={() => syncMutation.mutate()}
       />
@@ -145,6 +184,11 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 15,
     lineHeight: 24,
+  },
+  statusDetail: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 12,
+    lineHeight: 18,
   },
   metricGrid: {
     flexDirection: "row",

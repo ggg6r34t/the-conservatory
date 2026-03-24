@@ -30,9 +30,18 @@ const safeEnv: z.infer<typeof envSchema> = parsed.success
       expoPublicEnableSyncTrials: false,
     };
 
+const isDevelopmentBuild = __DEV__ || process.env.NODE_ENV === "test";
+const missingSupabaseConfig = [
+  !safeEnv.expoPublicSupabaseUrl ? "EXPO_PUBLIC_SUPABASE_URL" : null,
+  !safeEnv.expoPublicSupabaseAnonKey ? "EXPO_PUBLIC_SUPABASE_ANON_KEY" : null,
+].filter((value): value is string => Boolean(value));
+
 export const env = {
   supabaseUrl: safeEnv.expoPublicSupabaseUrl,
   supabaseAnonKey: safeEnv.expoPublicSupabaseAnonKey,
+  isDevelopmentBuild,
+  isProductionBuild: !isDevelopmentBuild,
+  missingSupabaseConfig,
   isSupabaseConfigured: Boolean(
     safeEnv.expoPublicSupabaseUrl && safeEnv.expoPublicSupabaseAnonKey,
   ),

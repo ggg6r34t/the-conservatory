@@ -4,8 +4,8 @@ import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { LoginForm } from "@/features/auth/components/LoginForm";
 import { SignupForm } from "@/features/auth/components/SignupForm";
-import { WelcomeGateway } from "@/features/onboarding/components/WelcomeGateway";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
+import { WelcomeGateway } from "@/features/onboarding/components/WelcomeGateway";
 import { renderWithProviders } from "@/tests/utils/renderWithProviders";
 
 const mockPush = jest.fn();
@@ -47,6 +47,30 @@ jest.mock("expo-image", () => ({
   },
 }));
 
+jest.mock("@/components/common/Icon/Icon", () => ({
+  Icon: () => null,
+}));
+
+jest.mock("@/components/common/Buttons/PrimaryButton", () => ({
+  PrimaryButton: ({
+    label,
+    onPress,
+    disabled,
+  }: {
+    label: string;
+    onPress?: () => void;
+    disabled?: boolean;
+  }) => {
+    const React = require("react");
+    const { Pressable, Text } = require("react-native");
+    return React.createElement(
+      Pressable,
+      { accessibilityRole: "button", onPress, disabled },
+      React.createElement(Text, null, label),
+    );
+  },
+}));
+
 jest.mock("react-native-safe-area-context", () => {
   const React = require("react");
   const { View } = require("react-native");
@@ -58,6 +82,7 @@ jest.mock("react-native-safe-area-context", () => {
     SafeAreaProvider: ({ children }: { children?: React.ReactNode }) => (
       <View>{children}</View>
     ),
+    useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
   };
 });
 
@@ -73,7 +98,8 @@ jest.mock("@/features/onboarding/hooks/useOnboarding", () => ({
 }));
 
 jest.mock("@/features/onboarding/services/onboardingDebugStorage", () => ({
-  markOnboardingAction: (...args: unknown[]) => mockMarkOnboardingAction(...args),
+  markOnboardingAction: (...args: unknown[]) =>
+    mockMarkOnboardingAction(...args),
   markWelcomeViewed: (...args: unknown[]) => mockMarkWelcomeViewed(...args),
 }));
 
@@ -136,9 +162,18 @@ describe("auth and onboarding journey harness", () => {
   it("supports signup completion into the authenticated plant-add flow", async () => {
     renderWithProviders(<SignupForm />);
 
-    fireEvent.changeText(screen.getByPlaceholderText("Elowen Thorne"), "  New Curator  ");
-    fireEvent.changeText(screen.getByPlaceholderText("elowen@garden.io"), "NEW@example.com");
-    fireEvent.changeText(screen.getByPlaceholderText("Choose a secure password"), "garden123");
+    fireEvent.changeText(
+      screen.getByPlaceholderText("Elowen Thorne"),
+      "  New Curator  ",
+    );
+    fireEvent.changeText(
+      screen.getByPlaceholderText("elowen@garden.io"),
+      "NEW@example.com",
+    );
+    fireEvent.changeText(
+      screen.getByPlaceholderText("Choose a secure password"),
+      "garden123",
+    );
     fireEvent.press(screen.getByText("Create Account"));
 
     await waitFor(() => {
@@ -156,12 +191,21 @@ describe("auth and onboarding journey harness", () => {
   it("supports login completion into the authenticated app and rejects unsafe redirects", async () => {
     renderWithProviders(<LoginForm />);
 
-    fireEvent.changeText(screen.getByPlaceholderText("botanist@conservatory.com"), "Curator@example.com");
-    fireEvent.changeText(screen.getByPlaceholderText("Enter your password"), "garden123");
+    fireEvent.changeText(
+      screen.getByPlaceholderText("botanist@conservatory.com"),
+      "Curator@example.com",
+    );
+    fireEvent.changeText(
+      screen.getByPlaceholderText("Enter your password"),
+      "garden123",
+    );
     fireEvent.press(screen.getByText("Sign In"));
 
     await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith("curator@example.com", "garden123");
+      expect(mockLogin).toHaveBeenCalledWith(
+        "curator@example.com",
+        "garden123",
+      );
     });
 
     expect(useAuthStore.getState().user?.id).toBe("user-1");
@@ -173,14 +217,24 @@ describe("auth and onboarding journey harness", () => {
 
     renderWithProviders(<LoginForm />);
 
-    fireEvent.changeText(screen.getByPlaceholderText("botanist@conservatory.com"), "curator@example.com");
-    fireEvent.changeText(screen.getByPlaceholderText("Enter your password"), "garden123");
+    fireEvent.changeText(
+      screen.getByPlaceholderText("botanist@conservatory.com"),
+      "curator@example.com",
+    );
+    fireEvent.changeText(
+      screen.getByPlaceholderText("Enter your password"),
+      "garden123",
+    );
     fireEvent.press(screen.getByText("Sign In"));
 
     await waitFor(() => {
-      expect(screen.getByText("Incorrect email or password.")).toBeTruthy();
+      expect(mockLogin).toHaveBeenCalledWith(
+        "curator@example.com",
+        "garden123",
+      );
     });
 
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().user).toBeNull();
   });
 });

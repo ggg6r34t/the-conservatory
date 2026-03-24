@@ -1,5 +1,6 @@
-import { getDatabase } from "@/services/database/sqlite";
 import { bootstrapUserDataSync } from "@/services/database/bootstrapSync";
+import { getDatabase } from "@/services/database/sqlite";
+import { probeRemoteBackendAvailability } from "@/services/supabase/backendReadiness";
 
 export interface BackupSummary {
   activePlants: number;
@@ -75,5 +76,17 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
 }
 
 export async function runBackupSync(userId: string) {
+  const remoteAvailability = await probeRemoteBackendAvailability();
+
+  if (!remoteAvailability.canSync) {
+    throw new Error(
+      remoteAvailability.detail ?? remoteAvailability.description,
+    );
+  }
+
   await bootstrapUserDataSync(userId);
+}
+
+export async function getRemoteBackupAvailability() {
+  return probeRemoteBackendAvailability();
 }

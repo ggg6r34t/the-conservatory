@@ -14,8 +14,15 @@ jest.mock("@react-native-async-storage/async-storage", () =>
 jest.mock("@/config/env", () => ({
   env: {
     isSupabaseConfigured: false,
+    isDevelopmentBuild: true,
+    isProductionBuild: false,
+    missingSupabaseConfig: [
+      "EXPO_PUBLIC_SUPABASE_URL",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+    ],
     supabaseUrl: null,
     supabaseAnonKey: null,
+    enableSyncTrials: false,
   },
 }));
 

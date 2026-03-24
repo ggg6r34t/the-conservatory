@@ -4,9 +4,10 @@ import { StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
-import { useAlert } from "@/hooks/useAlert";
 import { useLogin } from "@/features/auth/hooks/useLogin";
 import { loginSchema } from "@/features/auth/schemas/authValidation";
+import { useAlert } from "@/hooks/useAlert";
+import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 
 export function LoginForm() {
   const { colors } = useTheme();
@@ -16,6 +17,7 @@ export function LoginForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState("");
   const loginMutation = useLogin();
+  const backend = getBackendConfigurationSummary();
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
@@ -31,6 +33,11 @@ export function LoginForm() {
 
   const handleSubmit = async () => {
     if (loginMutation.isPending) {
+      return;
+    }
+
+    if (!backend.authActionsEnabled) {
+      setSubmitError(backend.description);
       return;
     }
 
@@ -99,7 +106,7 @@ export function LoginForm() {
         label="Sign In"
         onPress={handleSubmit}
         loading={loginMutation.isPending}
-        disabled={loginMutation.isPending}
+        disabled={loginMutation.isPending || !backend.authActionsEnabled}
       />
     </View>
   );

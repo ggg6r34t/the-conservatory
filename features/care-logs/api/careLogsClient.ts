@@ -4,7 +4,7 @@ import { getPlantById } from "@/features/plants/api/plantsClient";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import { getDatabase } from "@/services/database/sqlite";
 import { enqueueSyncOperation } from "@/services/database/sync";
-import type { CareLog, CareLogType } from "@/types/models";
+import type { CareLog, CareLogCondition, CareLogType } from "@/types/models";
 import { createId } from "@/utils/id";
 
 function mapCareLog(row: {
@@ -12,6 +12,7 @@ function mapCareLog(row: {
   user_id: string;
   plant_id: string;
   log_type: CareLogType;
+  current_condition: CareLogCondition | null;
   notes: string | null;
   logged_at: string;
   created_at: string;
@@ -26,6 +27,7 @@ function mapCareLog(row: {
     userId: row.user_id,
     plantId: row.plant_id,
     logType: row.log_type,
+    currentCondition: row.current_condition,
     notes: row.notes,
     loggedAt: row.logged_at,
     createdAt: row.created_at,
@@ -50,6 +52,7 @@ export async function listCareLogs(plantId: string) {
     user_id: string;
     plant_id: string;
     log_type: CareLogType;
+    current_condition: CareLogCondition | null;
     notes: string | null;
     logged_at: string;
     created_at: string;
@@ -70,6 +73,7 @@ export async function createCareLog(input: {
   userId: string;
   plantId: string;
   logType: CareLogType;
+  currentCondition?: CareLogCondition;
   notes?: string;
 }) {
   const database = await getDatabase();
@@ -78,13 +82,14 @@ export async function createCareLog(input: {
 
   await database.runAsync(
     `INSERT INTO care_logs (
-      id, user_id, plant_id, log_type, notes, logged_at, created_at, updated_at, updated_by,
+      id, user_id, plant_id, log_type, current_condition, notes, logged_at, created_at, updated_at, updated_by,
       pending, synced_at, sync_error
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
     logId,
     input.userId,
     input.plantId,
     input.logType,
+    input.currentCondition ?? null,
     input.notes ?? null,
     now,
     now,
@@ -103,6 +108,7 @@ export async function createCareLog(input: {
       userId: input.userId,
       plantId: input.plantId,
       logType: input.logType,
+      currentCondition: input.currentCondition ?? null,
     },
   });
 
@@ -157,6 +163,7 @@ export async function createCareLog(input: {
     user_id: string;
     plant_id: string;
     log_type: CareLogType;
+    current_condition: CareLogCondition | null;
     notes: string | null;
     logged_at: string;
     created_at: string;

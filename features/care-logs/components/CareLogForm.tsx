@@ -14,12 +14,10 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useObservationTagging } from "@/features/ai/hooks/useObservationTagging";
-import {
-  buildCareLogNoteForSave,
-} from "@/features/ai/services/observationTaggingService";
+import { buildCareLogNoteForSave } from "@/features/ai/services/observationTaggingService";
 import type { ObservationTag } from "@/features/ai/types/ai";
 import { useAddLog } from "@/features/care-logs/hooks/useAddLog";
-import type { CareLogType } from "@/types/models";
+import type { CareLogCondition, CareLogType } from "@/types/models";
 
 interface CareLogFormProps {
   plantId: string;
@@ -31,7 +29,12 @@ const logTypes: {
   icon: string;
   iconFamily?: React.ComponentProps<typeof Icon>["family"];
 }[] = [
-  { key: "water", label: "WATER", icon: "water-drop", iconFamily: "MaterialIcons" },
+  {
+    key: "water",
+    label: "WATER",
+    icon: "water-drop",
+    iconFamily: "MaterialIcons",
+  },
   { key: "mist", label: "MIST", icon: "opacity", iconFamily: "MaterialIcons" },
   { key: "feed", label: "FERTILIZE", icon: "white-balance-sunny" },
   { key: "repot", label: "REPOT", icon: "shovel" },
@@ -41,15 +44,18 @@ const logTypes: {
   { key: "note", label: "PHOTO", icon: "camera-outline" },
 ];
 
-const conditionOptions = ["Healthy", "Needs Attention", "Declining"] as const;
+const conditionOptions: CareLogCondition[] = [
+  "Healthy",
+  "Needs Attention",
+  "Declining",
+];
 
 export function CareLogForm({ plantId }: CareLogFormProps) {
   const router = useRouter();
   const { colors } = useTheme();
   const [notes, setNotes] = useState("");
   const [logType, setLogType] = useState<CareLogType>("water");
-  const [condition, setCondition] =
-    useState<(typeof conditionOptions)[number]>("Healthy");
+  const [condition, setCondition] = useState<CareLogCondition>("Healthy");
   const [suggestedRefinement, setSuggestedRefinement] = useState<string | null>(
     null,
   );
@@ -70,7 +76,11 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
         acceptedRefinement: suggestedRefinement,
         tags: selectedTags,
       });
-      await addLog.mutateAsync({ logType, notes: finalNote });
+      await addLog.mutateAsync({
+        logType,
+        currentCondition: condition,
+        notes: finalNote,
+      });
       router.back();
     } catch (error) {
       Alert.alert(
@@ -87,7 +97,10 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
       return;
     }
 
-    const result = await observationTagging.mutateAsync({ note: notes, logType });
+    const result = await observationTagging.mutateAsync({
+      note: notes,
+      logType,
+    });
     setSuggestedRefinement(result.refinedNote);
   };
 
@@ -96,7 +109,10 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
       return;
     }
 
-    const result = await observationTagging.mutateAsync({ note: notes, logType });
+    const result = await observationTagging.mutateAsync({
+      note: notes,
+      logType,
+    });
     setSelectedTags(result.suggestedTags);
   };
 
@@ -227,7 +243,9 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
               { backgroundColor: colors.surfaceContainerLow },
             ]}
           >
-            <Text style={[styles.suggestionEyebrow, { color: colors.secondary }]}>
+            <Text
+              style={[styles.suggestionEyebrow, { color: colors.secondary }]}
+            >
               REFINED NOTE
             </Text>
             <Text style={[styles.suggestionBody, { color: colors.onSurface }]}>
@@ -240,7 +258,9 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
                 setSuggestedRefinement(null);
               }}
             >
-              <Text style={[styles.useSuggestionText, { color: colors.primary }]}>
+              <Text
+                style={[styles.useSuggestionText, { color: colors.primary }]}
+              >
                 Use refinement
               </Text>
             </Pressable>
@@ -286,11 +306,7 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
             {nowLabel}
           </Text>
         </View>
-        <Icon
-          name="chevron-right"
-          size={22}
-          color={colors.onSurfaceVariant}
-        />
+        <Icon name="chevron-right" size={22} color={colors.onSurfaceVariant} />
       </View>
 
       <View style={styles.section}>

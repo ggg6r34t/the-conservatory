@@ -6,6 +6,7 @@ import {
   getStorageAssetUrl,
   normalizeStoragePath,
 } from "@/services/supabase/storage";
+import type { CareLogCondition } from "@/types/models";
 import { logger } from "@/utils/logger";
 
 interface MergeableRemoteRow {
@@ -50,7 +51,16 @@ interface RemotePhotoRow extends MergeableRemoteRow {
 interface RemoteCareLogRow extends MergeableRemoteRow {
   user_id: string;
   plant_id: string;
-  log_type: "water" | "mist" | "feed" | "repot" | "prune" | "inspect" | "pest" | "note";
+  log_type:
+    | "water"
+    | "mist"
+    | "feed"
+    | "repot"
+    | "prune"
+    | "inspect"
+    | "pest"
+    | "note";
+  current_condition: CareLogCondition | null;
   notes: string | null;
   logged_at: string;
   created_at: string;
@@ -79,7 +89,11 @@ interface RemoteGraveyardRow extends MergeableRemoteRow {
   updated_by: string | null;
 }
 
-async function fetchRemoteRows<T>(table: string, columns: string, userId: string) {
+async function fetchRemoteRows<T>(
+  table: string,
+  columns: string,
+  userId: string,
+) {
   if (!supabase) {
     return [] as T[];
   }
@@ -157,7 +171,10 @@ async function shouldReplaceLocalRow(
     return false;
   }
 
-  return new Date(row.updated_at).getTime() >= new Date(localRow.updated_at).getTime();
+  return (
+    new Date(row.updated_at).getTime() >=
+    new Date(localRow.updated_at).getTime()
+  );
 }
 
 async function reconcileRemoteDeletions(params: {
@@ -192,77 +209,83 @@ export async function hydrateRemoteUserData(userId: string) {
     return;
   }
 
-  const [plantsResult, photosResult, careLogsResult, remindersResult, graveyardResult] =
-    await Promise.all([
-      fetchRemoteRowsSafe<RemotePlantRow>(
-        "plants",
-        [
-          "id",
-          "user_id",
-          "name",
-          "species_name",
-          "nickname",
-          "status",
-          "location",
-          "watering_interval_days",
-          "last_watered_at",
-          "next_water_due_at",
-          "notes",
-          "created_at",
-          "updated_at",
-          "updated_by",
-        ].join(", "),
-        userId,
-      ),
-      fetchRemotePhotos(userId),
-      fetchRemoteRowsSafe<RemoteCareLogRow>(
-        "care_logs",
-        [
-          "id",
-          "user_id",
-          "plant_id",
-          "log_type",
-          "notes",
-          "logged_at",
-          "created_at",
-          "updated_at",
-          "updated_by",
-        ].join(", "),
-        userId,
-      ),
-      fetchRemoteRowsSafe<RemoteReminderRow>(
-        "care_reminders",
-        [
-          "id",
-          "user_id",
-          "plant_id",
-          "reminder_type",
-          "frequency_days",
-          "enabled",
-          "next_due_at",
-          "last_triggered_at",
-          "created_at",
-          "updated_at",
-          "updated_by",
-        ].join(", "),
-        userId,
-      ),
-      fetchRemoteRowsSafe<RemoteGraveyardRow>(
-        "graveyard_plants",
-        [
-          "id",
-          "user_id",
-          "plant_id",
-          "cause_of_passing",
-          "memorial_note",
-          "archived_at",
-          "created_at",
-          "updated_at",
-          "updated_by",
-        ].join(", "),
-        userId,
-      ),
-    ]);
+  const [
+    plantsResult,
+    photosResult,
+    careLogsResult,
+    remindersResult,
+    graveyardResult,
+  ] = await Promise.all([
+    fetchRemoteRowsSafe<RemotePlantRow>(
+      "plants",
+      [
+        "id",
+        "user_id",
+        "name",
+        "species_name",
+        "nickname",
+        "status",
+        "location",
+        "watering_interval_days",
+        "last_watered_at",
+        "next_water_due_at",
+        "notes",
+        "created_at",
+        "updated_at",
+        "updated_by",
+      ].join(", "),
+      userId,
+    ),
+    fetchRemotePhotos(userId),
+    fetchRemoteRowsSafe<RemoteCareLogRow>(
+      "care_logs",
+      [
+        "id",
+        "user_id",
+        "plant_id",
+        "log_type",
+        "current_condition",
+        "notes",
+        "logged_at",
+        "created_at",
+        "updated_at",
+        "updated_by",
+      ].join(", "),
+      userId,
+    ),
+    fetchRemoteRowsSafe<RemoteReminderRow>(
+      "care_reminders",
+      [
+        "id",
+        "user_id",
+        "plant_id",
+        "reminder_type",
+        "frequency_days",
+        "enabled",
+        "next_due_at",
+        "last_triggered_at",
+        "created_at",
+        "updated_at",
+        "updated_by",
+      ].join(", "),
+      userId,
+    ),
+    fetchRemoteRowsSafe<RemoteGraveyardRow>(
+      "graveyard_plants",
+      [
+        "id",
+        "user_id",
+        "plant_id",
+        "cause_of_passing",
+        "memorial_note",
+        "archived_at",
+        "created_at",
+        "updated_at",
+        "updated_by",
+      ].join(", "),
+      userId,
+    ),
+  ]);
 
   const plants = plantsResult.rows;
   const photos = photosResult.rows;
@@ -273,12 +296,11 @@ export async function hydrateRemoteUserData(userId: string) {
   const hydratedPhotos = await Promise.all(
     photos.map(async (row) => {
       try {
-        const directRemoteUrl =
-          row.remote_url?.startsWith("http")
-            ? row.remote_url
-            : row.storage_path?.startsWith("http")
-              ? row.storage_path
-              : null;
+        const directRemoteUrl = row.remote_url?.startsWith("http")
+          ? row.remote_url
+          : row.storage_path?.startsWith("http")
+            ? row.storage_path
+            : null;
         const normalizedStoragePath =
           normalizeStoragePath(row.storage_path) ??
           normalizeStoragePath(row.remote_url);
@@ -379,13 +401,14 @@ export async function hydrateRemoteUserData(userId: string) {
 
       await database.runAsync(
         `INSERT OR REPLACE INTO care_logs (
-          id, user_id, plant_id, log_type, notes, logged_at, created_at,
+          id, user_id, plant_id, log_type, current_condition, notes, logged_at, created_at,
           updated_at, updated_by, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         row.id,
         row.user_id,
         row.plant_id,
         row.log_type,
+        row.current_condition,
         row.notes,
         row.logged_at,
         row.created_at,
@@ -448,8 +471,8 @@ export async function hydrateRemoteUserData(userId: string) {
         0,
         syncedAt,
         null,
-        );
-      }
+      );
+    }
 
     if (photosResult.ok) {
       await reconcileRemoteDeletions({

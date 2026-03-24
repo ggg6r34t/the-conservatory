@@ -1,11 +1,12 @@
 import { STORAGE_BUCKET } from "@/config/constants";
 import { supabase } from "@/config/supabase";
 import { getDatabase } from "@/services/database/sqlite";
+import type { SyncQueueItem } from "@/services/database/sync";
 import {
   getStorageAssetUrl,
   normalizeStoragePath,
 } from "@/services/supabase/storage";
-import type { SyncQueueItem } from "@/services/database/sync";
+import type { CareLogCondition } from "@/types/models";
 import { logger } from "@/utils/logger";
 
 type SyncableEntity =
@@ -99,7 +100,16 @@ async function loadCareLogRecord(entityId: string) {
     id: string;
     user_id: string;
     plant_id: string;
-    log_type: "water" | "mist" | "feed" | "repot" | "prune" | "inspect" | "pest" | "note";
+    log_type:
+      | "water"
+      | "mist"
+      | "feed"
+      | "repot"
+      | "prune"
+      | "inspect"
+      | "pest"
+      | "note";
+    current_condition: CareLogCondition | null;
     notes: string | null;
     logged_at: string;
     created_at: string;
@@ -116,6 +126,7 @@ async function loadCareLogRecord(entityId: string) {
     user_id: row.user_id,
     plant_id: row.plant_id,
     log_type: row.log_type,
+    current_condition: row.current_condition,
     notes: row.notes,
     logged_at: row.logged_at,
     created_at: row.created_at,
@@ -144,19 +155,19 @@ async function loadReminderRecord(entityId: string) {
     return null;
   }
 
-      return {
-        id: row.id,
-        user_id: row.user_id,
-        plant_id: row.plant_id,
-        reminder_type: row.reminder_type,
-        frequency_days: row.frequency_days,
-        enabled: Boolean(row.enabled),
-        next_due_at: row.next_due_at,
-        last_triggered_at: row.last_triggered_at,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        updated_by: row.updated_by ?? row.user_id,
-      };
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    plant_id: row.plant_id,
+    reminder_type: row.reminder_type,
+    frequency_days: row.frequency_days,
+    enabled: Boolean(row.enabled),
+    next_due_at: row.next_due_at,
+    last_triggered_at: row.last_triggered_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    updated_by: row.updated_by ?? row.user_id,
+  };
 }
 
 async function loadPhotoRecord(entityId: string) {
@@ -291,9 +302,23 @@ function parsePayload(item: SyncQueueItem): Record<string, unknown> {
 async function deleteRemoteRecord(item: SyncQueueItem) {
   const payload = parsePayload(item);
   const userId = typeof payload.userId === "string" ? payload.userId : null;
+  const storagePath =
+    typeof payload.storagePath === "string"
+      ? normalizeStoragePath(payload.storagePath)
+      : null;
 
   if (!supabase) {
     throw new Error("Supabase client is unavailable.");
+  }
+
+  if (item.entity === "photos" && storagePath) {
+    const { error: storageError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .remove([storagePath]);
+
+    if (storageError) {
+      throw new Error(storageError.message);
+    }
   }
 
   const baseDelete = supabase

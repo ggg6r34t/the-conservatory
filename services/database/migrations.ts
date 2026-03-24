@@ -1,3 +1,5 @@
+import type { SQLiteDatabase } from "expo-sqlite";
+
 export const bootstrapSql = `
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY NOT NULL,
@@ -73,6 +75,7 @@ CREATE TABLE IF NOT EXISTS care_logs (
   user_id TEXT NOT NULL,
   plant_id TEXT NOT NULL,
   log_type TEXT NOT NULL,
+  current_condition TEXT,
   notes TEXT,
   logged_at TEXT NOT NULL,
   created_at TEXT NOT NULL,
@@ -138,3 +141,27 @@ CREATE INDEX IF NOT EXISTS idx_photos_plant_id ON photos(plant_id);
 CREATE INDEX IF NOT EXISTS idx_local_auth_credentials_email ON local_auth_credentials(email);
 CREATE INDEX IF NOT EXISTS idx_sync_queue_status_retry ON sync_queue(status, next_retry_at);
 `;
+
+async function ensureColumn(
+  database: SQLiteDatabase,
+  table: string,
+  column: string,
+  definition: string,
+) {
+  const columns = await database.getAllAsync<{ name: string }>(
+    `PRAGMA table_info(${table});`,
+  );
+
+  if (columns.some((entry) => entry.name === column)) {
+    return;
+  }
+
+  await database.execAsync(
+    `ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`,
+  );
+}
+
+export async function runDatabaseMigrations(database: SQLiteDatabase) {
+  await database.execAsync(bootstrapSql);
+  await ensureColumn(database, "care_logs", "current_condition", "TEXT");
+}

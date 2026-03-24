@@ -1,4 +1,3 @@
-import { STORAGE_BUCKET } from "@/config/constants";
 import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
 import { upsertReminder } from "@/features/notifications/api/remindersClient";
 import { cancelReminderNotification } from "@/features/notifications/services/notificationService";
@@ -7,6 +6,7 @@ import { getDatabase } from "@/services/database/sqlite";
 import { enqueueSyncOperation } from "@/services/database/sync";
 import { getStorageAssetUrl } from "@/services/supabase/storage";
 import type {
+  CareLogCondition,
   CareLogType,
   GraveyardPlant,
   Photo,
@@ -243,7 +243,9 @@ export async function listGraveyardPlants(userId: string) {
     speciesName: row.species_name,
     nickname: row.nickname,
     plantNotes: row.notes,
-    primaryPhotoUri: resolveRenderablePhotoUri(photoByPlantId.get(row.plant_id)),
+    primaryPhotoUri: resolveRenderablePhotoUri(
+      photoByPlantId.get(row.plant_id),
+    ),
   }));
 }
 
@@ -292,10 +294,12 @@ export async function listPlants(input: {
   const filtered = rows
     .map((row) => {
       const plant = toPlant(row);
-        return {
-          ...plant,
-          primaryPhotoUri: resolveRenderablePhotoUri(photoByPlantId.get(plant.id)),
-        } satisfies PlantListItem;
+      return {
+        ...plant,
+        primaryPhotoUri: resolveRenderablePhotoUri(
+          photoByPlantId.get(plant.id),
+        ),
+      } satisfies PlantListItem;
     })
     .filter((plant) => {
       if (input.filter === "needs-water") {
@@ -396,6 +400,7 @@ export async function getPlantById(
     user_id: string;
     plant_id: string;
     log_type: CareLogType;
+    current_condition: CareLogCondition | null;
     notes: string | null;
     logged_at: string;
     created_at: string;
@@ -434,6 +439,7 @@ export async function getPlantById(
       userId: row.user_id,
       plantId: row.plant_id,
       logType: row.log_type,
+      currentCondition: row.current_condition,
       notes: row.notes,
       loggedAt: row.logged_at,
       createdAt: row.created_at,
@@ -772,6 +778,30 @@ export async function updatePlant(input: {
 
 export async function deletePlant(userId: string, plantId: string) {
   const database = await getDatabase();
+  const photos = await database.getAllAsync<{
+    id: string;
+    storage_path: string | null;
+  }>("SELECT id, storage_path FROM photos WHERE plant_id = ?;", plantId);
+  const graveyardRecords = await database.getAllAsync<{ id: string }>(
+    "SELECT id FROM graveyard_plants WHERE plant_id = ?;",
+    plantId,
+  );
+  const logs = await database.getAllAsync<{ id: string }>(
+    "SELECT id FROM care_logs WHERE plant_id = ?;",
+    plantId,
+  );
+  const reminders = await database.getAllAsync<{
+    id: string;
+    notification_id: string | null;
+  }>(
+    "SELECT id, notification_id FROM care_reminders WHERE plant_id = ?;",
+    plantId,
+  );
+
+  for (const reminder of reminders) {
+    await cancelReminderNotification(reminder.notification_id);
+  }
+
   await database.withTransactionAsync(async () => {
     await database.runAsync("DELETE FROM photos WHERE plant_id = ?;", plantId);
     await database.runAsync(
@@ -792,6 +822,55 @@ export async function deletePlant(userId: string, plantId: string) {
       userId,
     );
   });
+
+  for (const photo of photos) {
+    await enqueueSyncOperation({
+      entity: "photos",
+      entityId: photo.id,
+      operation: "delete",
+      payload: {
+        userId,
+        plantId,
+        storagePath: photo.storage_path,
+      },
+    });
+  }
+
+  for (const graveyardRecord of graveyardRecords) {
+    await enqueueSyncOperation({
+      entity: "graveyard_plants",
+      entityId: graveyardRecord.id,
+      operation: "delete",
+      payload: {
+        userId,
+        plantId,
+      },
+    });
+  }
+
+  for (const log of logs) {
+    await enqueueSyncOperation({
+      entity: "care_logs",
+      entityId: log.id,
+      operation: "delete",
+      payload: {
+        userId,
+        plantId,
+      },
+    });
+  }
+
+  for (const reminder of reminders) {
+    await enqueueSyncOperation({
+      entity: "care_reminders",
+      entityId: reminder.id,
+      operation: "delete",
+      payload: {
+        userId,
+        plantId,
+      },
+    });
+  }
 
   await enqueueSyncOperation({
     entity: "plants",
@@ -916,4 +995,78 @@ export async function archivePlant(input: {
   });
 
   return graveyardId;
+}
+
+export async function updateGraveyardMemorial(input: {
+  userId: string;
+  graveyardId: string;
+  causeOfPassing?: string;
+  memorialNote?: string;
+}) {
+  const database = await getDatabase();
+  const existing = await database.getFirstAsync<{
+    id: string;
+    plant_id: string;
+  }>(
+    "SELECT id, plant_id FROM graveyard_plants WHERE id = ? AND user_id = ? LIMIT 1;",
+    input.graveyardId,
+    input.userId,
+  );
+
+  if (!existing) {
+    throw new Error("Memorial entry not found.");
+  }
+
+  const updatedAt = new Date().toISOString();
+
+  await database.runAsync(
+    `UPDATE graveyard_plants
+     SET cause_of_passing = ?, memorial_note = ?, updated_at = ?, updated_by = ?, pending = 1
+     WHERE id = ?;`,
+    input.causeOfPassing?.trim() || null,
+    input.memorialNote?.trim() || null,
+    updatedAt,
+    input.userId,
+    input.graveyardId,
+  );
+
+  await enqueueSyncOperation({
+    entity: "graveyard_plants",
+    entityId: input.graveyardId,
+    operation: "update",
+    payload: {
+      userId: input.userId,
+      plantId: existing.plant_id,
+    },
+  });
+
+  const updated = await database.getFirstAsync<{
+    id: string;
+    user_id: string;
+    plant_id: string;
+    cause_of_passing: string | null;
+    memorial_note: string | null;
+    archived_at: string;
+    created_at: string;
+    updated_at: string;
+    updated_by: string | null;
+    pending: number;
+    synced_at: string | null;
+    sync_error: string | null;
+  }>("SELECT * FROM graveyard_plants WHERE id = ? LIMIT 1;", input.graveyardId);
+
+  return {
+    id: updated!.id,
+    userId: updated!.user_id,
+    plantId: updated!.plant_id,
+    causeOfPassing: updated!.cause_of_passing,
+    memorialNote: updated!.memorial_note,
+    archivedAt: updated!.archived_at,
+    createdAt: updated!.created_at,
+    updatedAt: updated!.updated_at,
+    updatedBy: updated!.updated_by,
+    pending: updated!.pending,
+    syncedAt: updated!.synced_at,
+    syncError: updated!.sync_error,
+  } satisfies GraveyardPlant;
 }

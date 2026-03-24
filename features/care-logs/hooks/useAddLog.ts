@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/constants";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { createCareLog } from "@/features/care-logs/api/careLogsClient";
-import type { CareLogType } from "@/types/models";
+import type { CareLogCondition, CareLogType } from "@/types/models";
 
 export function useAddLog(plantId: string) {
   const { user } = useAuth();
@@ -12,6 +12,7 @@ export function useAddLog(plantId: string) {
   return useMutation({
     mutationFn: (input: {
       logType: CareLogType;
+      currentCondition?: CareLogCondition;
       notes?: string;
     }) =>
       createCareLog({

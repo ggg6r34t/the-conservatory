@@ -4,9 +4,10 @@ import { StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
-import { useAlert } from "@/hooks/useAlert";
 import { useSignup } from "@/features/auth/hooks/useSignup";
 import { signupSchema } from "@/features/auth/schemas/authValidation";
+import { useAlert } from "@/hooks/useAlert";
+import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 
 export function SignupForm() {
   const { colors } = useTheme();
@@ -17,6 +18,7 @@ export function SignupForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState("");
   const signupMutation = useSignup();
+  const backend = getBackendConfigurationSummary();
 
   const clearFieldError = (field: "displayName" | "email" | "password") => {
     setErrors((current) => ({ ...current, [field]: "" }));
@@ -25,6 +27,11 @@ export function SignupForm() {
 
   const handleSubmit = async () => {
     if (signupMutation.isPending) {
+      return;
+    }
+
+    if (!backend.authActionsEnabled) {
+      setSubmitError(backend.description);
       return;
     }
 
@@ -60,7 +67,6 @@ export function SignupForm() {
         });
         return;
       }
-
     } catch (error) {
       const message = error instanceof Error ? error.message : "Try again.";
       setSubmitError(message);
@@ -126,7 +132,7 @@ export function SignupForm() {
         label="Create Account"
         onPress={handleSubmit}
         loading={signupMutation.isPending}
-        disabled={signupMutation.isPending}
+        disabled={signupMutation.isPending || !backend.authActionsEnabled}
       />
     </View>
   );
