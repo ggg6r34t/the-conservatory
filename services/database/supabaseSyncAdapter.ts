@@ -7,7 +7,6 @@ import {
   normalizeStoragePath,
 } from "@/services/supabase/storage";
 import type { CareLogCondition } from "@/types/models";
-import { logger } from "@/utils/logger";
 
 type SyncableEntity =
   | "plants"
@@ -195,8 +194,9 @@ async function loadPhotoRecord(entityId: string) {
   const normalizedStoragePath = normalizeStoragePath(row.storage_path);
 
   if (!normalizedStoragePath || !row.mime_type) {
-    logger.warn("sync.photo_missing_storage_path", { entityId });
-    return null;
+    throw new Error(
+      "Photo sync missing required storage metadata (storage_path or mime_type).",
+    );
   }
 
   return {

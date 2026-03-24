@@ -114,24 +114,30 @@ describe("plants client", () => {
     await deletePlant("user-1", "plant-1");
 
     expect(mockCancelReminderNotification).toHaveBeenCalledWith("notif-1");
-    expect(mockEnqueueSyncOperation).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        entity: "photos",
-        entityId: "photo-1",
-        operation: "delete",
-        payload: expect.objectContaining({
-          storagePath: "user-1/plant-1/photo-1.jpg",
-        }),
-      }),
+    const syncInsertCalls = runAsync.mock.calls.filter((call) =>
+      String(call[0]).includes("INSERT INTO sync_queue"),
     );
-    expect(mockEnqueueSyncOperation).toHaveBeenNthCalledWith(
-      5,
-      expect.objectContaining({
-        entity: "plants",
-        entityId: "plant-1",
-        operation: "delete",
-      }),
+
+    expect(syncInsertCalls).toHaveLength(5);
+    expect(syncInsertCalls).toEqual(
+      expect.arrayContaining([
+        expect.arrayContaining([
+          expect.stringContaining("INSERT INTO sync_queue"),
+          expect.any(String),
+          "photos",
+          "photo-1",
+          "delete",
+          expect.stringContaining('"storagePath":"user-1/plant-1/photo-1.jpg"'),
+        ]),
+        expect.arrayContaining([
+          expect.stringContaining("INSERT INTO sync_queue"),
+          expect.any(String),
+          "plants",
+          "plant-1",
+          "delete",
+          expect.stringContaining('"userId":"user-1"'),
+        ]),
+      ]),
     );
     expect(runAsync).toHaveBeenCalledWith(
       "DELETE FROM plants WHERE id = ? AND user_id = ?;",

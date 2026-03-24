@@ -154,6 +154,7 @@ export default function HomeScreen() {
         <HydrationCard
           dueToday={dashboard.dueToday.length}
           overdue={overdueCount}
+          nextCycleHours={dashboard.nextCycleHours}
         />
 
         {presentation.primaryInsight ? (

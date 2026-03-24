@@ -319,4 +319,65 @@ describe("supabase sync adapter", () => {
     expect(from).toHaveBeenCalledWith("photos");
     expect(deleteFn).toHaveBeenCalled();
   });
+
+  it("does not mark photo sync successful when required metadata is missing", async () => {
+    const from = require("@/config/supabase").supabase.from as jest.Mock;
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+
+    from.mockReturnValue({
+      upsert: jest.fn().mockResolvedValue({ error: null }),
+    });
+
+    require("@/services/database/sqlite").getDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn().mockResolvedValue({
+        id: "photo-invalid-1",
+        user_id: "user-1",
+        plant_id: "plant-1",
+        local_uri: "file:///specimen.jpg",
+        remote_url: null,
+        storage_path: null,
+        mime_type: null,
+        width: null,
+        height: null,
+        taken_at: null,
+        is_primary: 1,
+        created_at: "2026-03-21T10:00:00.000Z",
+        updated_at: "2026-03-21T10:00:00.000Z",
+        updated_by: null,
+      }),
+      runAsync,
+    });
+
+    const {
+      processSyncQueueItemWithSupabase,
+    } = require("@/services/database/supabaseSyncAdapter");
+
+    await expect(
+      processSyncQueueItemWithSupabase({
+        id: "sync-photo-invalid-1",
+        entity: "photos",
+        entityId: "photo-invalid-1",
+        operation: "insert",
+        payload: JSON.stringify({ userId: "user-1", plantId: "plant-1" }),
+        status: "pending",
+        attemptCount: 0,
+        lastError: null,
+        nextRetryAt: null,
+        queuedAt: "2026-03-21T10:00:00.000Z",
+        updatedAt: "2026-03-21T10:00:00.000Z",
+      }),
+    ).rejects.toThrow(/missing required storage metadata/i);
+
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("SET sync_error = ?"),
+      expect.any(String),
+      expect.any(String),
+      "photo-invalid-1",
+    );
+    expect(runAsync).not.toHaveBeenCalledWith(
+      expect.stringContaining("SET pending = 0"),
+      expect.any(String),
+      "photo-invalid-1",
+    );
+  });
 });

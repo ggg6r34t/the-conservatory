@@ -37,6 +37,32 @@ class InMemorySyncQueueStorage implements SyncQueueStorage {
     ).length;
   }
 
+  async reclaimStaleProcessing(
+    staleBeforeIso: string,
+    nowIso: string,
+    errorMessage: string,
+  ) {
+    let reclaimed = 0;
+
+    this.items = this.items.map((item) => {
+      if (item.status !== "processing" || item.updatedAt > staleBeforeIso) {
+        return item;
+      }
+
+      reclaimed += 1;
+      return {
+        ...item,
+        status: "failed",
+        attemptCount: item.attemptCount + 1,
+        lastError: errorMessage,
+        nextRetryAt: nowIso,
+        updatedAt: nowIso,
+      };
+    });
+
+    return reclaimed;
+  }
+
   async markProcessing(id: string, updatedAt: string) {
     this.items = this.items.map((item) =>
       item.id === id ? { ...item, status: "processing", updatedAt } : item,
@@ -83,6 +109,10 @@ class InMemorySyncQueueStorage implements SyncQueueStorage {
 
   getAll() {
     return this.items;
+  }
+
+  seed(item: SyncQueueItem) {
+    this.items.push(item);
   }
 }
 
@@ -206,5 +236,62 @@ describe("sync queue replay", () => {
     expect(
       storage.getAll().filter((item) => item.status === "completed").length,
     ).toBe(1);
+  });
+
+  it("reclaims stale processing items and replays them", async () => {
+    const storage = new InMemorySyncQueueStorage();
+    const service = createSyncQueueService(storage);
+
+    storage.seed({
+      id: "sync-stale-1",
+      entity: "plants",
+      entityId: "plant-stale-1",
+      operation: "update",
+      payload: null,
+      status: "processing",
+      attemptCount: 0,
+      lastError: null,
+      nextRetryAt: null,
+      queuedAt: "2026-03-21T10:00:00.000Z",
+      updatedAt: "2026-03-21T10:00:00.000Z",
+    });
+
+    const report = await service.syncPendingChanges({
+      nowIso: "2026-03-21T10:10:00.000Z",
+      processOperation: async () => undefined,
+    });
+
+    expect(report.reclaimed).toBe(1);
+    expect(report.processed).toBe(1);
+    expect(report.successful).toBe(1);
+    expect(storage.getAll()[0]?.status).toBe("completed");
+  });
+
+  it("does not reclaim non-stale processing items", async () => {
+    const storage = new InMemorySyncQueueStorage();
+    const service = createSyncQueueService(storage);
+
+    storage.seed({
+      id: "sync-processing-fresh-1",
+      entity: "plants",
+      entityId: "plant-fresh-1",
+      operation: "update",
+      payload: null,
+      status: "processing",
+      attemptCount: 0,
+      lastError: null,
+      nextRetryAt: null,
+      queuedAt: "2026-03-21T10:08:00.000Z",
+      updatedAt: "2026-03-21T10:08:00.000Z",
+    });
+
+    const report = await service.syncPendingChanges({
+      nowIso: "2026-03-21T10:10:00.000Z",
+      processOperation: async () => undefined,
+    });
+
+    expect(report.reclaimed).toBe(0);
+    expect(report.processed).toBe(0);
+    expect(storage.getAll()[0]?.status).toBe("processing");
   });
 });

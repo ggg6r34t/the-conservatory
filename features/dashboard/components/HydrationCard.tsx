@@ -6,6 +6,7 @@ import { useTheme } from "@/components/design-system/useTheme";
 interface HydrationCardProps {
   dueToday: number;
   overdue: number;
+  nextCycleHours: number | null;
 }
 
 function countLabel(value: number) {
@@ -49,12 +50,15 @@ function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-export function HydrationCard({ dueToday, overdue }: HydrationCardProps) {
+export function HydrationCard({
+  dueToday,
+  overdue,
+  nextCycleHours,
+}: HydrationCardProps) {
   const { colors } = useTheme();
   const dueTodayCount = Math.max(0, Math.floor(dueToday));
   const overdueCount = Math.max(0, Math.floor(overdue));
   const hasOverdue = overdueCount > 0;
-  const hasDueSoon = dueTodayCount > 0;
   const hasNoTimeLeft = dueTodayCount === 0;
 
   let statusCopy = "";
@@ -71,9 +75,9 @@ export function HydrationCard({ dueToday, overdue }: HydrationCardProps) {
 
   if (hasNoTimeLeft || hasOverdue) {
     cycleCopy = "A gentle watering pass today should keep your rhythm steady.";
-  } else if (hasDueSoon) {
-    cycleCopy = `Next cycle in ${Math.max(1, dueTodayCount)}${
-      dueTodayCount === 1 ? " hour" : " hours"
+  } else if (nextCycleHours != null) {
+    cycleCopy = `Next cycle in ${Math.max(1, nextCycleHours)}${
+      nextCycleHours === 1 ? " hour" : " hours"
     }.`;
   } else {
     cycleCopy = "Next cycle begins tomorrow.";

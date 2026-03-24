@@ -20,9 +20,23 @@ export function useDashboard() {
       );
     });
 
+    const now = Date.now();
+    const nextFutureDueAtMs = plants
+      .map((plant) =>
+        plant.nextWaterDueAt ? new Date(plant.nextWaterDueAt).getTime() : null,
+      )
+      .filter((value): value is number => value != null && value > now)
+      .sort((left, right) => left - right)[0];
+
+    const nextCycleHours =
+      nextFutureDueAtMs == null
+        ? null
+        : Math.max(1, Math.ceil((nextFutureDueAtMs - now) / (1000 * 60 * 60)));
+
     return {
       plants,
       dueToday,
+      nextCycleHours,
       isOffline: network.isOffline,
       isLoading: plantsQuery.isLoading,
     };

@@ -16,6 +16,38 @@ import type {
 import type { PlantLibraryFilter, PlantSortOption } from "@/types/ui";
 import { createId } from "@/utils/id";
 
+function serializeQueuePayload(payload: Record<string, unknown>) {
+  return JSON.stringify(payload);
+}
+
+async function queueSyncDeleteInTransaction(
+  database: Awaited<ReturnType<typeof getDatabase>>,
+  input: {
+    entity: string;
+    entityId: string;
+    payload: Record<string, unknown>;
+    nowIso: string;
+  },
+) {
+  await database.runAsync(
+    `INSERT INTO sync_queue (
+      id, entity, entity_id, operation, payload, status, attempt_count,
+      last_error, next_retry_at, queued_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+    createId("sync"),
+    input.entity,
+    input.entityId,
+    "delete",
+    serializeQueuePayload(input.payload),
+    "pending",
+    0,
+    null,
+    null,
+    input.nowIso,
+    input.nowIso,
+  );
+}
+
 interface PlantRow {
   id: string;
   user_id: string;
@@ -778,6 +810,7 @@ export async function updatePlant(input: {
 
 export async function deletePlant(userId: string, plantId: string) {
   const database = await getDatabase();
+  const queueTimestamp = new Date().toISOString();
   const photos = await database.getAllAsync<{
     id: string;
     storage_path: string | null;
@@ -803,6 +836,62 @@ export async function deletePlant(userId: string, plantId: string) {
   }
 
   await database.withTransactionAsync(async () => {
+    for (const photo of photos) {
+      await queueSyncDeleteInTransaction(database, {
+        entity: "photos",
+        entityId: photo.id,
+        payload: {
+          userId,
+          plantId,
+          storagePath: photo.storage_path,
+        },
+        nowIso: queueTimestamp,
+      });
+    }
+
+    for (const graveyardRecord of graveyardRecords) {
+      await queueSyncDeleteInTransaction(database, {
+        entity: "graveyard_plants",
+        entityId: graveyardRecord.id,
+        payload: {
+          userId,
+          plantId,
+        },
+        nowIso: queueTimestamp,
+      });
+    }
+
+    for (const log of logs) {
+      await queueSyncDeleteInTransaction(database, {
+        entity: "care_logs",
+        entityId: log.id,
+        payload: {
+          userId,
+          plantId,
+        },
+        nowIso: queueTimestamp,
+      });
+    }
+
+    for (const reminder of reminders) {
+      await queueSyncDeleteInTransaction(database, {
+        entity: "care_reminders",
+        entityId: reminder.id,
+        payload: {
+          userId,
+          plantId,
+        },
+        nowIso: queueTimestamp,
+      });
+    }
+
+    await queueSyncDeleteInTransaction(database, {
+      entity: "plants",
+      entityId: plantId,
+      payload: { userId },
+      nowIso: queueTimestamp,
+    });
+
     await database.runAsync("DELETE FROM photos WHERE plant_id = ?;", plantId);
     await database.runAsync(
       "DELETE FROM graveyard_plants WHERE plant_id = ?;",
@@ -821,62 +910,6 @@ export async function deletePlant(userId: string, plantId: string) {
       plantId,
       userId,
     );
-  });
-
-  for (const photo of photos) {
-    await enqueueSyncOperation({
-      entity: "photos",
-      entityId: photo.id,
-      operation: "delete",
-      payload: {
-        userId,
-        plantId,
-        storagePath: photo.storage_path,
-      },
-    });
-  }
-
-  for (const graveyardRecord of graveyardRecords) {
-    await enqueueSyncOperation({
-      entity: "graveyard_plants",
-      entityId: graveyardRecord.id,
-      operation: "delete",
-      payload: {
-        userId,
-        plantId,
-      },
-    });
-  }
-
-  for (const log of logs) {
-    await enqueueSyncOperation({
-      entity: "care_logs",
-      entityId: log.id,
-      operation: "delete",
-      payload: {
-        userId,
-        plantId,
-      },
-    });
-  }
-
-  for (const reminder of reminders) {
-    await enqueueSyncOperation({
-      entity: "care_reminders",
-      entityId: reminder.id,
-      operation: "delete",
-      payload: {
-        userId,
-        plantId,
-      },
-    });
-  }
-
-  await enqueueSyncOperation({
-    entity: "plants",
-    entityId: plantId,
-    operation: "delete",
-    payload: { userId },
   });
 }
 
