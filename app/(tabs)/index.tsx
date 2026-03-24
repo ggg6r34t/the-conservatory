@@ -18,8 +18,6 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
 import { DashboardInsightCard } from "@/features/ai/components/DashboardInsightCard";
 import { useDashboardInsight } from "@/features/ai/hooks/useDashboardInsight";
-import { useStreakRecoveryNudge } from "@/features/ai/hooks/useStreakRecoveryNudge";
-import { decideDashboardPresentation } from "@/features/ai/services/dashboardPresentationService";
 import { calculateCurrentStreakDays } from "@/features/ai/services/streakNudgeService";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
@@ -104,15 +102,6 @@ export default function HomeScreen() {
     currentStreakDays,
     enabled: hasCurrentWateringNeed,
   });
-  const streakNudgeQuery = useStreakRecoveryNudge({
-    userId: user?.id,
-    plants: dashboard.plants,
-    logs,
-  });
-  const presentation = decideDashboardPresentation({
-    insight: insightQuery.data ?? null,
-    streakNudge: streakNudgeQuery.data ?? null,
-  });
 
   return (
     <SafeAreaView
@@ -175,14 +164,13 @@ export default function HomeScreen() {
           nextCycleHours={dashboard.nextCycleHours}
         />
 
-        {presentation.primaryInsight && hasCurrentWateringNeed ? (
-          <DashboardInsightCard insight={presentation.primaryInsight} />
+        {insightQuery.data && hasCurrentWateringNeed ? (
+          <DashboardInsightCard insight={insightQuery.data} />
         ) : null}
 
         <StreakSummary
           activePlants={dashboard.plants.length}
           plantPhotoUris={plantPhotoUris}
-          nudge={presentation.streakNudge?.body}
         />
 
         <UpcomingCare plants={dashboard.plants} />
