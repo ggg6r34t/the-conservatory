@@ -590,8 +590,8 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.985 }],
   },
   memorialButton: {
-    minHeight: 46,
-    paddingHorizontal: 32,
+    minHeight: 56,
+    paddingHorizontal: 20,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
@@ -600,7 +600,8 @@ const styles = StyleSheet.create({
   memorialButtonLabel: {
     color: "#ffffff",
     fontFamily: "Manrope_700Bold",
-    fontSize: 15,
+    fontSize: 16,
+    lineHeight: 20,
   },
   compactCard: {
     borderRadius: 28,
