@@ -22,6 +22,20 @@ export function AuthScreenScaffold({
 }: AuthScreenScaffoldProps) {
   const { colors, spacing } = useTheme();
   const backend = getBackendConfigurationSummary();
+  const authNotice =
+    backend.mode === "local-development"
+      ? {
+          title: "This device only",
+          description:
+            "This build is currently using device-only sign-in and storage.",
+        }
+      : backend.mode === "release-misconfigured"
+        ? {
+            title: "Account setup needed",
+            description:
+              "This build is missing account setup values, so sign-in and password recovery are unavailable.",
+          }
+        : null;
 
   return (
     <SafeAreaView
@@ -51,7 +65,7 @@ export function AuthScreenScaffold({
             </View>
           </View>
 
-          {backend.mode !== "cloud" ? (
+          {authNotice ? (
             <View
               style={[
                 styles.notice,
@@ -59,12 +73,12 @@ export function AuthScreenScaffold({
               ]}
             >
               <Text style={[styles.noticeTitle, { color: colors.primary }]}>
-                {backend.title}
+                {authNotice.title}
               </Text>
               <Text
                 style={[styles.noticeBody, { color: colors.onSurfaceVariant }]}
               >
-                {backend.description}
+                {authNotice.description}
               </Text>
             </View>
           ) : null}

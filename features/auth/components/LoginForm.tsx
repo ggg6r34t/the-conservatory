@@ -18,6 +18,12 @@ export function LoginForm() {
   const [submitError, setSubmitError] = useState("");
   const loginMutation = useLogin();
   const backend = getBackendConfigurationSummary();
+  const authUnavailableMessage =
+    backend.mode === "local-development"
+      ? "Sign-in is limited in this build right now."
+      : backend.mode === "release-misconfigured"
+        ? "Sign-in isn't available until account setup is completed for this build."
+        : "Sign-in is unavailable right now.";
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
@@ -37,7 +43,7 @@ export function LoginForm() {
     }
 
     if (!backend.authActionsEnabled) {
-      setSubmitError(backend.description);
+      setSubmitError(authUnavailableMessage);
       return;
     }
 

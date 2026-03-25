@@ -19,6 +19,12 @@ export function SignupForm() {
   const [submitError, setSubmitError] = useState("");
   const signupMutation = useSignup();
   const backend = getBackendConfigurationSummary();
+  const authUnavailableMessage =
+    backend.mode === "local-development"
+      ? "Account creation is limited in this build right now."
+      : backend.mode === "release-misconfigured"
+        ? "Account creation isn't available until account setup is completed for this build."
+        : "Account creation is unavailable right now.";
 
   const clearFieldError = (field: "displayName" | "email" | "password") => {
     setErrors((current) => ({ ...current, [field]: "" }));
@@ -31,7 +37,7 @@ export function SignupForm() {
     }
 
     if (!backend.authActionsEnabled) {
-      setSubmitError(backend.description);
+      setSubmitError(authUnavailableMessage);
       return;
     }
 

@@ -38,8 +38,8 @@ export default function ForgotPasswordScreen() {
     if (!canRequestReset) {
       setError(
         backend.mode === "local-development"
-          ? "Password reset emails are unavailable in local-only development mode."
-          : backend.description,
+          ? "Password reset emails aren't available in this build right now."
+          : "Password reset is currently unavailable for this build.",
       );
       return;
     }
