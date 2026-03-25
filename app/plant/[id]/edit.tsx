@@ -1,22 +1,16 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { useAlert } from "@/hooks/useAlert";
 import { MoveToGraveyardSheet } from "@/features/plants/components/MoveToGraveyardSheet";
 import { PlantForm } from "@/features/plants/components/PlantForm";
 import { useArchivePlant } from "@/features/plants/hooks/useArchivePlant";
 import { usePlant } from "@/features/plants/hooks/usePlant";
+import { useAlert } from "@/hooks/useAlert";
 
 function formatUpdatedAt(value: string) {
   return new Intl.DateTimeFormat("en-US", {

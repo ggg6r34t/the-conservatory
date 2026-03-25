@@ -24,7 +24,9 @@ export function ProfileScreenScaffold({
   const { colors, spacing } = useTheme();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.surface }]}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
@@ -65,7 +67,9 @@ export function ProfileScreenScaffold({
             {title}
           </Text>
           {description ? (
-            <Text style={[styles.description, { color: colors.onSurfaceVariant }]}>
+            <Text
+              style={[styles.description, { color: colors.onSurfaceVariant }]}
+            >
               {description}
             </Text>
           ) : null}
@@ -100,9 +104,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   topBarTitle: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 18,
-    lineHeight: 24,
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 22,
+    lineHeight: 28,
   },
   hero: {
     gap: 10,

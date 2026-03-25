@@ -1,4 +1,4 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Pressable,
@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
@@ -97,6 +98,7 @@ function GrayscaleImage({
 
 export default function GraveyardScreen() {
   const { colors, spacing } = useTheme();
+  const router = useRouter();
   const alert = useAlert();
   const snackbar = useSnackbar();
   const graveyardQuery = useGraveyard();
@@ -168,10 +170,19 @@ export default function GraveyardScreen() {
         </Text>
 
         {featuredMemorial ? (
-          <View
-            style={[
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`View ${featuredMemorial.name} memorial`}
+            onPress={() =>
+              router.push({
+                pathname: "/memorial/[id]",
+                params: { id: featuredMemorial.id },
+              })
+            }
+            style={({ pressed }) => [
               styles.featuredCard,
               { backgroundColor: colors.surfaceContainerLow },
+              pressed && styles.cardPressed,
             ]}
           >
             <View style={styles.featuredImageWrap}>
@@ -222,17 +233,26 @@ export default function GraveyardScreen() {
                 Gently Remembered
               </Text>
             </View>
-          </View>
+          </Pressable>
         ) : null}
 
         {reflectionMemorial ? (
-          <View
-            style={[
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`View ${reflectionMemorial.name} memorial`}
+            onPress={() =>
+              router.push({
+                pathname: "/memorial/[id]",
+                params: { id: reflectionMemorial.id },
+              })
+            }
+            style={({ pressed }) => [
               styles.reflectionCard,
               {
                 backgroundColor: "#fde8de",
                 borderColor: "rgba(148, 73, 46, 0.12)",
               },
+              pressed && styles.cardPressed,
             ]}
           >
             <View
@@ -257,7 +277,7 @@ export default function GraveyardScreen() {
             >
               {buildShortReflection(reflectionMemorial, 98)}
             </Text>
-          </View>
+          </Pressable>
         ) : null}
 
         {tributeMemorial ? (
@@ -268,25 +288,47 @@ export default function GraveyardScreen() {
             ]}
           >
             <View style={styles.avatarCluster}>
-              <View style={styles.avatarFrame}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View ${tributeMemorial.name} memorial`}
+                onPress={() =>
+                  router.push({
+                    pathname: "/memorial/[id]",
+                    params: { id: tributeMemorial.id },
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.avatarFrame,
+                  pressed && styles.cardPressed,
+                ]}
+              >
                 <GrayscaleImage
                   uri={tributeMemorial.primaryPhotoUri}
                   style={styles.avatarImage}
                 />
-              </View>
+              </Pressable>
               {tributeCompanion ? (
-                <View
-                  style={[
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${tributeCompanion.name} memorial`}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/memorial/[id]",
+                      params: { id: tributeCompanion.id },
+                    })
+                  }
+                  style={({ pressed }) => [
                     styles.avatarFrame,
                     styles.avatarFrameOffset,
                     { backgroundColor: colors.surfaceContainerLowest },
+                    pressed && styles.cardPressed,
                   ]}
                 >
                   <GrayscaleImage
                     uri={tributeCompanion.primaryPhotoUri}
                     style={styles.avatarImage}
                   />
-                </View>
+                </Pressable>
               ) : null}
             </View>
 
@@ -299,27 +341,17 @@ export default function GraveyardScreen() {
               &quot;{buildShortReflection(tributeMemorial, 64)}&quot;
             </Text>
 
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setSelectedMemorial(tributeMemorial)}
-              style={({ pressed }) => [
-                styles.memorialButtonPressable,
-                pressed && styles.memorialButtonPressed,
-              ]}
-            >
-              <LinearGradient
-                colors={[colors.primary, colors.primaryContainer]}
-                start={{ x: 0.12, y: 0.08 }}
-                end={{ x: 0.88, y: 0.92 }}
-                style={styles.memorialButton}
-              >
-                <Text style={styles.memorialButtonLabel}>
-                  {tributeMemorial.memorialNote?.trim()
+            <View style={styles.tributeButtonWrap}>
+              <PrimaryButton
+                compact
+                label={
+                  tributeMemorial.memorialNote?.trim()
                     ? "Edit Memorial"
-                    : "Add Memorial"}
-                </Text>
-              </LinearGradient>
-            </Pressable>
+                    : "Add Memorial"
+                }
+                onPress={() => setSelectedMemorial(tributeMemorial)}
+              />
+            </View>
           </View>
         ) : null}
 
@@ -331,12 +363,25 @@ export default function GraveyardScreen() {
             ]}
           >
             <View style={styles.compactTopRow}>
-              <View style={styles.compactImageFrame}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View ${compactMemorial.name} memorial`}
+                onPress={() =>
+                  router.push({
+                    pathname: "/memorial/[id]",
+                    params: { id: compactMemorial.id },
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.compactImageFrame,
+                  pressed && styles.cardPressed,
+                ]}
+              >
                 <GrayscaleImage
                   uri={compactMemorial.primaryPhotoUri}
                   style={styles.compactImage}
                 />
-              </View>
+              </Pressable>
 
               <View style={styles.compactHeader}>
                 <Text style={[styles.compactName, { color: colors.onSurface }]}>
@@ -430,6 +475,10 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 24,
+  },
+  cardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
   },
   intro: {
     fontFamily: "Manrope_500Medium",
@@ -580,28 +629,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 234,
   },
-  memorialButtonPressable: {
-    alignSelf: "center",
-    minWidth: 136,
-    marginTop: 2,
-  },
-  memorialButtonPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.985 }],
-  },
-  memorialButton: {
-    minHeight: 56,
-    paddingHorizontal: 20,
-    borderRadius: 999,
+  tributeButtonWrap: {
     alignItems: "center",
-    justifyContent: "center",
-    ...shadowScale.subtleSurface,
-  },
-  memorialButtonLabel: {
-    color: "#ffffff",
-    fontFamily: "Manrope_700Bold",
-    fontSize: 16,
-    lineHeight: 20,
   },
   compactCard: {
     borderRadius: 28,

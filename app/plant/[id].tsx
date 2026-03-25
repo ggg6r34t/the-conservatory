@@ -1,11 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/common/Icon/Icon";
@@ -44,7 +38,7 @@ export default function PlantDetailRoute() {
               <Icon name="arrow-left" size={20} color={colors.primary} />
             </Pressable>
             <Text style={[styles.brand, { color: colors.primary }]}>
-              The Conservatory
+              Living Gallery
             </Text>
           </View>
 

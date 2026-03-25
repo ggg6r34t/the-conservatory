@@ -41,7 +41,9 @@ export default function RootLayout() {
   return (
     <Providers>
       <RootNavigator
-        authStatus={authStatus === "authenticated" ? "authenticated" : "anonymous"}
+        authStatus={
+          authStatus === "authenticated" ? "authenticated" : "anonymous"
+        }
         isAuthenticated={isAuthenticated}
         onboardingStatus={onboarding.status}
       />
@@ -170,6 +172,10 @@ function RootNavigator({
       />
       <Stack.Screen
         name="plant/[id]/edit"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen
+        name="memorial/[id]"
         options={{ headerShown: false, presentation: "card" }}
       />
       <Stack.Screen

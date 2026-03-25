@@ -11,7 +11,9 @@ export default function AddPlantScreen() {
   const { colors, spacing } = useTheme();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.surface }]}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
@@ -30,7 +32,12 @@ export default function AddPlantScreen() {
               onPress={() => router.back()}
               style={styles.closeButton}
             >
-              <Icon family="MaterialIcons" name="close" size={22} color={colors.onSurface} />
+              <Icon
+                family="MaterialIcons"
+                name="close"
+                size={22}
+                color={colors.onSurface}
+              />
             </Pressable>
             <Text style={[styles.topBarTitle, { color: colors.primary }]}>
               New Specimen

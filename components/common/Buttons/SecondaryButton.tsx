@@ -11,6 +11,8 @@ interface SecondaryButtonProps {
   icon?: string;
   fullWidth?: boolean;
   variant?: "filled" | "surface";
+  backgroundColor?: string;
+  textColor?: string;
 }
 
 export function SecondaryButton({
@@ -20,6 +22,8 @@ export function SecondaryButton({
   icon,
   fullWidth = false,
   variant = "filled",
+  backgroundColor,
+  textColor,
 }: SecondaryButtonProps) {
   const { colors } = useTheme();
   const surfaceVariant = variant === "surface";
@@ -29,15 +33,17 @@ export function SecondaryButton({
       style={[
         styles.button,
         fullWidth && styles.fullWidth,
-        surfaceVariant
-          ? [
-              styles.surfaceButton,
-              {
-                backgroundColor: colors.surfaceContainerLowest,
-                borderColor: "rgba(193, 200, 194, 0.35)",
-              },
-            ]
-          : { backgroundColor: colors.secondaryContainer },
+        backgroundColor
+          ? { backgroundColor }
+          : surfaceVariant
+            ? [
+                styles.surfaceButton,
+                {
+                  backgroundColor: colors.surfaceContainerLowest,
+                  borderColor: "rgba(193, 200, 194, 0.35)",
+                },
+              ]
+            : { backgroundColor: colors.secondaryContainer },
       ]}
     >
       <View style={styles.content}>
@@ -45,16 +51,21 @@ export function SecondaryButton({
           <Icon
             name={icon}
             size={18}
-            color={surfaceVariant ? colors.onSurface : colors.secondaryOnContainer}
+            color={
+              textColor ??
+              (surfaceVariant ? colors.onSurface : colors.secondaryOnContainer)
+            }
           />
         ) : null}
         <Text
           style={[
             styles.label,
             {
-              color: surfaceVariant
-                ? colors.onSurface
-                : colors.secondaryOnContainer,
+              color:
+                textColor ??
+                (surfaceVariant
+                  ? colors.onSurface
+                  : colors.secondaryOnContainer),
             },
           ]}
         >

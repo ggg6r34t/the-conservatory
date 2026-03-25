@@ -452,9 +452,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   topBarTitle: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 18,
-    lineHeight: 24,
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 22,
+    lineHeight: 28,
   },
   badge: {
     width: 32,
