@@ -14,7 +14,9 @@ function alignToHour(value: Date, defaultHour: number) {
   return aligned;
 }
 
-function optimizeLocally(input: OptimizeRemindersRequest): OptimizeRemindersResponse {
+function optimizeLocally(
+  input: OptimizeRemindersRequest,
+): OptimizeRemindersResponse {
   if (!input.reminderEnabled) {
     return {
       result: {
@@ -39,7 +41,8 @@ function optimizeLocally(input: OptimizeRemindersRequest): OptimizeRemindersResp
   const cooldownCutoff = input.lastTriggeredAt
     ? new Date(new Date(input.lastTriggeredAt).getTime() + 12 * HOUR_MS)
     : null;
-  let optimized = fromWatering.getTime() > baseline.getTime() ? fromWatering : baseline;
+  let optimized =
+    fromWatering.getTime() > baseline.getTime() ? fromWatering : baseline;
   let explanation =
     fromWatering.getTime() > baseline.getTime()
       ? "Adjusted based on recent care."
@@ -66,7 +69,10 @@ Deno.serve(async (request) => {
 
   const body = await readJson<OptimizeRemindersRequest>(request);
   if (!body?.plantName || !body?.speciesName) {
-    return jsonResponse({ error: "plantName and speciesName are required." }, 400);
+    return jsonResponse(
+      { error: "plantName and speciesName are required." },
+      400,
+    );
   }
 
   // Provider integration point:

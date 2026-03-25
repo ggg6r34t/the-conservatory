@@ -41,7 +41,7 @@ export interface OptimizedReminderTiming {
   shouldSchedule: boolean;
 }
 
-export interface OptimizeRemindersRequest extends ReminderOptimizationInput {}
+export type OptimizeRemindersRequest = ReminderOptimizationInput;
 
 export interface OptimizeRemindersResponse {
   result: OptimizedReminderTiming;
@@ -154,15 +154,15 @@ export interface ArchiveCuratedPair {
 }
 
 export interface CurateArchiveGalleryRequest {
-  items: Array<{
+  items: {
     plantId: string;
     plantName: string;
     photoUris: string[];
-  }>;
+  }[];
 }
 
 export interface CurateArchiveGalleryResponse {
-  pairs: Array<Omit<ArchiveCuratedPair, "source">>;
+  pairs: Omit<ArchiveCuratedPair, "source">[];
 }
 
 export interface StreakRecoveryNudge {
