@@ -40,11 +40,13 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     pendingCareLogs,
     pendingReminders,
     pendingMemorials,
+    pendingPreferences,
     failedPlants,
     failedPhotos,
     failedCareLogs,
     failedReminders,
     failedMemorials,
+    failedPreferences,
     pendingSyncQueueAccount,
     failedSyncQueueAccount,
     pendingSyncDevice,
@@ -93,6 +95,10 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
       userId,
     ),
     database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM user_preferences WHERE user_id = ? AND pending = 1;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
       "SELECT COUNT(*) AS count FROM plants WHERE user_id = ? AND sync_error IS NOT NULL;",
       userId,
     ),
@@ -110,6 +116,10 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     ),
     database.getFirstAsync<{ count: number }>(
       "SELECT COUNT(*) AS count FROM graveyard_plants WHERE user_id = ? AND sync_error IS NOT NULL;",
+      userId,
+    ),
+    database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM user_preferences WHERE user_id = ? AND sync_error IS NOT NULL;",
       userId,
     ),
     database.getFirstAsync<{ count: number }>(
@@ -154,6 +164,7 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
       pendingCareLogs,
       pendingReminders,
       pendingMemorials,
+      pendingPreferences,
     ]),
     failedSyncUser: sumCounts([
       failedPlants,
@@ -161,6 +172,7 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
       failedCareLogs,
       failedReminders,
       failedMemorials,
+      failedPreferences,
     ]),
     pendingSyncQueueAccount: pendingSyncQueueAccount?.count ?? 0,
     failedSyncQueueAccount: failedSyncQueueAccount?.count ?? 0,

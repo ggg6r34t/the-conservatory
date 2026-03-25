@@ -222,8 +222,9 @@ export default function CareRemindersScreen() {
                 { color: colors.onSurfaceVariant },
               ]}
             >
-              Stay updated on your plant&apos;s needs. This switch only changes
-              reminders on this device.
+              Stay updated on your plant&apos;s needs. This preference updates
+              on this device right away and syncs with your account when backup
+              is available.
             </Text>
           </View>
 

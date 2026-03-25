@@ -28,7 +28,10 @@ CREATE TABLE IF NOT EXISTS user_preferences (
   default_watering_hour INTEGER NOT NULL DEFAULT 9,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  updated_by TEXT
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 0,
+  synced_at TEXT,
+  sync_error TEXT
 );
 
 CREATE TABLE IF NOT EXISTS plants (
@@ -373,6 +376,14 @@ async function ensurePlantChildForeignKeys(database: SQLiteDatabase) {
 export async function runDatabaseMigrations(database: SQLiteDatabase) {
   await database.execAsync(bootstrapSql);
   await database.execAsync("PRAGMA foreign_keys = ON;");
+  await ensureColumn(
+    database,
+    "user_preferences",
+    "pending",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  await ensureColumn(database, "user_preferences", "synced_at", "TEXT");
+  await ensureColumn(database, "user_preferences", "sync_error", "TEXT");
   await ensureColumn(database, "care_logs", "current_condition", "TEXT");
   await ensurePlantChildForeignKeys(database);
 }

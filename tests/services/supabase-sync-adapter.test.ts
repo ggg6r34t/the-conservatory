@@ -277,6 +277,60 @@ describe("supabase sync adapter", () => {
     );
   });
 
+  it("should sync user preferences with user-scoped upsert", async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    const from = require("@/config/supabase").supabase.from as jest.Mock;
+    from.mockReturnValue({ upsert });
+
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    require("@/services/database/sqlite").getDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn().mockResolvedValue({
+        user_id: "user-1",
+        reminders_enabled: 0,
+        preferred_theme: "linen-light",
+        timezone: "America/New_York",
+        default_watering_hour: 7,
+        created_at: "2026-03-21T10:00:00.000Z",
+        updated_at: "2026-03-22T10:00:00.000Z",
+        updated_by: null,
+      }),
+      runAsync,
+    });
+
+    const {
+      processSyncQueueItemWithSupabase,
+    } = require("@/services/database/supabaseSyncAdapter");
+
+    await processSyncQueueItemWithSupabase({
+      id: "sync-pref-1",
+      entity: "user_preferences",
+      entityId: "user-1",
+      operation: "update",
+      payload: JSON.stringify({ userId: "user-1" }),
+      status: "pending",
+      attemptCount: 0,
+      lastError: null,
+      nextRetryAt: null,
+      queuedAt: "2026-03-22T10:00:00.000Z",
+      updatedAt: "2026-03-22T10:00:00.000Z",
+    });
+
+    expect(from).toHaveBeenCalledWith("user_preferences");
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: "user-1",
+        reminders_enabled: false,
+        timezone: "America/New_York",
+      }),
+      { onConflict: "user_id" },
+    );
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("SET pending = 0"),
+      expect.any(String),
+      "user-1",
+    );
+  });
+
   it("removes photo storage assets before deleting remote photo metadata", async () => {
     const remove = jest.fn().mockResolvedValue({ error: null });
     const eqId = jest.fn().mockResolvedValue({ error: null });

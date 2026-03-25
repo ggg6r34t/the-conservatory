@@ -28,6 +28,7 @@ export function usePullToRefreshSync() {
         queryClient.invalidateQueries({ queryKey: queryKeys.plants }),
         queryClient.invalidateQueries({ queryKey: queryKeys.graveyard }),
         queryClient.invalidateQueries({ queryKey: queryKeys.reminders }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.preferences }),
         queryClient.invalidateQueries({ queryKey: ["care-logs"] }),
       ]);
     } finally {

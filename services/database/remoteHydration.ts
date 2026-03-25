@@ -38,6 +38,17 @@ interface RemotePlantRow extends MergeableRemoteRow {
   updated_by: string | null;
 }
 
+interface RemoteUserPreferencesRow {
+  user_id: string;
+  reminders_enabled: boolean;
+  preferred_theme: "linen-light";
+  timezone: string;
+  default_watering_hour: number;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+}
+
 interface RemotePhotoRow extends MergeableRemoteRow {
   id: string;
   user_id: string;
@@ -157,6 +168,52 @@ async function fetchRemotePhotos(userId: string) {
   );
 }
 
+async function shouldReplaceLocalUserPreferences(
+  database: SQLiteDatabase,
+  userId: string,
+  row: RemoteUserPreferencesRow,
+) {
+  const localRow = await database.getFirstAsync<LocalSyncRow>(
+    `SELECT pending, updated_at FROM user_preferences WHERE user_id = ? LIMIT 1;`,
+    userId,
+  );
+
+  if (!localRow) {
+    return true;
+  }
+
+  const result = resolveConflict({
+    entity: "user_preferences",
+    entityId: userId,
+    strategy: "last-write-wins",
+    localUpdatedAt: localRow.updated_at,
+    remoteUpdatedAt: row.updated_at,
+    localPending: localRow.pending === 1,
+  });
+
+  const telemetry = buildConflictTelemetryMeta({
+    record: {
+      entity: "user_preferences",
+      entityId: userId,
+      strategy: "last-write-wins",
+      localUpdatedAt: localRow.updated_at,
+      remoteUpdatedAt: row.updated_at,
+      localPending: localRow.pending === 1,
+    },
+    result,
+    source: "remote-hydration",
+  });
+
+  logger.info("sync.conflict.observed", {
+    entity: "user_preferences",
+    entityId: userId,
+    winner: result.winner,
+    ...telemetry,
+  });
+
+  return result.winner === "remote";
+}
+
 async function shouldReplaceLocalRow(
   database: SQLiteDatabase,
   table: string,
@@ -236,12 +293,27 @@ export async function hydrateRemoteUserData(userId: string) {
   }
 
   const [
+    preferencesResult,
     plantsResult,
     photosResult,
     careLogsResult,
     remindersResult,
     graveyardResult,
   ] = await Promise.all([
+    fetchRemoteRowsSafe<RemoteUserPreferencesRow>(
+      "user_preferences",
+      [
+        "user_id",
+        "reminders_enabled",
+        "preferred_theme",
+        "timezone",
+        "default_watering_hour",
+        "created_at",
+        "updated_at",
+        "updated_by",
+      ].join(", "),
+      userId,
+    ),
     fetchRemoteRowsSafe<RemotePlantRow>(
       "plants",
       [
@@ -314,6 +386,7 @@ export async function hydrateRemoteUserData(userId: string) {
   ]);
 
   const plants = plantsResult.rows;
+  const preferences = preferencesResult.rows[0] ?? null;
   const photos = photosResult.rows;
   const careLogs = careLogsResult.rows;
   const reminders = remindersResult.rows;
@@ -359,6 +432,29 @@ export async function hydrateRemoteUserData(userId: string) {
   const syncedAt = new Date().toISOString();
 
   await database.withTransactionAsync(async () => {
+    if (
+      preferences &&
+      (await shouldReplaceLocalUserPreferences(database, userId, preferences))
+    ) {
+      await database.runAsync(
+        `INSERT OR REPLACE INTO user_preferences (
+          user_id, reminders_enabled, preferred_theme, timezone, default_watering_hour,
+          created_at, updated_at, updated_by, pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        preferences.user_id,
+        preferences.reminders_enabled ? 1 : 0,
+        preferences.preferred_theme,
+        preferences.timezone,
+        preferences.default_watering_hour,
+        preferences.created_at,
+        preferences.updated_at,
+        preferences.updated_by ?? preferences.user_id,
+        0,
+        syncedAt,
+        null,
+      );
+    }
+
     for (const row of plants) {
       if (!(await shouldReplaceLocalRow(database, "plants", row))) {
         continue;

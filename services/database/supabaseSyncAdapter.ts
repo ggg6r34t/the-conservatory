@@ -9,6 +9,7 @@ import {
 import type { CareLogCondition } from "@/types/models";
 
 type SyncableEntity =
+  | "user_preferences"
   | "plants"
   | "care_logs"
   | "care_reminders"
@@ -17,6 +18,7 @@ type SyncableEntity =
 
 function canTrackLocalSync(entity: string): entity is SyncableEntity {
   return (
+    entity === "user_preferences" ||
     entity === "plants" ||
     entity === "care_logs" ||
     entity === "care_reminders" ||
@@ -25,12 +27,16 @@ function canTrackLocalSync(entity: string): entity is SyncableEntity {
   );
 }
 
+function getLocalSyncKeyColumn(entity: SyncableEntity) {
+  return entity === "user_preferences" ? "user_id" : "id";
+}
+
 async function markLocalSynced(entity: SyncableEntity, entityId: string) {
   const database = await getDatabase();
   await database.runAsync(
     `UPDATE ${entity}
      SET pending = 0, synced_at = ?, sync_error = NULL
-     WHERE id = ?;`,
+     WHERE ${getLocalSyncKeyColumn(entity)} = ?;`,
     new Date().toISOString(),
     entityId,
   );
@@ -45,11 +51,40 @@ async function markLocalSyncError(
   await database.runAsync(
     `UPDATE ${entity}
      SET sync_error = ?, updated_at = ?
-     WHERE id = ?;`,
+     WHERE ${getLocalSyncKeyColumn(entity)} = ?;`,
     message,
     new Date().toISOString(),
     entityId,
   );
+}
+
+async function loadUserPreferencesRecord(entityId: string) {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{
+    user_id: string;
+    reminders_enabled: number;
+    preferred_theme: "linen-light";
+    timezone: string;
+    default_watering_hour: number;
+    created_at: string;
+    updated_at: string;
+    updated_by: string | null;
+  }>("SELECT * FROM user_preferences WHERE user_id = ? LIMIT 1;", entityId);
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    user_id: row.user_id,
+    reminders_enabled: Boolean(row.reminders_enabled),
+    preferred_theme: row.preferred_theme,
+    timezone: row.timezone,
+    default_watering_hour: row.default_watering_hour,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    updated_by: row.updated_by ?? row.user_id,
+  };
 }
 
 async function loadPlantRecord(entityId: string) {
@@ -347,6 +382,20 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
     const { error } = await supabase
       .from("plants")
       .upsert(row, { onConflict: "id" });
+    if (error) {
+      throw new Error(error.message);
+    }
+    return;
+  }
+
+  if (item.entity === "user_preferences") {
+    const row = await loadUserPreferencesRecord(item.entityId);
+    if (!row) {
+      return;
+    }
+    const { error } = await supabase
+      .from("user_preferences")
+      .upsert(row, { onConflict: "user_id" });
     if (error) {
       throw new Error(error.message);
     }

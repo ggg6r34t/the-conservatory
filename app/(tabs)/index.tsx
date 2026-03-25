@@ -23,7 +23,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
 import { HydrationCard } from "@/features/dashboard/components/HydrationCard";
-import { StreakSummary } from "@/features/dashboard/components/StreakSummary";
+import { SpeciesCounter } from "@/features/dashboard/components/SpeciesCounter";
 import { UpcomingCare } from "@/features/dashboard/components/UpcomingCare";
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
 import { buildDashboardHeroCopy } from "@/features/dashboard/services/dashboardHeroCopy";
@@ -168,7 +168,7 @@ export default function HomeScreen() {
           <DashboardInsightCard insight={insightQuery.data} />
         ) : null}
 
-        <StreakSummary
+        <SpeciesCounter
           activePlants={dashboard.plants.length}
           plantPhotoUris={plantPhotoUris}
         />

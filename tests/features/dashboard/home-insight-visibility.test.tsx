@@ -140,8 +140,8 @@ jest.mock("@/features/dashboard/components/HydrationCard", () => ({
   HydrationCard: () => null,
 }));
 
-jest.mock("@/features/dashboard/components/StreakSummary", () => ({
-  StreakSummary: () => null,
+jest.mock("@/features/dashboard/components/SpeciesCounter", () => ({
+  SpeciesCounter: () => null,
 }));
 
 jest.mock("@/features/dashboard/components/UpcomingCare", () => ({

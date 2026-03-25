@@ -19,7 +19,8 @@ export function SyncBootstrapProvider({ children }: PropsWithChildren) {
   const attemptedUserBootstrapRef = useRef<string | null>(null);
 
   useEffect(() => {
-    activeUserIdRef.current = authStatus === "authenticated" ? user?.id ?? null : null;
+    activeUserIdRef.current =
+      authStatus === "authenticated" ? (user?.id ?? null) : null;
   }, [authStatus, user?.id]);
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export function SyncBootstrapProvider({ children }: PropsWithChildren) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: queryKeys.plants }),
           queryClient.invalidateQueries({ queryKey: queryKeys.graveyard }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.preferences }),
         ]);
       } finally {
         isSyncingRef.current = false;

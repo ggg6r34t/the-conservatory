@@ -30,6 +30,10 @@ export interface UserPreferences {
   defaultWateringHour: number;
   createdAt: string;
   updatedAt: string;
+  updatedBy?: string | null;
+  pending: number;
+  syncedAt?: string | null;
+  syncError?: string | null;
 }
 
 export interface Plant {
