@@ -196,5 +196,30 @@ export async function runBackupSync(userId: string) {
 }
 
 export async function getRemoteBackupAvailability() {
-  return probeRemoteBackendAvailability();
+  const availability = await probeRemoteBackendAvailability();
+
+  if (availability.state === "available") {
+    return {
+      ...availability,
+      title: "Online backup available",
+      description:
+        "Online backup is reachable, so recent changes can be saved and restored.",
+    };
+  }
+
+  if (availability.state === "local-only") {
+    return {
+      ...availability,
+      title: "This device only",
+      description:
+        "Your conservatory is currently saved only on this device. Connect your account backup to save online.",
+    };
+  }
+
+  return {
+    ...availability,
+    title: "Online backup unavailable",
+    description:
+      "Online backup can't be reached right now. Your conservatory is still available on this device.",
+  };
 }

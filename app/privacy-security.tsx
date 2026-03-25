@@ -14,12 +14,30 @@ export default function PrivacySecurityScreen() {
   const snackbar = useSnackbar();
   const { user, requestPasswordReset } = useAuth();
   const backend = getBackendConfigurationSummary();
+  const signInSetup =
+    backend.mode === "cloud"
+      ? {
+          title: "Account backup connected",
+          description:
+            "Sign-in and online backup are ready to use on this app.",
+        }
+      : backend.mode === "local-development"
+        ? {
+            title: "This device only",
+            description:
+              "This build is using device-only sign-in and storage for now.",
+          }
+        : {
+            title: "Account setup needed",
+            description:
+              "This build is missing account setup values, so online sign-in and backup are unavailable.",
+          };
 
   return (
     <ProfileScreenScaffold
       title="Privacy & Security"
       subtitle="Account safety"
-      description="Manage your sign-in identity, password recovery, and how this device stores and syncs your conservatory data."
+      description="Manage your sign-in details, password recovery, and how your conservatory is saved on this device and in your account."
     >
       <View
         style={[
@@ -34,7 +52,7 @@ export default function PrivacySecurityScreen() {
           {user?.email ?? "botanist@conservatory.com"}
         </Text>
         <Text style={[styles.cardBody, { color: colors.onSurfaceVariant }]}>
-          This email is used for authentication and password recovery.
+          This email is used to sign in and recover your password.
         </Text>
       </View>
 
@@ -42,13 +60,13 @@ export default function PrivacySecurityScreen() {
         style={[styles.card, { backgroundColor: colors.surfaceContainerLow }]}
       >
         <Text style={[styles.cardLabel, { color: colors.secondary }]}>
-          AUTHENTICATION MODE
+          SIGN-IN SETUP
         </Text>
         <Text style={[styles.cardValue, { color: colors.primary }]}>
-          {backend.title}
+          {signInSetup.title}
         </Text>
         <Text style={[styles.cardBody, { color: colors.onSurfaceVariant }]}>
-          {backend.description}
+          {signInSetup.description}
         </Text>
       </View>
 

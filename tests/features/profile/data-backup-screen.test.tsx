@@ -76,11 +76,11 @@ describe("DataBackupScreen", () => {
     });
 
     expect(mockPrimaryButton).toHaveBeenLastCalledWith(
-      expect.objectContaining({ label: "Run Sync Now", disabled: true }),
+      expect.objectContaining({ label: "Update Backup Now", disabled: true }),
     );
   });
 
-  it("renders an active remote state when Supabase is reachable", async () => {
+  it("renders an active online backup state when backup is reachable", async () => {
     mockGetRemoteBackupAvailability.mockResolvedValue({
       state: "available",
       canSync: true,
@@ -94,13 +94,11 @@ describe("DataBackupScreen", () => {
       expect(screen.getByText("Remote backup available")).toBeTruthy();
     });
 
-    expect(screen.getByText("Queue waiting (account)")).toBeTruthy();
-    expect(
-      screen.getByText("Waiting on this device (all accounts)"),
-    ).toBeTruthy();
+    expect(screen.getByText("Pending changes (account)")).toBeTruthy();
+    expect(screen.getByText("Pending changes on this device")).toBeTruthy();
 
     expect(mockPrimaryButton).toHaveBeenLastCalledWith(
-      expect.objectContaining({ label: "Run Sync Now", disabled: false }),
+      expect.objectContaining({ label: "Update Backup Now", disabled: false }),
     );
   });
 });

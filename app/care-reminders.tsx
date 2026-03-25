@@ -222,9 +222,9 @@ export default function CareRemindersScreen() {
                 { color: colors.onSurfaceVariant },
               ]}
             >
-              Stay updated on your plant&apos;s needs. This preference updates
-              on this device right away and syncs with your account when backup
-              is available.
+              Stay updated on your plant&apos;s needs. This setting saves on
+              this device right away and keeps your account up to date when
+              backup is available.
             </Text>
           </View>
 

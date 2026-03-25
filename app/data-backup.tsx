@@ -81,11 +81,11 @@ export default function DataBackupScreen() {
     onError: (error) => {
       void alert.show({
         variant: "error",
-        title: "Sync failed",
+        title: "Backup update failed",
         message:
           error instanceof Error
             ? error.message
-            : "We couldn't complete backup sync right now.",
+            : "We couldn't update your backup right now.",
         primaryAction: { label: "Close", tone: "danger" },
       });
     },
@@ -96,28 +96,30 @@ export default function DataBackupScreen() {
     ? {
         title: "Offline mode",
         description:
-          "Remote backup cannot be reached until connectivity returns, but your local conservatory remains available on this device.",
+          "Online backup can't be reached until you're connected again, but your conservatory is still available on this device.",
         canSync: false,
       }
     : (remoteAvailability.data ?? {
         title:
           backendConfiguration.mode === "cloud"
-            ? "Checking remote backup"
+            ? "Checking online backup"
             : backendConfiguration.mode === "local-development"
               ? "Local device only"
-              : "Remote backup unavailable",
+              : "Online backup unavailable",
         description:
           backendConfiguration.mode === "cloud"
-            ? "Checking whether online backup is currently reachable."
-            : backendConfiguration.description,
+            ? "Checking whether your online backup is reachable."
+            : backendConfiguration.mode === "local-development"
+              ? "This build is currently storing your conservatory on this device only."
+              : "Online backup isn't configured for this build yet.",
         canSync: false,
       });
 
   return (
     <ProfileScreenScaffold
       title="Data Backup"
-      subtitle="Sync & recovery"
-      description="Review what is saved to your account, what is still waiting on this device, and refresh from online backup when needed."
+      subtitle="Backup & restore"
+      description="Review what is saved to your account, what is still pending on this device, and refresh from online backup when needed."
     >
       <View
         style={[
@@ -150,34 +152,36 @@ export default function DataBackupScreen() {
           <BackupMetric label="Photos" value={summary.photos} />
           <BackupMetric label="Care logs" value={summary.careLogs} />
           <BackupMetric
-            label="Waiting to upload (account)"
+            label="Pending saves (account)"
             value={summary.pendingSyncUser}
           />
           <BackupMetric
-            label="Upload issues (account)"
+            label="Save issues (account)"
             value={summary.failedSyncUser}
           />
           <BackupMetric
-            label="Queue waiting (account)"
+            label="Pending changes (account)"
             value={summary.pendingSyncQueueAccount}
           />
           <BackupMetric
-            label="Queue issues (account)"
+            label="Change issues (account)"
             value={summary.failedSyncQueueAccount}
           />
           <BackupMetric
-            label="Waiting on this device (all accounts)"
+            label="Pending changes on this device"
             value={summary.pendingSyncDevice}
           />
           <BackupMetric
-            label="Issues on this device (all accounts)"
+            label="Change issues on this device"
             value={summary.failedSyncDevice}
           />
         </View>
       ) : null}
 
       <PrimaryButton
-        label={syncMutation.isPending ? "Running Sync..." : "Run Sync Now"}
+        label={
+          syncMutation.isPending ? "Updating Backup..." : "Update Backup Now"
+        }
         disabled={syncMutation.isPending || !user?.id || !systemStatus.canSync}
         loading={syncMutation.isPending}
         onPress={() => syncMutation.mutate()}

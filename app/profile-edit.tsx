@@ -5,11 +5,11 @@ import { Image, StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
-import { useAlert } from "@/hooks/useAlert";
-import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useUpdateProfile } from "@/features/profile/hooks/useUpdateProfile";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
 
 function getInitials(name: string) {
   return name
@@ -54,7 +54,7 @@ export default function ProfileEditScreen() {
     <ProfileScreenScaffold
       title="Edit Profile"
       subtitle="Identity details"
-      description="Update the name shown across your conservatory while keeping your account email and synced identity intact."
+      description="Update the name shown across your conservatory while keeping your account email and profile connected."
     >
       <View
         style={[
@@ -114,11 +114,11 @@ export default function ProfileEditScreen() {
         ]}
       >
         <Text style={[styles.noteLabel, { color: colors.secondary }]}>
-          PROFILE SYNC
+          PROFILE UPDATES
         </Text>
         <Text style={[styles.noteBody, { color: colors.onSurfaceVariant }]}>
-          Changes update your local session immediately and attempt to sync your
-          profile record remotely when connected.
+          Changes appear on this device right away and are saved to your account
+          when you&apos;re connected.
         </Text>
       </View>
 

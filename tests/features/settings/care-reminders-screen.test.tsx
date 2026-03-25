@@ -90,7 +90,7 @@ describe("CareRemindersScreen copy", () => {
 
     expect(
       screen.getByText(
-        /updates on this device right away and syncs with your account/i,
+        /saves on this device right away and keeps your account up to date/i,
       ),
     ).toBeTruthy();
     expect(
