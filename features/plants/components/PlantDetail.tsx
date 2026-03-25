@@ -902,11 +902,19 @@ export function PlantDetail({ data }: PlantDetailProps) {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
-            Growth
+            Growth Progress
           </Text>
-          <Text style={[styles.sectionLink, { color: colors.secondary }]}>
-            TIMELINE
-          </Text>
+          <Pressable
+            accessibilityRole="button"
+            style={{ marginLeft: "auto" }}
+            onPress={() =>
+              router.push(`/plant/${data.plant.id}/timeline` as const)
+            }
+          >
+            <Text style={[styles.sectionLink, { color: colors.secondary }]}>
+              TIMELINE
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.growthGrid}>

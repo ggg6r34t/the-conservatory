@@ -175,6 +175,10 @@ function RootNavigator({
         options={{ headerShown: false, presentation: "card" }}
       />
       <Stack.Screen
+        name="plant/[id]/timeline"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen
         name="memorial/[id]"
         options={{ headerShown: false, presentation: "card" }}
       />
