@@ -23,6 +23,15 @@ interface LocalSyncRow {
   updated_at: string;
 }
 
+interface ConflictLogMeta {
+  entity: string;
+  entityId: string;
+  winner: "local" | "remote";
+  conflictClass: "local-pending" | "remote-newer" | "local-newer-or-equal";
+  clockSkewSuspected: boolean;
+  source: "remote-hydration";
+}
+
 interface RemotePlantRow extends MergeableRemoteRow {
   user_id: string;
   name: string;
@@ -168,6 +177,19 @@ async function fetchRemotePhotos(userId: string) {
   );
 }
 
+function logRemoteHydrationConflict(meta: ConflictLogMeta) {
+  const shouldLog =
+    meta.winner === "remote" ||
+    meta.conflictClass === "local-pending" ||
+    meta.clockSkewSuspected;
+
+  if (!shouldLog) {
+    return;
+  }
+
+  logger.info("sync.conflict.observed", meta);
+}
+
 async function shouldReplaceLocalUserPreferences(
   database: SQLiteDatabase,
   userId: string,
@@ -204,7 +226,7 @@ async function shouldReplaceLocalUserPreferences(
     source: "remote-hydration",
   });
 
-  logger.info("sync.conflict.observed", {
+  logRemoteHydrationConflict({
     entity: "user_preferences",
     entityId: userId,
     winner: result.winner,
@@ -250,7 +272,7 @@ async function shouldReplaceLocalRow(
     source: "remote-hydration",
   });
 
-  logger.info("sync.conflict.observed", {
+  logRemoteHydrationConflict({
     entity: table,
     entityId: row.id,
     winner: result.winner,
