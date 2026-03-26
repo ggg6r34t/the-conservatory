@@ -238,7 +238,7 @@ export default function ProfileScreen() {
           {
             paddingHorizontal: spacing.lg,
             paddingTop: spacing.lg,
-            paddingBottom: 112,
+            paddingBottom: 96,
           },
         ]}
       >
@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
   },
   signOutRow: {
-    marginTop: 10,
+    marginTop: 16,
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
