@@ -19,12 +19,16 @@ import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHealthInsight";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
-import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
 import {
   capturePlantImage,
   pickPlantImage,
 } from "@/features/plants/services/photoService";
+import {
+  buildPlantActivitySections,
+  getPlantActivityIcon,
+  getPlantActivityIconFamily,
+} from "@/features/plants/services/plantActivityTimeline";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
@@ -131,84 +135,8 @@ function formatYear(value: string) {
   }).format(new Date(value));
 }
 
-function getLogHeading(logType: CareLogType) {
-  switch (logType) {
-    case "water":
-      return "Full Soak &\nFertilize";
-    case "mist":
-      return "Humidity\nRefresh";
-    case "feed":
-      return "Feed\nSession";
-    case "repot":
-      return "Repot &\nRefresh";
-    case "prune":
-      return "Propagation\nPruning";
-    case "inspect":
-      return "Routine\nInspection";
-    case "pest":
-      return "Pest\nInspection";
-    case "note":
-    default:
-      return "Growth\nObservation";
-  }
-}
-
-function getLogBody(logType: CareLogType, notes?: string | null) {
-  const parsedNote = parseStructuredCareLogNote(notes);
-
-  if (parsedNote.body) {
-    return parsedNote.body;
-  }
-
-  switch (logType) {
-    case "water":
-      return "Used organic liquid fertilizer at half-strength. Noticed fresh growth unfurling near the stem.";
-    case "mist":
-      return "Boosted ambient moisture and refreshed the upper leaves.";
-    case "feed":
-      return "Fed to support steady growth and richer foliage tone.";
-    case "repot":
-      return "Repotted into fresh soil and refreshed the root zone to support steadier growth.";
-    case "prune":
-      return "Removed two older leaves for propagation. Nodes were placed in distilled water for root development.";
-    case "inspect":
-      return "Completed a close foliage and stem inspection to track growth and spot early issues.";
-    case "pest":
-      return "Cleaned leaves with neem oil. No signs of thrips or spider mites detected during routine check.";
-    case "note":
-    default:
-      return "Captured a fresh growth note for this specimen.";
-  }
-}
-
 function formatConditionLabel(condition: CareLogCondition) {
   return condition;
-}
-
-function getLogIcon(logType: CareLogType) {
-  switch (logType) {
-    case "water":
-      return "water-drop";
-    case "mist":
-      return "opacity";
-    case "feed":
-      return "leaf";
-    case "repot":
-      return "yard";
-    case "prune":
-      return "content-cut";
-    case "inspect":
-      return "search";
-    case "pest":
-      return "filter-center-focus";
-    case "note":
-    default:
-      return "event-note";
-  }
-}
-
-function getLogIconFamily(_logType: CareLogType): "MaterialIcons" {
-  return "MaterialIcons";
 }
 
 function buildCareGuide(plant: Plant): CareGuideCard[] {
@@ -249,27 +177,27 @@ function buildCareGuide(plant: Plant): CareGuideCard[] {
 }
 
 function buildRecentActivity(data: PlantWithRelations): ActivityCard[] {
-  return [...data.logs]
-    .sort((left, right) => right.loggedAt.localeCompare(left.loggedAt))
+  return buildPlantActivitySections(data)
+    .flatMap((section) => section.items)
     .slice(0, 3)
-    .map((log) => ({
-      id: log.id,
-      title: getLogHeading(log.logType),
-      body: getLogBody(log.logType, log.notes),
-      condition: log.currentCondition ?? null,
+    .map((item) => ({
+      id: item.id,
+      title: item.title,
+      body: item.body,
+      condition: item.condition ?? null,
       stampPrimary:
-        formatStamp(log.loggedAt).toUpperCase() ===
+        formatStamp(item.loggedAt).toUpperCase() ===
         formatStamp(new Date().toISOString()).toUpperCase()
           ? "TODAY,"
-          : `${formatStamp(log.loggedAt).toUpperCase()},`,
+          : `${formatStamp(item.loggedAt).toUpperCase()},`,
       stampSecondary:
-        formatStamp(log.loggedAt).toUpperCase() ===
+        formatStamp(item.loggedAt).toUpperCase() ===
         formatStamp(new Date().toISOString()).toUpperCase()
-          ? formatTime(log.loggedAt).toUpperCase()
-          : formatYear(log.loggedAt),
-      logType: log.logType,
-      icon: getLogIcon(log.logType),
-      iconFamily: getLogIconFamily(log.logType),
+          ? formatTime(item.loggedAt).toUpperCase()
+          : formatYear(item.loggedAt),
+      logType: item.logType,
+      icon: item.icon,
+      iconFamily: item.iconFamily,
     }));
 }
 
@@ -766,9 +694,17 @@ export function PlantDetail({ data }: PlantDetailProps) {
           <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
             Recent Activity
           </Text>
-          <Text style={[styles.sectionLink, { color: colors.secondary }]}>
-            VIEW ALL
-          </Text>
+          <Pressable
+            accessibilityRole="button"
+            style={{ marginLeft: "auto" }}
+            onPress={() =>
+              router.push(`/plant/${data.plant.id}/activity` as const)
+            }
+          >
+            <Text style={[styles.sectionLink, { color: colors.secondary }]}>
+              VIEW ALL
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.activityStack}>
@@ -787,9 +723,9 @@ export function PlantDetail({ data }: PlantDetailProps) {
                       ]}
                     >
                       <Icon
-                        family={getLogIconFamily(visualType)}
-                        name={getLogIcon(visualType)}
-                        size={18}
+                        family={getPlantActivityIconFamily(visualType)}
+                        name={getPlantActivityIcon(visualType)}
+                        size={22}
                         color={badgeStyle.iconColor}
                       />
                     </View>

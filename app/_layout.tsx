@@ -179,6 +179,10 @@ function RootNavigator({
         options={{ headerShown: false, presentation: "card" }}
       />
       <Stack.Screen
+        name="plant/[id]/activity"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen
         name="memorial/[id]"
         options={{ headerShown: false, presentation: "card" }}
       />

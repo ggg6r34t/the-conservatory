@@ -1,12 +1,15 @@
 import { screen } from "@testing-library/react-native";
 import React from "react";
+import { fireEvent } from "@testing-library/react-native";
 
 import { PlantDetail } from "@/features/plants/components/PlantDetail";
 import { renderWithProviders } from "@/tests/utils/renderWithProviders";
 import type { PlantWithRelations } from "@/types/models";
 
+const mockPush = jest.fn();
+
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: mockPush }),
 }));
 
 jest.mock("expo-blur", () => ({
@@ -15,6 +18,10 @@ jest.mock("expo-blur", () => ({
 
 jest.mock("expo-image", () => ({
   Image: () => null,
+}));
+
+jest.mock("@/components/common/Icon/Icon", () => ({
+  Icon: () => null,
 }));
 
 jest.mock("react-native-safe-area-context", () => ({
@@ -72,6 +79,10 @@ const baseFixture: PlantWithRelations = {
 };
 
 describe("PlantDetail recent activity", () => {
+  beforeEach(() => {
+    mockPush.mockClear();
+  });
+
   it("renders an honest empty state and no fabricated activity cards", () => {
     renderWithProviders(<PlantDetail data={baseFixture} />);
 
@@ -105,5 +116,33 @@ describe("PlantDetail recent activity", () => {
 
     expect(screen.getByText("Needs Attention")).toBeTruthy();
     expect(screen.getByText(/Only saved care logs appear here/i)).toBeTruthy();
+  });
+
+  it("routes VIEW ALL to the dedicated recent activity screen", () => {
+    renderWithProviders(
+      <PlantDetail
+        data={{
+          ...baseFixture,
+          logs: [
+            {
+              id: "log-1",
+              userId: "user-1",
+              plantId: "plant-1",
+              logType: "water",
+              currentCondition: null,
+              notes: "Saved care entry.",
+              loggedAt: "2026-03-24T10:00:00.000Z",
+              createdAt: "2026-03-24T10:00:00.000Z",
+              updatedAt: "2026-03-24T10:00:00.000Z",
+              pending: 0,
+            },
+          ],
+        }}
+      />,
+    );
+
+    fireEvent.press(screen.getByText("VIEW ALL"));
+
+    expect(mockPush).toHaveBeenCalledWith("/plant/plant-1/activity");
   });
 });
