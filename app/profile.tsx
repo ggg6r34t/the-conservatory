@@ -506,7 +506,7 @@ export default function ProfileScreen() {
             <ProfileRow
               icon="lock-reset"
               label="Change Password"
-              onPress={() => router.push("/")}
+              onPress={() => router.push("/change-password")}
             />
           </View>
         </View>
@@ -526,18 +526,12 @@ export default function ProfileScreen() {
             <ProfileRow
               icon="file-document-outline"
               label="Terms of Service"
-              onPress={() => router.push("/")}
+              onPress={() => router.push("/terms")}
             />
             <ProfileRow
               icon="shield-check-outline"
               label="Privacy Policy"
-              onPress={() => router.push("/")}
-            />
-            <ProfileRow
-              icon="copyright"
-              iconFamily="MaterialIcons"
-              label="Licenses"
-              onPress={() => router.push("/")}
+              onPress={() => router.push("/privavcy")}
             />
           </View>
         </View>

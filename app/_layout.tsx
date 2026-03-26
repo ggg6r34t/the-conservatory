@@ -167,12 +167,15 @@ function RootNavigator({
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={drillInScreenOptions} />
+      <Stack.Screen name="change-password" options={drillInScreenOptions} />
       <Stack.Screen name="highlights" options={drillInScreenOptions} />
       <Stack.Screen name="care-reminders" options={drillInScreenOptions} />
       <Stack.Screen name="profile-edit" options={drillInScreenOptions} />
       <Stack.Screen name="archive-gallery" options={drillInScreenOptions} />
       <Stack.Screen name="specimen-tags" options={drillInScreenOptions} />
       <Stack.Screen name="privacy-security" options={drillInScreenOptions} />
+      <Stack.Screen name="terms" options={drillInScreenOptions} />
+      <Stack.Screen name="privavcy" options={drillInScreenOptions} />
       <Stack.Screen name="data-backup" options={drillInScreenOptions} />
       <Stack.Screen name="interface-theme" options={drillInScreenOptions} />
       <Stack.Screen name="plant/add" options={drillInScreenOptions} />

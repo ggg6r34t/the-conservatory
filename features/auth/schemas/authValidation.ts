@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters.")
+  .regex(/[A-Za-z]/, "Password must include at least one letter.")
+  .regex(/\d/, "Password must include at least one number.");
+
 const displayNameSchema = z
   .string()
   .trim()
@@ -16,11 +22,7 @@ export const loginSchema = z.object({
     .trim()
     .toLowerCase()
     .email("Enter a valid email address."),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters.")
-    .regex(/[A-Za-z]/, "Password must include at least one letter.")
-    .regex(/\d/, "Password must include at least one number."),
+  password: passwordSchema,
 });
 
 export const signupSchema = loginSchema.extend({
@@ -29,6 +31,21 @@ export const signupSchema = loginSchema.extend({
 export const forgotPasswordSchema = loginSchema.pick({
   email: true,
 });
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password."),
+    newPassword: passwordSchema,
+    confirmNewPassword: z.string().min(1, "Confirm your new password."),
+  })
+  .refine((value) => value.newPassword !== value.currentPassword, {
+    message: "Choose a new password that differs from your current one.",
+    path: ["newPassword"],
+  })
+  .refine((value) => value.newPassword === value.confirmNewPassword, {
+    message: "Your new passwords should match.",
+    path: ["confirmNewPassword"],
+  });
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontFamily: "NotoSerif_700Bold",
     fontSize: 40,
-    lineHeight: 46,
+    lineHeight: 50,
   },
   description: {
     fontFamily: "Manrope_500Medium",

@@ -667,6 +667,85 @@ export async function requestPasswordReset(email: string) {
   );
 }
 
+export async function changePassword(
+  currentUser: AppUser,
+  currentPassword: string,
+  newPassword: string,
+) {
+  if (env.isSupabaseConfigured && supabase) {
+    const reauthResult = await supabase.auth.signInWithPassword({
+      email: normalizeEmail(currentUser.email),
+      password: currentPassword,
+    });
+
+    if (reauthResult.error) {
+      throw createAuthError(
+        "invalid_current_password",
+        "Your current password wasn't recognized.",
+      );
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      throw mapSupabaseAuthError(
+        error,
+        "We couldn't update your password right now.",
+      );
+    }
+
+    await writeSession(currentUser);
+    return;
+  }
+
+  if (!isLocalAuthEnabled()) {
+    throw createAuthError(
+      "password_change_unavailable",
+      getBackendUnavailableMessage(
+        "Password changes aren't available in this build right now.",
+      ),
+    );
+  }
+
+  const credential = await getLocalCredentialByEmail(normalizeEmail(currentUser.email));
+  if (!credential) {
+    throw createAuthError(
+      "account_missing",
+      "We couldn't find the account details needed to change your password.",
+      true,
+    );
+  }
+
+  const currentPasswordHash = await hashLocalPassword(currentPassword);
+  if (credential.password_hash !== currentPasswordHash) {
+    throw createAuthError(
+      "invalid_current_password",
+      "Your current password wasn't recognized.",
+    );
+  }
+
+  const database = await getDatabase();
+  const nextPasswordHash = await hashLocalPassword(newPassword);
+  const updatedAt = new Date().toISOString();
+
+  await queueLocalUserWrite("auth.change_password", () =>
+    withDatabaseBusyRetry("auth.change_password", () =>
+      database.runAsync(
+        `UPDATE local_auth_credentials
+         SET password_hash = ?, updated_at = ?
+         WHERE user_id = ?;`,
+        nextPasswordHash,
+        updatedAt,
+        currentUser.id,
+      ),
+    ),
+  );
+
+  await writeSession(currentUser);
+}
+
 export async function updateProfileIdentity(
   currentUser: AppUser,
   patch: {
