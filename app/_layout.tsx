@@ -155,6 +155,10 @@ function RootNavigator({
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="highlights"
+        options={{ headerShown: false, presentation: "card" }}
+      />
       <Stack.Screen name="care-reminders" options={{ headerShown: false }} />
       <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
       <Stack.Screen name="archive-gallery" options={{ headerShown: false }} />

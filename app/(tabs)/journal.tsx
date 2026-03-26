@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Link } from "expo-router";
 import {
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -288,11 +289,18 @@ export default function JournalScreen() {
               >
                 Monthly Highlights
               </Text>
-              <Text
-                style={[styles.viewAll, { color: colors.secondaryOnContainer }]}
-              >
-                VIEW ALL
-              </Text>
+              <Link href="/highlights" asChild>
+                <Pressable accessibilityRole="button">
+                  <Text
+                    style={[
+                      styles.viewAll,
+                      { color: colors.secondaryOnContainer },
+                    ]}
+                  >
+                    VIEW ALL
+                  </Text>
+                </Pressable>
+              </Link>
             </View>
 
             <ScrollView
@@ -493,8 +501,9 @@ const styles = StyleSheet.create({
   },
   viewAll: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 12,
-    letterSpacing: 1.2,
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.5,
   },
   highlightsRow: {
     gap: 14,
