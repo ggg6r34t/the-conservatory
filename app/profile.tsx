@@ -357,7 +357,7 @@ export default function ProfileScreen() {
               icon="ios-share"
               iconFamily="MaterialIcons"
               label="Export Collection Data"
-              onPress={() => router.push("/")}
+              onPress={() => router.push("/export-collection-data")}
             />
           </View>
         </View>
