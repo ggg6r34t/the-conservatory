@@ -173,6 +173,7 @@ function RootNavigator({
       <Stack.Screen name="profile-edit" options={drillInScreenOptions} />
       <Stack.Screen name="archive-gallery" options={drillInScreenOptions} />
       <Stack.Screen name="specimen-tags" options={drillInScreenOptions} />
+      <Stack.Screen name="backup-details" options={drillInScreenOptions} />
       <Stack.Screen
         name="export-collection-data"
         options={drillInScreenOptions}

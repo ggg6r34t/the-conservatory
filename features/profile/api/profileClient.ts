@@ -8,12 +8,13 @@ export interface BackupSummary {
   photos: number;
   careLogs: number;
   reminders: number;
+  lastSuccessfulSyncAt: string | null;
   pendingSyncUser: number;
   failedSyncUser: number;
   pendingSyncQueueAccount: number;
   failedSyncQueueAccount: number;
-  pendingSyncDevice: number;
-  failedSyncDevice: number;
+  pendingSyncQueueDevice: number;
+  failedSyncQueueDevice: number;
   processingSync: number;
   completedSync: number;
 }
@@ -35,6 +36,7 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     photos,
     careLogs,
     reminders,
+    lastSuccessfulSyncAt,
     pendingPlants,
     pendingPhotos,
     pendingCareLogs,
@@ -49,8 +51,8 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     failedPreferences,
     pendingSyncQueueAccount,
     failedSyncQueueAccount,
-    pendingSyncDevice,
-    failedSyncDevice,
+    pendingSyncQueueDevice,
+    failedSyncQueueDevice,
     processingSync,
     completedSync,
   ] = await Promise.all([
@@ -72,6 +74,28 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     ),
     database.getFirstAsync<{ count: number }>(
       "SELECT COUNT(*) AS count FROM care_reminders WHERE user_id = ?;",
+      userId,
+    ),
+    database.getFirstAsync<{ last_synced_at: string | null }>(
+      `SELECT MAX(synced_at) AS last_synced_at
+       FROM (
+         SELECT synced_at FROM plants WHERE user_id = ?
+         UNION ALL
+         SELECT synced_at FROM photos WHERE user_id = ?
+         UNION ALL
+         SELECT synced_at FROM care_logs WHERE user_id = ?
+         UNION ALL
+         SELECT synced_at FROM care_reminders WHERE user_id = ?
+         UNION ALL
+         SELECT synced_at FROM graveyard_plants WHERE user_id = ?
+         UNION ALL
+         SELECT synced_at FROM user_preferences WHERE user_id = ?
+       );`,
+      userId,
+      userId,
+      userId,
+      userId,
+      userId,
       userId,
     ),
     database.getFirstAsync<{ count: number }>(
@@ -158,6 +182,7 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     photos: photos?.count ?? 0,
     careLogs: careLogs?.count ?? 0,
     reminders: reminders?.count ?? 0,
+    lastSuccessfulSyncAt: lastSuccessfulSyncAt?.last_synced_at ?? null,
     pendingSyncUser: sumCounts([
       pendingPlants,
       pendingPhotos,
@@ -176,8 +201,8 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     ]),
     pendingSyncQueueAccount: pendingSyncQueueAccount?.count ?? 0,
     failedSyncQueueAccount: failedSyncQueueAccount?.count ?? 0,
-    pendingSyncDevice: pendingSyncDevice?.count ?? 0,
-    failedSyncDevice: failedSyncDevice?.count ?? 0,
+    pendingSyncQueueDevice: pendingSyncQueueDevice?.count ?? 0,
+    failedSyncQueueDevice: failedSyncQueueDevice?.count ?? 0,
     processingSync: processingSync?.count ?? 0,
     completedSync: completedSync?.count ?? 0,
   };

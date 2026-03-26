@@ -353,12 +353,6 @@ export default function ProfileScreen() {
               label="Specimen Tags"
               onPress={() => router.push("/specimen-tags")}
             />
-            <ProfileRow
-              icon="ios-share"
-              iconFamily="MaterialIcons"
-              label="Export Collection Data"
-              onPress={() => router.push("/export-collection-data")}
-            />
           </View>
         </View>
 
@@ -500,7 +494,7 @@ export default function ProfileScreen() {
             />
             <ProfileRow
               icon="cloud-check-outline"
-              label="Data Backup"
+              label="Data & Backup"
               onPress={() => router.push("/data-backup")}
             />
             <ProfileRow

@@ -1,239 +1,162 @@
+import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { queryKeys } from "@/config/constants";
-import { useAuth } from "@/features/auth/hooks/useAuth";
-import {
-  getBackupSummary,
-  getRemoteBackupAvailability,
-  runBackupSync,
-} from "@/features/profile/api/profileClient";
+import { DataBackupExportCard } from "@/features/profile/components/DataBackupExportCard";
+import { DataBackupHeroCard } from "@/features/profile/components/DataBackupHeroCard";
+import { DataBackupOverviewCard } from "@/features/profile/components/DataBackupOverviewCard";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
+import { useBackupStatus } from "@/features/profile/hooks/useBackupStatus";
 import { useAlert } from "@/hooks/useAlert";
-import { useNetworkState } from "@/hooks/useNetworkState";
 import { useSnackbar } from "@/hooks/useSnackbar";
-import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
-
-function BackupMetric({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  const { colors } = useTheme();
-
-  return (
-    <View
-      style={[
-        styles.metricCard,
-        { backgroundColor: colors.surfaceContainerLowest },
-      ]}
-    >
-      <Text style={[styles.metricValue, { color: colors.primary }]}>
-        {value}
-      </Text>
-      <Text style={[styles.metricLabel, { color: colors.onSurfaceVariant }]}>
-        {label}
-      </Text>
-    </View>
-  );
-}
 
 export default function DataBackupScreen() {
   const { colors } = useTheme();
+  const router = useRouter();
   const alert = useAlert();
   const snackbar = useSnackbar();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const network = useNetworkState();
-  const backendConfiguration = getBackendConfigurationSummary();
+  const {
+    overviewState,
+    overviewSupportingLabel,
+    overviewSecondaryValue,
+    remoteAvailability,
+    syncMutation,
+    canSync,
+  } = useBackupStatus();
 
-  const backupSummary = useQuery({
-    queryKey: ["profile-backup-summary", user?.id],
-    enabled: Boolean(user?.id),
-    queryFn: () => getBackupSummary(user!.id),
-  });
-
-  const remoteAvailability = useQuery({
-    queryKey: ["profile-backup-availability", user?.id, network.isOffline],
-    enabled: Boolean(user?.id) && !network.isOffline,
-    queryFn: () => getRemoteBackupAvailability(),
-    staleTime: 30_000,
-  });
-
-  const syncMutation = useMutation({
-    mutationFn: () => runBackupSync(user!.id),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.plants }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.graveyard }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.preferences }),
-        queryClient.invalidateQueries({
-          queryKey: ["profile-backup-summary", user?.id],
-        }),
-      ]);
-      snackbar.success("Your local backup summary has been refreshed.");
-    },
-    onError: (error) => {
-      void alert.show({
-        variant: "error",
-        title: "Backup update failed",
-        message:
-          error instanceof Error
-            ? error.message
-            : "We couldn't update your backup right now.",
-        primaryAction: { label: "Close", tone: "danger" },
-      });
-    },
-  });
-
-  const summary = backupSummary.data;
-  const systemStatus = network.isOffline
-    ? {
-        title: "Offline mode",
-        description:
-          "Online backup can't be reached until you're connected again, but your conservatory is still available on this device.",
-        canSync: false,
-      }
-    : (remoteAvailability.data ?? {
-        title:
-          backendConfiguration.mode === "cloud"
-            ? "Checking online backup"
-            : backendConfiguration.mode === "local-development"
-              ? "Local device only"
-              : "Online backup unavailable",
-        description:
-          backendConfiguration.mode === "cloud"
-            ? "Checking whether your online backup is reachable."
-            : backendConfiguration.mode === "local-development"
-              ? "This build is currently storing your conservatory on this device only."
-              : "Online backup isn't configured for this build yet.",
-        canSync: false,
-      });
+  const handleSync = () => {
+    syncMutation.mutate(undefined, {
+      onSuccess: () => {
+        snackbar.success("Your conservatory backup has been refreshed.");
+      },
+      onError: (error) => {
+        void alert.show({
+          variant: "error",
+          title: "Backup update failed",
+          message:
+            error instanceof Error
+              ? error.message
+              : "We couldn't update your backup right now.",
+          primaryAction: { label: "Close", tone: "danger" },
+        });
+      },
+    });
+  };
 
   return (
     <ProfileScreenScaffold
-      title="Data Backup"
-      subtitle="Backup & restore"
-      description="Review what is saved to your account, what is still pending on this device, and refresh from online backup when needed."
+      title="Data & Backup"
+      subtitle="Archive care"
+      description="Review your conservatory's backup health, refresh cloud sync when needed, and open a portable export when you'd like to keep a copy close at hand."
     >
-      <View
-        style={[
-          styles.statusCard,
-          { backgroundColor: colors.surfaceContainerLow },
-        ]}
-      >
-        <Text style={[styles.statusLabel, { color: colors.secondary }]}>
-          SYSTEM STATUS
-        </Text>
-        <Text style={[styles.statusValue, { color: colors.primary }]}>
-          {systemStatus.title}
-        </Text>
-        <Text style={[styles.statusBody, { color: colors.onSurfaceVariant }]}>
-          {systemStatus.description}
-        </Text>
-        {remoteAvailability.data?.detail ? (
-          <Text
-            style={[styles.statusDetail, { color: colors.onSurfaceVariant }]}
-          >
-            {remoteAvailability.data.detail}
-          </Text>
-        ) : null}
-      </View>
+      <View style={styles.content}>
+        <DataBackupHeroCard />
 
-      {summary ? (
-        <View style={styles.metricGrid}>
-          <BackupMetric label="Active plants" value={summary.activePlants} />
-          <BackupMetric label="Memorials" value={summary.archivedPlants} />
-          <BackupMetric label="Photos" value={summary.photos} />
-          <BackupMetric label="Care logs" value={summary.careLogs} />
-          <BackupMetric
-            label="Pending saves (account)"
-            value={summary.pendingSyncUser}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text
+              style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
+            >
+              CLOUD SYNC
+            </Text>
+            <View
+              style={[styles.sectionRule, { backgroundColor: colors.outlineVariant }]}
+            />
+          </View>
+
+          <DataBackupOverviewCard
+            syncTitle={remoteAvailability.title}
+            syncDescription={remoteAvailability.description}
+            statusTitle={overviewState}
+            statusValue={overviewSecondaryValue}
+            statusDetail={overviewSupportingLabel}
+            onOpenDetails={() => router.push("/backup-details")}
           />
-          <BackupMetric
-            label="Save issues (account)"
-            value={summary.failedSyncUser}
-          />
-          <BackupMetric
-            label="Pending changes (account)"
-            value={summary.pendingSyncQueueAccount}
-          />
-          <BackupMetric
-            label="Change issues (account)"
-            value={summary.failedSyncQueueAccount}
-          />
-          <BackupMetric
-            label="Pending changes on this device"
-            value={summary.pendingSyncDevice}
-          />
-          <BackupMetric
-            label="Change issues on this device"
-            value={summary.failedSyncDevice}
+
+          <PrimaryButton
+            label={syncMutation.isPending ? "Syncing Now..." : "Sync Now"}
+            icon="sync"
+            iconFamily="MaterialIcons"
+            loading={syncMutation.isPending}
+            disabled={syncMutation.isPending || !canSync}
+            onPress={handleSync}
           />
         </View>
-      ) : null}
 
-      <PrimaryButton
-        label={
-          syncMutation.isPending ? "Updating Backup..." : "Update Backup Now"
-        }
-        disabled={syncMutation.isPending || !user?.id || !systemStatus.canSync}
-        loading={syncMutation.isPending}
-        onPress={() => syncMutation.mutate()}
-      />
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text
+              style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
+            >
+              EXPORT
+            </Text>
+            <View
+              style={[styles.sectionRule, { backgroundColor: colors.outlineVariant }]}
+            />
+          </View>
+
+          <DataBackupExportCard
+            onPress={() => router.push("/export-collection-data")}
+          />
+
+          <View
+            style={[
+              styles.noteCard,
+              { backgroundColor: colors.surfaceContainerLow },
+            ]}
+          >
+            <Icon
+              family="MaterialIcons"
+              name="info"
+              size={20}
+              color={colors.secondary}
+            />
+            <Text style={[styles.noteCopy, { color: colors.onSurfaceVariant }]}>
+              Export files are prepared on-device and exclude sign-in credentials
+              and password data.
+            </Text>
+          </View>
+        </View>
+      </View>
     </ProfileScreenScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  statusCard: {
-    borderRadius: 28,
-    padding: 20,
-    gap: 8,
+  content: {
+    gap: 20,
   },
-  statusLabel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 11,
-    letterSpacing: 1.8,
+  section: {
+    gap: 14,
   },
-  statusValue: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 28,
-    lineHeight: 34,
-  },
-  statusBody: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 15,
-    lineHeight: 24,
-  },
-  statusDetail: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  metricGrid: {
+  sectionHeader: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
     gap: 12,
   },
-  metricCard: {
-    width: "48%",
+  sectionLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 12,
+    letterSpacing: 2.1,
+  },
+  sectionRule: {
+    flex: 1,
+    height: 1,
+    opacity: 0.25,
+  },
+  noteCard: {
     borderRadius: 24,
-    padding: 18,
-    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
   },
-  metricValue: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 28,
-    lineHeight: 34,
-  },
-  metricLabel: {
-    fontFamily: "Manrope_600SemiBold",
+  noteCopy: {
+    flex: 1,
+    fontFamily: "Manrope_500Medium",
     fontSize: 12,
     lineHeight: 18,
   },
