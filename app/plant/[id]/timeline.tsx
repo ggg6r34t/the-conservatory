@@ -2,7 +2,6 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
-  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -20,6 +19,7 @@ import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
 import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
+import { AddProgressPhotoSheet } from "@/features/plants/components/AddProgressPhotoSheet";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
 import { usePlant } from "@/features/plants/hooks/usePlant";
 import {
@@ -441,84 +441,12 @@ export default function GrowthTimelineScreen() {
         )}
       </ScrollView>
 
-      <Modal
-        animationType="fade"
-        transparent
+      <AddProgressPhotoSheet
         visible={mediaSheetVisible}
-        onRequestClose={() => setMediaSheetVisible(false)}
-      >
-        <View style={styles.modalRoot}>
-          <Pressable
-            style={[styles.modalBackdrop, { backgroundColor: colors.backdrop }]}
-            onPress={() => setMediaSheetVisible(false)}
-          />
-          <View
-            style={[
-              styles.modalSheet,
-              {
-                backgroundColor: colors.surfaceContainerLowest,
-                paddingBottom: Math.max(insets.bottom + spacing.md, spacing.lg),
-              },
-            ]}
-          >
-            <Text style={[styles.modalTitle, { color: colors.primary }]}>
-              Add a new frame
-            </Text>
-            <Text
-              style={[styles.modalBody, { color: colors.onSurfaceVariant }]}
-            >
-              Capture a fresh moment or choose one from your library.
-            </Text>
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={handleCapturePhoto}
-              style={[
-                styles.modalAction,
-                { backgroundColor: colors.surfaceContainerLow },
-              ]}
-            >
-              <Icon name="camera-outline" size={20} color={colors.primary} />
-              <Text
-                style={[styles.modalActionLabel, { color: colors.onSurface }]}
-              >
-                Take Photo
-              </Text>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={handlePickPhoto}
-              style={[
-                styles.modalAction,
-                { backgroundColor: colors.surfaceContainerLow },
-              ]}
-            >
-              <Icon name="image-outline" size={20} color={colors.primary} />
-              <Text
-                style={[styles.modalActionLabel, { color: colors.onSurface }]}
-              >
-                Choose From Library
-              </Text>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setMediaSheetVisible(false)}
-              style={styles.modalCancel}
-            >
-              <Text
-                style={[
-                  styles.modalCancelLabel,
-                  { color: colors.onSurfaceVariant },
-                ]}
-              >
-                Cancel
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setMediaSheetVisible(false)}
+        onCapture={handleCapturePhoto}
+        onPickFromLibrary={handlePickPhoto}
+      />
 
       <View style={[styles.footerButton, { bottom: fabBottomOffset }]}>
         <PrimaryButton
@@ -578,9 +506,9 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   filmstripCard: {
-    width: 128,
-    height: 176,
-    borderRadius: 8,
+    width: 140,
+    height: 188,
+    borderRadius: 26,
     overflow: "hidden",
   },
   filmstripImage: {
@@ -610,7 +538,7 @@ const styles = StyleSheet.create({
     lineHeight: 46,
   },
   entryImageWrap: {
-    borderRadius: 12,
+    borderRadius: 32,
     overflow: "hidden",
   },
   entryImage: {
@@ -640,54 +568,5 @@ const styles = StyleSheet.create({
   footerButton: {
     position: "absolute",
     right: 18,
-  },
-  modalRoot: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  modalSheet: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    gap: 12,
-  },
-  modalTitle: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 28,
-    lineHeight: 34,
-  },
-  modalBody: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 15,
-    lineHeight: 24,
-    marginBottom: 4,
-  },
-  modalAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderRadius: 22,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-  },
-  modalActionLabel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  modalCancel: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    marginTop: 4,
-  },
-  modalCancelLabel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 14,
-    lineHeight: 20,
   },
 });

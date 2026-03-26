@@ -1,17 +1,7 @@
-import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  Easing,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
@@ -19,6 +9,7 @@ import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHealthInsight";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
+import { AddProgressPhotoSheet } from "@/features/plants/components/AddProgressPhotoSheet";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
 import {
   capturePlantImage,
@@ -31,7 +22,7 @@ import {
 } from "@/features/plants/services/plantActivityTimeline";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
-import { shadowScale, shadowWithColor } from "@/styles/shadows";
+import { shadowScale } from "@/styles/shadows";
 import type {
   CareLogCondition,
   CareLogType,
@@ -257,12 +248,9 @@ export function PlantDetail({ data }: PlantDetailProps) {
   const { colors } = useTheme();
   const alert = useAlert();
   const snackbar = useSnackbar();
-  const insets = useSafeAreaInsets();
   const addPlantProgressPhoto = useAddPlantProgressPhoto(data.plant.id);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [mediaSheetVisible, setMediaSheetVisible] = useState(false);
-  const mediaSheetOpacity = useRef(new Animated.Value(0)).current;
-  const mediaSheetTranslateY = useRef(new Animated.Value(24)).current;
   const primaryPhoto = getPrimaryPhoto(data);
   const status = getPlantStatus(data.plant);
   const careGuide = buildCareGuide(data.plant);
@@ -274,31 +262,6 @@ export function PlantDetail({ data }: PlantDetailProps) {
   while (growthPhotos.length < 3 && primaryPhoto) {
     growthPhotos.push(primaryPhoto);
   }
-
-  useEffect(() => {
-    if (!mediaSheetVisible) {
-      mediaSheetOpacity.setValue(0);
-      mediaSheetTranslateY.setValue(24);
-      return;
-    }
-
-    mediaSheetOpacity.setValue(0);
-    mediaSheetTranslateY.setValue(24);
-    Animated.parallel([
-      Animated.timing(mediaSheetOpacity, {
-        toValue: 1,
-        duration: 180,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: false,
-      }),
-      Animated.timing(mediaSheetTranslateY, {
-        toValue: 0,
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }, [mediaSheetOpacity, mediaSheetTranslateY, mediaSheetVisible]);
 
   const applyPhotoUpdate = async (photoUri: string) => {
     setIsUploadingPhoto(true);
@@ -364,152 +327,12 @@ export function PlantDetail({ data }: PlantDetailProps) {
 
   return (
     <View style={styles.container}>
-      <Modal
-        animationType="fade"
-        transparent
+      <AddProgressPhotoSheet
         visible={mediaSheetVisible}
-        onRequestClose={() => setMediaSheetVisible(false)}
-      >
-        <View style={styles.mediaSheetOverlay}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setMediaSheetVisible(false)}
-          />
-          <BlurView intensity={42} tint="dark" style={StyleSheet.absoluteFill}>
-            <View
-              style={[
-                styles.mediaSheetOverlayTint,
-                { backgroundColor: colors.backdrop },
-              ]}
-            />
-          </BlurView>
-          <Animated.View
-            style={[
-              styles.mediaSheet,
-              shadowWithColor(shadowScale.floatingSheet, colors.backdrop),
-              {
-                backgroundColor: colors.surfaceContainerLowest,
-                paddingBottom: Math.max(20, insets.bottom + 8),
-                borderColor: "rgba(255, 255, 255, 0.72)",
-                opacity: mediaSheetOpacity,
-                transform: [{ translateY: mediaSheetTranslateY }],
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.mediaSheetHandle,
-                { backgroundColor: colors.surfaceContainerHigh },
-              ]}
-            />
-
-            <View style={styles.mediaSheetHeader}>
-              <Text style={[styles.mediaSheetTitle, { color: colors.primary }]}>
-                Add Progress Photo
-              </Text>
-              <Text
-                style={[
-                  styles.mediaSheetBody,
-                  { color: colors.onSurfaceVariant },
-                ]}
-              >
-                Capture a fresh milestone or choose one from your library.
-              </Text>
-            </View>
-
-            <View style={styles.mediaSheetActions}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={handleCapturePhoto}
-                style={({ pressed }) => [
-                  styles.mediaActionCard,
-                  {
-                    backgroundColor: colors.surfaceContainerLow,
-                    borderColor: colors.surfaceContainerHigh,
-                    opacity: pressed ? 0.92 : 1,
-                    transform: [{ scale: pressed ? 0.992 : 1 }],
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.mediaActionIconTile,
-                    { backgroundColor: colors.secondaryContainer },
-                  ]}
-                >
-                  <Icon
-                    family="MaterialIcons"
-                    name="photo-camera"
-                    size={22}
-                    color={colors.secondary}
-                  />
-                </View>
-                <Text
-                  style={[styles.mediaActionTitle, { color: colors.onSurface }]}
-                >
-                  Take Photo
-                </Text>
-                <Text
-                  style={[
-                    styles.mediaActionBody,
-                    { color: colors.onSurfaceVariant },
-                  ]}
-                >
-                  Open the camera and capture today&apos;s growth.
-                </Text>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={handlePickPhoto}
-                style={({ pressed }) => [
-                  styles.mediaActionCard,
-                  {
-                    backgroundColor: colors.surfaceContainerLow,
-                    borderColor: colors.surfaceContainerHigh,
-                    opacity: pressed ? 0.92 : 1,
-                    transform: [{ scale: pressed ? 0.992 : 1 }],
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.mediaActionIconTile,
-                    { backgroundColor: colors.primaryFixed },
-                  ]}
-                >
-                  <Icon
-                    family="MaterialIcons"
-                    name="photo-library"
-                    size={22}
-                    color={colors.primary}
-                  />
-                </View>
-                <Text
-                  style={[styles.mediaActionTitle, { color: colors.onSurface }]}
-                >
-                  Photo Library
-                </Text>
-                <Text
-                  style={[
-                    styles.mediaActionBody,
-                    { color: colors.onSurfaceVariant },
-                  ]}
-                >
-                  Choose an existing image from your camera roll.
-                </Text>
-              </Pressable>
-            </View>
-
-            <SecondaryButton
-              label="Cancel"
-              fullWidth
-              variant="surface"
-              onPress={() => setMediaSheetVisible(false)}
-            />
-          </Animated.View>
-        </View>
-      </Modal>
+        onClose={() => setMediaSheetVisible(false)}
+        onCapture={handleCapturePhoto}
+        onPickFromLibrary={handlePickPhoto}
+      />
 
       <View style={styles.heroWrap}>
         {primaryPhoto?.localUri || primaryPhoto?.remoteUrl ? (
@@ -1143,7 +966,7 @@ const styles = StyleSheet.create({
   growthPhotoWrap: {
     width: "47%",
     aspectRatio: 1,
-    borderRadius: 18,
+    borderRadius: 26,
     overflow: "hidden",
   },
   growthPhoto: {
@@ -1166,68 +989,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     letterSpacing: 1.6,
-  },
-  mediaSheetOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  mediaSheetOverlayTint: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.72,
-  },
-  mediaSheet: {
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    gap: 18,
-    borderWidth: 1,
-  },
-  mediaSheetHandle: {
-    width: 64,
-    height: 6,
-    borderRadius: 999,
-    alignSelf: "center",
-  },
-  mediaSheetHeader: {
-    gap: 6,
-  },
-  mediaSheetTitle: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 24,
-    lineHeight: 30,
-  },
-  mediaSheetBody: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  mediaSheetActions: {
-    gap: 12,
-  },
-  mediaActionCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    gap: 12,
-    ...shadowScale.subtleSurface,
-  },
-  mediaActionIconTile: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  mediaActionTitle: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 18,
-    lineHeight: 24,
-  },
-  mediaActionBody: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 13,
-    lineHeight: 20,
   },
 });
