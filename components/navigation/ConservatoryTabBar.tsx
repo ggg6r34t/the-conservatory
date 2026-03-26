@@ -1,7 +1,7 @@
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Animated, Easing, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/common/Icon/Icon";
@@ -37,25 +37,36 @@ function ConservatoryTabBarItem({
   onPress: () => void;
 }) {
   const { colors } = useTheme();
-  const scale = useRef(new Animated.Value(isFocused ? 1 : 0.92)).current;
-  const translateY = useRef(new Animated.Value(isFocused ? 0 : 2)).current;
+  const focusProgress = useRef(new Animated.Value(isFocused ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scale, {
-        toValue: isFocused ? 1 : 0.92,
-        damping: 14,
-        stiffness: 180,
-        mass: 0.9,
-        useNativeDriver: false,
-      }),
-      Animated.timing(translateY, {
-        toValue: isFocused ? 0 : 2,
-        duration: 180,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }, [isFocused, scale, translateY]);
+    Animated.timing(focusProgress, {
+      toValue: isFocused ? 1 : 0,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [focusProgress, isFocused]);
+
+  const iconTranslateY = focusProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1.5, 0],
+  });
+
+  const iconOpacity = focusProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.84, 1],
+  });
+
+  const labelOpacity = focusProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.78, 1],
+  });
+
+  const labelTranslateY = focusProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+  });
 
   return (
     <Pressable
@@ -76,7 +87,8 @@ function ConservatoryTabBarItem({
             { backgroundColor: colors.surfaceContainerHigh },
           ],
           {
-            transform: [{ scale }, { translateY }],
+            opacity: iconOpacity,
+            transform: [{ translateY: iconTranslateY }],
           },
         ]}
       >
@@ -91,8 +103,8 @@ function ConservatoryTabBarItem({
           styles.label,
           {
             color: isFocused ? colors.onSurface : colors.outline,
-            opacity: isFocused ? 1 : 0.82,
-            transform: [{ translateY }],
+            opacity: labelOpacity,
+            transform: [{ translateY: labelTranslateY }],
           },
         ]}
       >
