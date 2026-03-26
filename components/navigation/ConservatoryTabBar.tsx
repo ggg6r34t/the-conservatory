@@ -68,6 +68,11 @@ function ConservatoryTabBarItem({
     outputRange: [1, 0],
   });
 
+  const activeBackgroundOpacity = focusProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -81,17 +86,23 @@ function ConservatoryTabBarItem({
       <Animated.View
         style={[
           styles.iconWrap,
-          isFocused && [
-            styles.iconWrapActive,
-            shadowScale.subtleSurface,
-            { backgroundColor: colors.surfaceContainerHigh },
-          ],
+          isFocused && [styles.iconWrapActive, shadowScale.subtleSurface],
           {
             opacity: iconOpacity,
             transform: [{ translateY: iconTranslateY }],
           },
         ]}
       >
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.iconActiveBackground,
+            {
+              backgroundColor: colors.surfaceContainerHigh,
+              opacity: activeBackgroundOpacity,
+            },
+          ]}
+        />
         <Icon
           color={isFocused ? colors.primary : colors.outline}
           name={iconName}
@@ -209,10 +220,15 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
+    position: "relative",
   },
   iconWrapActive: {
     borderRadius: 12,
     overflow: "hidden",
+  },
+  iconActiveBackground: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 12,
   },
   label: {
     fontFamily: "Manrope_700Bold",
