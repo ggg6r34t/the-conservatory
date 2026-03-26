@@ -17,7 +17,7 @@ import {
 } from "@expo/vector-icons";
 import type { ComponentProps } from "react";
 
-type SupportedFamily =
+export type IconFamily =
   | "AntDesign"
   | "Entypo"
   | "EvilIcons"
@@ -35,7 +35,7 @@ type SupportedFamily =
   | "Zocial";
 
 interface IconProps {
-  family?: SupportedFamily;
+  family?: IconFamily;
   name: string;
   size?: number;
   color?: string;

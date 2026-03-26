@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   Image,
@@ -12,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import type { IconFamily } from "@/components/common/Icon/Icon";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
@@ -21,9 +23,11 @@ import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { usePlants } from "@/features/plants/hooks/usePlants";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
+import { useAlert } from "@/hooks/useAlert";
 
 type ProfileRowProps = {
   icon: string;
+  iconFamily?: IconFamily;
   label: string;
   value?: string;
   onPress?: () => void;
@@ -120,6 +124,7 @@ function StatItem({ value, label }: StatItemProps) {
 
 function ProfileRow({
   icon,
+  iconFamily,
   label,
   value,
   onPress,
@@ -136,6 +141,7 @@ function ProfileRow({
     >
       <View style={styles.rowLead}>
         <Icon
+          family={iconFamily}
           name={icon}
           size={24}
           color={colors.primary}
@@ -166,6 +172,7 @@ function ProfileRow({
 
 export default function ProfileScreen() {
   const { colors, spacing } = useTheme();
+  const alert = useAlert();
   const { user, signOut, isSigningOut } = useAuth();
   const router = useRouter();
   const [showDeveloperMenu, setShowDeveloperMenu] = useState(false);
@@ -209,6 +216,16 @@ export default function ProfileScreen() {
   useEffect(() => {
     setAvatarFailed(false);
   }, [avatarSource]);
+
+  const showSubscriptionAlert = (title: string) => {
+    void alert.show({
+      variant: "info",
+      title,
+      message: "This subscription feature is coming soon.",
+      icon: "sprout",
+      primaryAction: { label: "Close", tone: "primary" },
+    });
+  };
 
   return (
     <SafeAreaView
@@ -327,7 +344,7 @@ export default function ProfileScreen() {
             ]}
           >
             <ProfileRow
-              icon="archive-arrow-down"
+              icon="archive-arrow-down-outline"
               label="Archive Gallery"
               onPress={() => router.push("/archive-gallery")}
             />
@@ -336,7 +353,72 @@ export default function ProfileScreen() {
               label="Specimen Tags"
               onPress={() => router.push("/specimen-tags")}
             />
+            <ProfileRow
+              icon="ios-share"
+              iconFamily="MaterialIcons"
+              label="Export Collection Data"
+              onPress={() => router.push("/")}
+            />
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text
+            style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
+          >
+            SUBSCRIPTION
+          </Text>
+          <LinearGradient
+            colors={[colors.primary, colors.primaryContainer]}
+            start={{ x: 0.08, y: 0.08 }}
+            end={{ x: 0.92, y: 0.92 }}
+            style={styles.subscriptionCard}
+          >
+            <View style={styles.subscriptionCardContent}>
+              <Text
+                style={[
+                  styles.subscriptionCardTitle,
+                  { color: colors.onPrimary },
+                ]}
+              >
+                Conservatory Premium
+              </Text>
+              <Text
+                style={[
+                  styles.subscriptionCardBody,
+                  { color: colors.primaryFixed },
+                ]}
+              >
+                Access expert diagnostics and unlimited specimen tracking.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => showSubscriptionAlert("Manage Plan")}
+                style={[
+                  styles.subscriptionButton,
+                  { backgroundColor: colors.secondaryContainer },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.subscriptionButtonLabel,
+                    { color: colors.onSecondaryContainer },
+                  ]}
+                >
+                  Manage Plan
+                </Text>
+              </Pressable>
+            </View>
+
+            <Image
+              source={require("@/assets/images/potted-plant.png")}
+              resizeMode="contain"
+              style={[
+                styles.subscriptionCardGlyph,
+                { tintColor: colors.primaryFixed },
+              ]}
+            />
+          </LinearGradient>
         </View>
 
         <View style={styles.section}>
@@ -412,14 +494,50 @@ export default function ProfileScreen() {
             ]}
           >
             <ProfileRow
-              icon="shield-check"
+              icon="shield-account-outline"
               label="Privacy & Security"
               onPress={() => router.push("/privacy-security")}
             />
             <ProfileRow
-              icon="cloud-check"
+              icon="cloud-check-outline"
               label="Data Backup"
               onPress={() => router.push("/data-backup")}
+            />
+            <ProfileRow
+              icon="lock-reset"
+              label="Change Password"
+              onPress={() => router.push("/")}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text
+            style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
+          >
+            LEGAL
+          </Text>
+          <View
+            style={[
+              styles.groupCard,
+              { backgroundColor: colors.surfaceContainerLowest },
+            ]}
+          >
+            <ProfileRow
+              icon="file-document-outline"
+              label="Terms of Service"
+              onPress={() => router.push("/")}
+            />
+            <ProfileRow
+              icon="shield-check-outline"
+              label="Privacy Policy"
+              onPress={() => router.push("/")}
+            />
+            <ProfileRow
+              icon="copyright"
+              iconFamily="MaterialIcons"
+              label="Licenses"
+              onPress={() => router.push("/")}
             />
           </View>
         </View>
@@ -633,6 +751,52 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
     gap: 2,
+  },
+  subscriptionCard: {
+    minHeight: 208,
+    borderRadius: 30,
+    overflow: "hidden",
+    paddingHorizontal: 24,
+    paddingVertical: 26,
+    justifyContent: "space-between",
+  },
+  subscriptionCardContent: {
+    maxWidth: 236,
+    gap: 10,
+    zIndex: 1,
+  },
+  subscriptionCardTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 31,
+    lineHeight: 37,
+  },
+  subscriptionCardBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 15,
+    lineHeight: 23,
+    opacity: 0.84,
+  },
+  subscriptionButton: {
+    alignSelf: "flex-start",
+    minHeight: 56,
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  subscriptionButtonLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  subscriptionCardGlyph: {
+    position: "absolute",
+    right: -10,
+    bottom: -18,
+    width: 156,
+    height: 156,
+    opacity: 0.14,
+    transform: [{ rotate: "12deg" }],
   },
   row: {
     minHeight: 68,
