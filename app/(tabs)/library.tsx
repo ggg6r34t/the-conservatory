@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   },
   media: {
     height: 228,
-    borderRadius: 18,
+    borderRadius: 26,
     overflow: "hidden",
     position: "relative",
     justifyContent: "flex-start",

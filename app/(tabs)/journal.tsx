@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
   highlightCard: {
     width: 198,
     height: 254,
-    borderRadius: 18,
+    borderRadius: 26,
     overflow: "hidden",
     position: "relative",
   },

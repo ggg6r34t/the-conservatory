@@ -77,7 +77,7 @@ export function MonthlyHighlightCard({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    borderRadius: 18,
+    borderRadius: 26,
     overflow: "hidden",
   },
   imageFrame: {
@@ -85,13 +85,13 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     position: "relative",
     overflow: "hidden",
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
   },
   image: {
     ...StyleSheet.absoluteFillObject,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
   },
   dateChip: {
     position: "absolute",
@@ -113,8 +113,8 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 16,
     gap: 4,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
+    borderBottomLeftRadius: 26,
+    borderBottomRightRadius: 26,
   },
   title: {
     fontFamily: "NotoSerif_700Bold",
