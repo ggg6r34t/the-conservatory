@@ -10,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
 
+import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding";
 import {
@@ -83,6 +84,17 @@ function RootNavigator({
     onboardingStatus,
   });
   const safeRedirectTo = resolveSafeAuthRedirectTarget(redirectTo);
+  const { colors } = useTheme();
+  const drillInScreenOptions = {
+    headerShown: false,
+    presentation: "card" as const,
+    animation: "simple_push" as const,
+    animationDuration: 260,
+    animationMatchesGesture: true,
+    contentStyle: {
+      backgroundColor: colors.surface,
+    },
+  };
 
   if (isDebugRoute && !__DEV__) {
     return <Redirect href={expectedPublicEntry} />;
@@ -154,42 +166,27 @@ function RootNavigator({
       />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="profile" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="highlights"
-        options={{ headerShown: false, presentation: "card" }}
-      />
-      <Stack.Screen name="care-reminders" options={{ headerShown: false }} />
-      <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
-      <Stack.Screen name="archive-gallery" options={{ headerShown: false }} />
-      <Stack.Screen name="specimen-tags" options={{ headerShown: false }} />
-      <Stack.Screen name="privacy-security" options={{ headerShown: false }} />
-      <Stack.Screen name="data-backup" options={{ headerShown: false }} />
-      <Stack.Screen name="interface-theme" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="plant/add"
-        options={{ headerShown: false, presentation: "card" }}
-      />
-      <Stack.Screen
-        name="plant/[id]"
-        options={{ headerShown: false, presentation: "card" }}
-      />
-      <Stack.Screen
-        name="plant/[id]/edit"
-        options={{ headerShown: false, presentation: "card" }}
-      />
+      <Stack.Screen name="profile" options={drillInScreenOptions} />
+      <Stack.Screen name="highlights" options={drillInScreenOptions} />
+      <Stack.Screen name="care-reminders" options={drillInScreenOptions} />
+      <Stack.Screen name="profile-edit" options={drillInScreenOptions} />
+      <Stack.Screen name="archive-gallery" options={drillInScreenOptions} />
+      <Stack.Screen name="specimen-tags" options={drillInScreenOptions} />
+      <Stack.Screen name="privacy-security" options={drillInScreenOptions} />
+      <Stack.Screen name="data-backup" options={drillInScreenOptions} />
+      <Stack.Screen name="interface-theme" options={drillInScreenOptions} />
+      <Stack.Screen name="plant/add" options={drillInScreenOptions} />
+      <Stack.Screen name="plant/[id]" options={drillInScreenOptions} />
+      <Stack.Screen name="plant/[id]/edit" options={drillInScreenOptions} />
       <Stack.Screen
         name="plant/[id]/timeline"
-        options={{ headerShown: false, presentation: "card" }}
+        options={drillInScreenOptions}
       />
       <Stack.Screen
         name="plant/[id]/activity"
-        options={{ headerShown: false, presentation: "card" }}
+        options={drillInScreenOptions}
       />
-      <Stack.Screen
-        name="memorial/[id]"
-        options={{ headerShown: false, presentation: "card" }}
-      />
+      <Stack.Screen name="memorial/[id]" options={drillInScreenOptions} />
       <Stack.Screen
         name="care-log/[id]"
         options={{
