@@ -25,7 +25,7 @@ interface PrimaryButtonProps {
   iconFamily?: React.ComponentProps<typeof Icon>["family"];
   iconPosition?: "leading" | "trailing";
   compact?: boolean;
-  tone?: "primary" | "memorial";
+  tone?: "primary" | "memorial" | "danger";
 }
 
 export function PrimaryButton({
@@ -45,9 +45,16 @@ export function PrimaryButton({
   const gradientColors =
     tone === "memorial"
       ? ([colors.secondary, colors.onSecondaryFixedVariant] as const)
-      : ([colors.primary, colors.primaryContainer] as const);
+      : tone === "danger"
+        ? ([colors.error, "#8c1414"] as const)
+        : ([colors.primary, colors.primaryContainer] as const);
   const foregroundColor =
-    tone === "memorial" ? colors.onSecondary : colors.onPrimary;
+    tone === "memorial"
+      ? colors.onSecondary
+      : tone === "danger"
+        ? colors.onError
+        : colors.onPrimary;
+  const iconSize = 20;
 
   useEffect(() => {
     Animated.timing(loadingOpacity, {
@@ -72,10 +79,7 @@ export function PrimaryButton({
       >
         <Animated.View
           pointerEvents="none"
-          style={[
-            styles.loadingOverlay,
-            { opacity: loadingOpacity },
-          ]}
+          style={[styles.loadingOverlay, { opacity: loadingOpacity }]}
         >
           <ActivityIndicator color={foregroundColor} />
         </Animated.View>
@@ -94,16 +98,18 @@ export function PrimaryButton({
               family={iconFamily}
               color={foregroundColor}
               name={icon}
-              size={18}
+              size={iconSize}
             />
           ) : null}
-          <Text style={[styles.label, { color: foregroundColor }]}>{label}</Text>
+          <Text style={[styles.label, { color: foregroundColor }]}>
+            {label}
+          </Text>
           {icon && iconPosition === "trailing" ? (
             <Icon
               family={iconFamily}
               color={foregroundColor}
               name={icon}
-              size={18}
+              size={iconSize}
             />
           ) : null}
         </Animated.View>
