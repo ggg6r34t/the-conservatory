@@ -1,3 +1,6 @@
+import { useMemo } from "react";
+
+import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Link } from "expo-router";
 import {
@@ -14,24 +17,44 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
+import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
+import { useReminders } from "@/features/notifications/hooks/useReminders";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { usePlants } from "@/features/plants/hooks/usePlants";
+import {
+  buildPlantStatusMap,
+  getLibraryPlantBadgeLabel,
+} from "@/features/plants/services/plantLibraryStatusService";
 import { usePlantStore } from "@/features/plants/stores/usePlantStore";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import { formatDueLabel } from "@/utils/dateFormatter";
 
-function getPlantStatus(plant: PlantListItem) {
-  if (!plant.nextWaterDueAt) {
-    return "THRIVING";
-  }
-
-  return new Date(plant.nextWaterDueAt).getTime() <= Date.now()
-    ? "NEEDS WATER"
-    : "THRIVING";
+function formatMetaLabel(nextWateringDate: string | null) {
+  return `NEXT WATER: ${formatDueLabel(nextWateringDate).toUpperCase()}`;
 }
 
-function formatMetaLabel(plant: PlantListItem) {
-  return `NEXT WATER: ${formatDueLabel(plant.nextWaterDueAt).toUpperCase()}`;
+function getBadgeColors(input: {
+  colors: ReturnType<typeof useTheme>["colors"];
+  badgeLabel: "THRIVING" | "NEEDS WATER" | "STABLE";
+}) {
+  if (input.badgeLabel === "THRIVING") {
+    return {
+      backgroundColor: input.colors.primaryContainer,
+      color: input.colors.surfaceBright,
+    };
+  }
+
+  if (input.badgeLabel === "NEEDS WATER") {
+    return {
+      backgroundColor: input.colors.secondaryContainer,
+      color: input.colors.secondaryOnContainer,
+    };
+  }
+
+  return {
+    backgroundColor: input.colors.surfaceContainerHigh,
+    color: input.colors.onSurfaceVariant,
+  };
 }
 
 function chunkPlants(plants: PlantListItem[]) {
@@ -52,7 +75,23 @@ export default function LibraryScreen() {
   const query = usePlantStore((state) => state.query);
   const setFilter = usePlantStore((state) => state.setFilter);
   const setQuery = usePlantStore((state) => state.setQuery);
-  const plants = plantsQuery.data ?? [];
+  const plants = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
+  const remindersQuery = useReminders();
+  const plantIds = plants.map((plant) => plant.id);
+  const logsQuery = useQuery({
+    queryKey: ["care-logs", "library", plantIds.join("|")],
+    queryFn: () => listCareLogsForPlants(plantIds),
+    enabled: plantIds.length > 0,
+  });
+  const plantStatusMap = useMemo(
+    () =>
+      buildPlantStatusMap({
+        plants,
+        reminders: remindersQuery.data ?? [],
+        logs: logsQuery.data ?? [],
+      }),
+    [logsQuery.data, plants, remindersQuery.data],
+  );
   const plantRows = chunkPlants(plants);
 
   return (
@@ -132,8 +171,14 @@ export default function LibraryScreen() {
             {plantRows.map((row, rowIndex) => (
               <View key={`row-${rowIndex}`} style={styles.galleryRow}>
                 {row.map((plant) => {
-                  const status = getPlantStatus(plant);
-                  const isThriving = status === "THRIVING";
+                  const plantStatus = plantStatusMap.get(plant.id);
+                  const badgeLabel = plantStatus
+                    ? getLibraryPlantBadgeLabel(plantStatus)
+                    : null;
+                  const needsAttention = badgeLabel === "NEEDS WATER";
+                  const badgeColors = badgeLabel
+                    ? getBadgeColors({ colors, badgeLabel })
+                    : null;
 
                   return (
                     <Link
@@ -166,30 +211,25 @@ export default function LibraryScreen() {
                               ]}
                             />
                           )}
-
-                          <View
-                            style={[
-                              styles.statusChip,
-                              {
-                                backgroundColor: isThriving
-                                  ? colors.primaryContainer
-                                  : colors.secondaryContainer,
-                              },
-                            ]}
-                          >
-                            <Text
+                          {badgeLabel ? (
+                            <View
                               style={[
-                                styles.statusChipLabel,
+                                styles.statusChip,
                                 {
-                                  color: isThriving
-                                    ? colors.surfaceBright
-                                    : colors.secondaryOnContainer,
+                                  backgroundColor: badgeColors?.backgroundColor,
                                 },
                               ]}
                             >
-                              {status}
-                            </Text>
-                          </View>
+                              <Text
+                                style={[
+                                  styles.statusChipLabel,
+                                  { color: badgeColors?.color },
+                                ]}
+                              >
+                                {badgeLabel}
+                              </Text>
+                            </View>
+                          ) : null}
                         </View>
 
                         <View style={styles.copy}>
@@ -202,13 +242,15 @@ export default function LibraryScreen() {
                             style={[
                               styles.meta,
                               {
-                                color: isThriving
-                                  ? colors.onSurfaceVariant
-                                  : colors.error,
+                                color: needsAttention
+                                  ? colors.error
+                                  : colors.onSurfaceVariant,
                               },
                             ]}
                           >
-                            {formatMetaLabel(plant)}
+                            {formatMetaLabel(
+                              plantStatus?.effectiveNextWateringDate ?? null,
+                            )}
                           </Text>
                         </View>
                       </Pressable>

@@ -9,6 +9,8 @@ import {
 } from "@/services/database/syncOutbox";
 import { getStorageAssetUrl } from "@/services/supabase/storage";
 import type {
+  CareLog,
+  CareReminder,
   CareLogCondition,
   CareLogType,
   GraveyardPlant,
@@ -18,6 +20,8 @@ import type {
 } from "@/types/models";
 import type { PlantLibraryFilter, PlantSortOption } from "@/types/ui";
 import { createId } from "@/utils/id";
+
+import { derivePlantStatus } from "../services/plantStatusService";
 
 async function queueSyncDeleteInTransaction(
   database: Awaited<ReturnType<typeof getDatabase>>,
@@ -78,6 +82,24 @@ interface PhotoRow {
   sync_error: string | null;
 }
 
+interface ReminderRow {
+  id: string;
+  user_id: string;
+  plant_id: string;
+  reminder_type: "water" | "mist" | "feed";
+  frequency_days: number;
+  enabled: number;
+  next_due_at: string | null;
+  last_triggered_at: string | null;
+  notification_id: string | null;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+  pending: number;
+  synced_at: string | null;
+  sync_error: string | null;
+}
+
 function toPlant(row: PlantRow): Plant {
   return {
     id: row.id,
@@ -115,6 +137,58 @@ function toPhoto(row: PhotoRow): Photo {
     isPrimary: row.is_primary,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    pending: row.pending,
+    syncedAt: row.synced_at,
+    syncError: row.sync_error,
+  };
+}
+
+function toReminder(row: ReminderRow): CareReminder {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    plantId: row.plant_id,
+    reminderType: row.reminder_type,
+    frequencyDays: row.frequency_days,
+    enabled: row.enabled,
+    nextDueAt: row.next_due_at,
+    lastTriggeredAt: row.last_triggered_at,
+    notificationId: row.notification_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    updatedBy: row.updated_by,
+    pending: row.pending,
+    syncedAt: row.synced_at,
+    syncError: row.sync_error,
+  };
+}
+
+function mapCareLog(row: {
+  id: string;
+  user_id: string;
+  plant_id: string;
+  log_type: CareLogType;
+  current_condition: CareLogCondition | null;
+  notes: string | null;
+  logged_at: string;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+  pending: number;
+  synced_at: string | null;
+  sync_error: string | null;
+}): CareLog {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    plantId: row.plant_id,
+    logType: row.log_type,
+    currentCondition: row.current_condition,
+    notes: row.notes,
+    loggedAt: row.logged_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    updatedBy: row.updated_by,
     pending: row.pending,
     syncedAt: row.synced_at,
     syncError: row.sync_error,
@@ -290,6 +364,32 @@ export async function listPlants(input: {
      ORDER BY is_primary DESC, updated_at DESC, created_at DESC;`,
     input.userId,
   );
+  const reminders = await database.getAllAsync<ReminderRow>(
+    `SELECT * FROM care_reminders
+     WHERE user_id = ?
+     ORDER BY next_due_at ASC, updated_at DESC;`,
+    input.userId,
+  );
+  const logs = await database.getAllAsync<{
+    id: string;
+    user_id: string;
+    plant_id: string;
+    log_type: CareLogType;
+    current_condition: CareLogCondition | null;
+    notes: string | null;
+    logged_at: string;
+    created_at: string;
+    updated_at: string;
+    updated_by: string | null;
+    pending: number;
+    synced_at: string | null;
+    sync_error: string | null;
+  }>(
+    `SELECT * FROM care_logs
+     WHERE user_id = ?
+     ORDER BY logged_at DESC;`,
+    input.userId,
+  );
   const hydratedPhotos = await hydratePhotosForDisplay(photos);
   const photoByPlantId = buildPhotoByPlantIdMap(
     hydratedPhotos.map((photo) => ({
@@ -311,36 +411,50 @@ export async function listPlants(input: {
       sync_error: photo.syncError ?? null,
     })),
   );
-  const lowerQuery = input.query.trim().toLowerCase();
-  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const remindersByPlantId = new Map<string, CareReminder[]>();
+  for (const reminder of reminders.map(toReminder)) {
+    const existing = remindersByPlantId.get(reminder.plantId) ?? [];
+    existing.push(reminder);
+    remindersByPlantId.set(reminder.plantId, existing);
+  }
 
+  const logsByPlantId = new Map<string, ReturnType<typeof mapCareLog>[]>();
+  for (const log of logs.map(mapCareLog)) {
+    const existing = logsByPlantId.get(log.plantId) ?? [];
+    existing.push(log);
+    logsByPlantId.set(log.plantId, existing);
+  }
+  const lowerQuery = input.query.trim().toLowerCase();
   const filtered = rows
     .map((row) => {
       const plant = toPlant(row);
-      return {
+      const listItem = {
         ...plant,
         primaryPhotoUri: resolveRenderablePhotoUri(
           photoByPlantId.get(plant.id),
         ),
       } satisfies PlantListItem;
+
+      return {
+        plant: listItem,
+        status: derivePlantStatus({
+          plant: listItem,
+          reminders: remindersByPlantId.get(plant.id) ?? [],
+          logs: logsByPlantId.get(plant.id) ?? [],
+        }),
+      };
     })
-    .filter((plant) => {
+    .filter(({ plant, status }) => {
       if (input.filter === "needs-water") {
-        return plant.nextWaterDueAt
-          ? new Date(plant.nextWaterDueAt).getTime() <= Date.now()
-          : false;
+        return status.isDue || status.isOverdue;
       }
 
       if (input.filter === "thriving") {
-        return plant.nextWaterDueAt
-          ? new Date(plant.nextWaterDueAt).getTime() > Date.now()
-          : true;
+        return status.healthState === "thriving";
       }
 
       if (input.filter === "recently-watered") {
-        return plant.lastWateredAt
-          ? new Date(plant.lastWateredAt).getTime() >= sevenDaysAgo
-          : false;
+        return status.isRecentlyWatered;
       }
 
       if (input.filter === "with-notes") {
@@ -353,7 +467,7 @@ export async function listPlants(input: {
 
       return true;
     })
-    .filter((plant) => {
+    .filter(({ plant }) => {
       if (!lowerQuery) {
         return true;
       }
@@ -363,17 +477,24 @@ export async function listPlants(input: {
         .includes(lowerQuery);
     });
 
-  return filtered.sort((left, right) => {
+  return filtered
+    .sort((left, right) => {
     if (input.sort === "name") {
-      return left.name.localeCompare(right.name);
+        return left.plant.name.localeCompare(right.plant.name);
     }
     if (input.sort === "water-due") {
-      return (left.nextWaterDueAt ?? "").localeCompare(
-        right.nextWaterDueAt ?? "",
-      );
+        const leftDue = left.status.effectiveNextWateringDate ?? "";
+        const rightDue = right.status.effectiveNextWateringDate ?? "";
+
+        if (leftDue !== rightDue) {
+          return leftDue.localeCompare(rightDue);
+        }
+
+        return left.plant.name.localeCompare(right.plant.name);
     }
-    return right.updatedAt.localeCompare(left.updatedAt);
-  });
+      return right.plant.updatedAt.localeCompare(left.plant.updatedAt);
+    })
+    .map((item) => item.plant);
 }
 
 export async function getPlantById(
