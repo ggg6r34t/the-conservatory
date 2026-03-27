@@ -173,7 +173,11 @@ export default function HomeScreen() {
           plantPhotoUris={plantPhotoUris}
         />
 
-        <UpcomingCare plants={dashboard.plants} />
+        <UpcomingCare
+          plants={dashboard.plants}
+          reminders={remindersQuery.data ?? []}
+          logs={logs}
+        />
       </ScrollView>
 
       <FAB

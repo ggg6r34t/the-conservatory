@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link } from "expo-router";
@@ -6,20 +8,54 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
+import { selectPlantHighlights } from "@/features/plants/services/plantSelectionService";
+import type { PlantHealthState } from "@/features/plants/services/plantStatusService";
+import type { CareLog, CareReminder } from "@/types/models";
 import { formatDueLabel, formatEditorialDate } from "@/utils/dateFormatter";
 
 interface PlantHighlightsProps {
   plants: PlantListItem[];
+  reminders: CareReminder[];
+  logs: CareLog[];
 }
 
-function getPlantStatus(plant: PlantListItem) {
-  if (!plant.nextWaterDueAt) {
-    return "THRIVING";
+function getHealthLabel(healthState: PlantHealthState) {
+  switch (healthState) {
+    case "needs_attention":
+      return "NEEDS ATTENTION";
+    case "thriving":
+      return "THRIVING";
+    case "stable":
+    default:
+      return "STABLE";
+  }
+}
+
+function getStackedStatusLabel(healthState: PlantHealthState) {
+  if (healthState === "needs_attention") {
+    return ["NEEDS", "ATTENTION"] as const;
   }
 
-  return new Date(plant.nextWaterDueAt).getTime() <= Date.now()
-    ? "NEEDS ATTENTION"
-    : "THRIVING";
+  if (healthState === "thriving") {
+    return ["THRIVING", ""] as const;
+  }
+
+  return ["STABLE", ""] as const;
+}
+
+function getStatusColor(input: {
+  colors: ReturnType<typeof useTheme>["colors"];
+  healthState: PlantHealthState;
+}) {
+  if (input.healthState === "needs_attention") {
+    return input.colors.error;
+  }
+
+  if (input.healthState === "thriving") {
+    return input.colors.primary;
+  }
+
+  return input.colors.onSurfaceVariant;
 }
 
 function toTitleCase(value: string) {
@@ -53,15 +89,37 @@ function PlantImage({ plant, style }: { plant: PlantListItem; style: object }) {
   );
 }
 
-export function PlantHighlights({ plants }: PlantHighlightsProps) {
+export function PlantHighlights({
+  plants,
+  reminders,
+  logs,
+}: PlantHighlightsProps) {
   const { colors } = useTheme();
-  const featuredPlant = plants[0];
-  const secondaryPlants = plants.slice(1, 3);
-  const leftSecondaryPlant = secondaryPlants[0];
-  const rightSecondaryPlant = secondaryPlants[1];
-  const timelinePlants = plants.slice(0, 5);
+  const selection = useMemo(
+    () => selectPlantHighlights({ plants, reminders, logs }),
+    [logs, plants, reminders],
+  );
+  const featuredItem = selection.featuredPlant;
+  const leftSecondaryItem = selection.secondaryPlants[0];
+  const rightSecondaryItem = selection.secondaryPlants[1];
+  const leftSecondaryPlant = leftSecondaryItem?.plant;
+  const rightSecondaryPlant = rightSecondaryItem?.plant;
+  const timelinePlants = [...plants]
+    .sort(
+      (left, right) => {
+        const updatedAtDiff =
+          new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
 
-  if (!featuredPlant) {
+        if (updatedAtDiff !== 0) {
+          return updatedAtDiff;
+        }
+
+        return left.id.localeCompare(right.id);
+      },
+    )
+    .slice(0, 5);
+
+  if (!featuredItem) {
     return (
       <View style={styles.emptyState}>
         <Text style={[styles.emptyTitle, { color: colors.primary }]}>
@@ -74,6 +132,11 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
       </View>
     );
   }
+
+  const featuredPlant = featuredItem.plant;
+  const featuredStatus = featuredItem.status;
+  const leftSecondaryStatus = leftSecondaryItem?.status ?? null;
+  const rightSecondaryStatus = rightSecondaryItem?.status ?? null;
 
   return (
     <View style={styles.container}>
@@ -89,7 +152,7 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
                 ]}
               >
                 <Text style={[styles.chipLabel, { color: colors.primary }]}>
-                  {getPlantStatus(featuredPlant)}
+                  {getHealthLabel(featuredStatus.healthState)}
                 </Text>
               </View>
             </View>
@@ -119,7 +182,9 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
                   WATER IN
                 </Text>
                 <Text style={[styles.metaValue, { color: colors.onSurface }]}>
-                  {toTitleCase(formatDueLabel(featuredPlant.nextWaterDueAt))}
+                  {toTitleCase(
+                    formatDueLabel(featuredStatus.effectiveNextWateringDate),
+                  )}
                 </Text>
               </View>
             </View>
@@ -156,11 +221,31 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
                     >
                       STATUS
                     </Text>
-                    <Text style={[styles.statusValue, { color: colors.error }]}>
-                      NEEDS
+                    <Text
+                      style={[
+                        styles.statusValue,
+                        {
+                          color: getStatusColor({
+                            colors,
+                            healthState: leftSecondaryStatus!.healthState,
+                          }),
+                        },
+                      ]}
+                    >
+                      {getStackedStatusLabel(leftSecondaryStatus!.healthState)[0]}
                     </Text>
-                    <Text style={[styles.statusValue, { color: colors.error }]}>
-                      ATTENTION
+                    <Text
+                      style={[
+                        styles.statusValue,
+                        {
+                          color: getStatusColor({
+                            colors,
+                            healthState: leftSecondaryStatus!.healthState,
+                          }),
+                        },
+                      ]}
+                    >
+                      {getStackedStatusLabel(leftSecondaryStatus!.healthState)[1]}
                     </Text>
                   </View>
                 </View>
@@ -177,7 +262,7 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
                     ]}
                   >
                     {formatDueLabel(
-                      leftSecondaryPlant.nextWaterDueAt,
+                      leftSecondaryStatus!.effectiveNextWateringDate,
                     ).toUpperCase()}
                   </Text>
                 </View>
@@ -206,7 +291,12 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
                     <View
                       style={[
                         styles.secondaryDotInner,
-                        { backgroundColor: colors.primary },
+                        {
+                          backgroundColor: getStatusColor({
+                            colors,
+                            healthState: rightSecondaryStatus!.healthState,
+                          }),
+                        },
                       ]}
                     />
                   </View>
@@ -224,7 +314,7 @@ export function PlantHighlights({ plants }: PlantHighlightsProps) {
                     ]}
                   >
                     {formatDueLabel(
-                      rightSecondaryPlant.nextWaterDueAt,
+                      rightSecondaryStatus!.effectiveNextWateringDate,
                     ).toUpperCase()}
                   </Text>
                 </View>
