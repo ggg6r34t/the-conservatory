@@ -2,8 +2,7 @@ import { useMemo } from "react";
 
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
@@ -13,6 +12,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import { useSetReminder } from "@/features/notifications/hooks/useSetReminder";
 import { usePlants } from "@/features/plants/hooks/usePlants";
+import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 import { useAlert } from "@/hooks/useAlert";
@@ -89,7 +89,7 @@ function getReminderIcon(reminder?: CareReminder, fallbackDays = 7) {
 
 export default function CareRemindersScreen() {
   const router = useRouter();
-  const { colors, spacing } = useTheme();
+  const { colors } = useTheme();
   const alert = useAlert();
   const snackbar = useSnackbar();
   const { user } = useAuth();
@@ -140,70 +140,13 @@ export default function CareRemindersScreen() {
   );
 
   const remindersEnabled = settingsQuery.data?.remindersEnabled ?? true;
-  const enabledReminderCount = reminderRows.filter(
-    ({ reminder }) => reminder?.enabled ?? remindersEnabled,
-  ).length;
 
   const nextPlantWithoutReminder =
     reminderRows.find(({ reminder }) => !reminder)?.plant ?? null;
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.surface }]}
-    >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingHorizontal: spacing.lg,
-            paddingTop: spacing.lg,
-            paddingBottom: 80,
-          },
-        ]}
-      >
-        <View style={styles.topBar}>
-          <View style={styles.topBarLeft}>
-            <Pressable
-              accessibilityLabel="Go back"
-              accessibilityRole="button"
-              hitSlop={10}
-              onPress={() => router.back()}
-              style={styles.backButton}
-            >
-              <Icon
-                family="MaterialCommunityIcons"
-                name="arrow-left"
-                size={24}
-                color={colors.primary}
-              />
-            </Pressable>
-            <Text style={[styles.topBarTitle, { color: colors.primary }]}>
-              Settings
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.badge,
-              { backgroundColor: colors.secondaryContainer },
-            ]}
-          >
-            <Text style={[styles.badgeText, { color: colors.secondary }]}>
-              {String(enabledReminderCount).padStart(2, "0")}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.hero}>
-          <Text style={[styles.eyebrow, { color: colors.secondary }]}>
-            YOUR SCHEDULE
-          </Text>
-          <Text style={[styles.heroTitle, { color: colors.primary }]}>
-            Reminder Settings
-          </Text>
-        </View>
-
+    <ProfileScreenScaffold title="Care Reminders" subtitle="Your schedule">
+      <View style={styles.content}>
         <View
           style={[
             styles.notificationsCard,
@@ -423,63 +366,14 @@ export default function CareRemindersScreen() {
             }}
           />
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </ProfileScreenScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   content: {
     gap: 24,
-  },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  topBarLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  backButton: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  topBarTitle: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 22,
-    lineHeight: 28,
-  },
-  badge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeText: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 11,
-    letterSpacing: 0.8,
-  },
-  hero: {
-    gap: 10,
-  },
-  eyebrow: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 11,
-    letterSpacing: 2.2,
-  },
-  heroTitle: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 28,
-    lineHeight: 36,
   },
   notificationsCard: {
     borderRadius: 18,
