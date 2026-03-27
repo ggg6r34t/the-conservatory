@@ -93,8 +93,6 @@ export default function MonthlyHighlightsScreen() {
               Highlights
             </Text>
           </View>
-
-          <View style={styles.topBarBadge} />
         </View>
 
         <View style={[styles.introWrap, { paddingHorizontal: spacing.lg }]}>
@@ -160,7 +158,6 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   topBar: {
-    minHeight: 32,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -180,10 +177,6 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSerif_700Bold",
     fontSize: 22,
     lineHeight: 28,
-  },
-  topBarBadge: {
-    width: 32,
-    height: 32,
   },
   introWrap: {
     paddingTop: 4,

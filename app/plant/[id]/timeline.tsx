@@ -304,28 +304,37 @@ export default function GrowthTimelineScreen() {
           },
         ]}
       >
-        <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            hitSlop={10}
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Icon name="arrow-left" size={20} color={colors.primary} />
-          </Pressable>
-          <Text style={[styles.topBarTitle, { color: colors.primary }]}>
-            Growth Progress
-          </Text>
-        </View>
+        <View style={{ gap: 20 }}>
+          <View style={styles.topBar}>
+            <View style={styles.topBarLeft}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                hitSlop={10}
+                onPress={() => router.back()}
+                style={styles.backButton}
+              >
+                <Icon
+                  family="MaterialCommunityIcons"
+                  name="arrow-left"
+                  size={24}
+                  color={colors.primary}
+                />
+              </Pressable>
+              <Text style={[styles.topBarTitle, { color: colors.primary }]}>
+                Growth Progress
+              </Text>
+            </View>
+          </View>
 
-        <View style={styles.pageIntro}>
-          <Text style={[styles.pageEyebrow, { color: colors.secondary }]}>
-            WITNESS THE JOURNEY
-          </Text>
-          <Text style={[styles.pageTitle, { color: colors.primary }]}>
-            {plant?.name ?? "Untitled Plant"}
-          </Text>
+          <View style={styles.hero}>
+            <Text style={[styles.eyebrow, { color: colors.secondary }]}>
+              WITNESS THE JOURNEY
+            </Text>
+            <Text style={[styles.heroTitle, { color: colors.primary }]}>
+              {plant?.name ?? "Untitled Plant"}
+            </Text>
+          </View>
         </View>
 
         {timelineMoments.length > 0 ? (
@@ -472,7 +481,12 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
+  },
+  topBarLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   backButton: {
     width: 32,
@@ -485,18 +499,19 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 28,
   },
-  pageIntro: {
-    gap: 4,
+  hero: {
+    gap: 10,
   },
-  pageEyebrow: {
+  eyebrow: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 11,
-    letterSpacing: 2.8,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 2.4,
   },
-  pageTitle: {
+  heroTitle: {
     fontFamily: "NotoSerif_700Bold",
-    fontSize: 38,
-    lineHeight: 46,
+    fontSize: 40,
+    lineHeight: 50,
   },
   filmstripSection: {
     marginTop: -2,

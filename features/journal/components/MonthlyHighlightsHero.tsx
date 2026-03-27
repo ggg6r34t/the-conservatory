@@ -3,17 +3,17 @@ import { StyleSheet, Text, View } from "react-native";
 import { useTheme } from "@/components/design-system/useTheme";
 
 export function MonthlyHighlightsHero() {
-  const { colors, spacing } = useTheme();
+  const { colors } = useTheme();
 
   return (
-    <View style={[styles.container, { gap: spacing.lg }]}>
+    <View style={styles.hero}>
       <Text style={[styles.eyebrow, { color: colors.secondary }]}>
         COLLECTION ARCHIVE
       </Text>
-      <Text style={[styles.title, { color: colors.primary }]}>
+      <Text style={[styles.heroTitle, { color: colors.primary }]}>
         Monthly{"\n"}Highlights
       </Text>
-      <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
+      <Text style={[styles.description, { color: colors.onSurfaceVariant }]}>
         A curated visual record of your collection&apos;s growth and seasonal
         shifts.
       </Text>
@@ -22,21 +22,24 @@ export function MonthlyHighlightsHero() {
 }
 
 const styles = StyleSheet.create({
-  container: {},
+  hero: {
+    gap: 10,
+  },
   eyebrow: {
     fontFamily: "Manrope_700Bold",
     fontSize: 12,
     lineHeight: 16,
-    letterSpacing: 3,
+    letterSpacing: 2.4,
   },
-  title: {
+  heroTitle: {
     fontFamily: "NotoSerif_700Bold",
-    fontSize: 32,
-    lineHeight: 40,
+    fontSize: 40,
+    lineHeight: 50,
   },
-  body: {
+  description: {
     fontFamily: "Manrope_500Medium",
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 28,
+    maxWidth: 340,
   },
 });

@@ -13,12 +13,12 @@ export function PlantActivityHero({ plant, photo }: PlantActivityHeroProps) {
   const { colors, spacing } = useTheme();
 
   return (
-    <View style={[styles.container, { gap: spacing.lg }]}>
-      <View style={styles.copy}>
+    <View style={{ gap: spacing.lg }}>
+      <View style={styles.hero}>
         <Text style={[styles.eyebrow, { color: colors.secondary }]}>
           CHRONICLE
         </Text>
-        <Text style={[styles.title, { color: colors.primary }]}>
+        <Text style={[styles.heroTitle, { color: colors.primary }]}>
           {plant.speciesName}
         </Text>
       </View>
@@ -57,20 +57,19 @@ export function PlantActivityHero({ plant, photo }: PlantActivityHeroProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {},
-  copy: {
+  hero: {
     gap: 10,
   },
   eyebrow: {
     fontFamily: "Manrope_700Bold",
     fontSize: 12,
     lineHeight: 16,
-    letterSpacing: 3,
+    letterSpacing: 2.4,
   },
-  title: {
+  heroTitle: {
     fontFamily: "NotoSerif_700Bold",
-    fontSize: 32,
-    lineHeight: 38,
+    fontSize: 40,
+    lineHeight: 50,
   },
   imageFrame: {
     width: "100%",
