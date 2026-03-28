@@ -53,6 +53,9 @@ describe("database migrations integrity", () => {
     expect(bootstrapSql).toContain(
       "CREATE TABLE IF NOT EXISTS graveyard_plants",
     );
+    expect(bootstrapSql).toContain("photo_role TEXT NOT NULL DEFAULT 'progress'");
+    expect(bootstrapSql).toContain("captured_at TEXT");
+    expect(bootstrapSql).toContain("caption TEXT");
   });
 
   it("rebuilds child tables with FK constraints when legacy schema has no foreign keys", async () => {
@@ -83,6 +86,9 @@ describe("database migrations integrity", () => {
     expect(executedSql).toContain(
       "ALTER TABLE graveyard_plants_v2 RENAME TO graveyard_plants",
     );
+    expect(executedSql).toContain("photo_role");
+    expect(executedSql).toContain("captured_at");
+    expect(executedSql).toContain("caption");
   });
 
   it("skips table rebuild when all required cascade foreign keys already exist", async () => {

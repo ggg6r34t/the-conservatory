@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
@@ -11,9 +11,11 @@ import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHe
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import { AddProgressPhotoSheet } from "@/features/plants/components/AddProgressPhotoSheet";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
+import { buildGrowthTimeline } from "@/features/plants/services/growthTimelineService";
 import {
   capturePlantImage,
   pickPlantImage,
+  type PlantImageAsset,
 } from "@/features/plants/services/photoService";
 import {
   buildPlantActivitySections,
@@ -255,19 +257,17 @@ export function PlantDetail({ data }: PlantDetailProps) {
   const status = getPlantStatus(data.plant);
   const careGuide = buildCareGuide(data.plant);
   const recentActivity = buildRecentActivity(data);
-  const growthPhotos = data.photos.filter(
-    (photo) => photo.localUri || photo.remoteUrl,
+  const growthTimeline = useMemo(() => buildGrowthTimeline(data), [data]);
+  const growthPhotos = useMemo(
+    () => growthTimeline.slice(-3).reverse(),
+    [growthTimeline],
   );
 
-  while (growthPhotos.length < 3 && primaryPhoto) {
-    growthPhotos.push(primaryPhoto);
-  }
-
-  const applyPhotoUpdate = async (photoUri: string) => {
+  const applyPhotoUpdate = async (photo: PlantImageAsset) => {
     setIsUploadingPhoto(true);
 
     try {
-      await addPlantProgressPhoto.mutateAsync(photoUri);
+      await addPlantProgressPhoto.mutateAsync(photo);
       snackbar.success("Progress photo saved successfully.");
     } catch (error) {
       void alert.show({
@@ -294,7 +294,7 @@ export function PlantDetail({ data }: PlantDetailProps) {
         return;
       }
 
-      await applyPhotoUpdate(asset.uri);
+      await applyPhotoUpdate(asset);
     } catch (error) {
       void alert.show({
         variant: "error",
@@ -314,7 +314,7 @@ export function PlantDetail({ data }: PlantDetailProps) {
         return;
       }
 
-      await applyPhotoUpdate(asset.uri);
+      await applyPhotoUpdate(asset);
     } catch (error) {
       void alert.show({
         variant: "error",
@@ -677,10 +677,33 @@ export function PlantDetail({ data }: PlantDetailProps) {
         </View>
 
         <View style={styles.growthGrid}>
-          {growthPhotos.slice(0, 3).map((photo, index) => (
-            <View key={`${photo.id}-${index}`} style={styles.growthPhotoWrap}>
+          {growthPhotos.length === 0 ? (
+            <View
+              style={[
+                styles.growthEmptyCard,
+                { backgroundColor: colors.surfaceContainerLow },
+              ]}
+            >
+              <Text
+                style={[styles.growthEmptyTitle, { color: colors.onSurface }]}
+              >
+                No progress photos yet
+              </Text>
+              <Text
+                style={[
+                  styles.growthEmptyBody,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
+                Add a progress photo to start this plant&apos;s visual record.
+              </Text>
+            </View>
+          ) : null}
+
+          {growthPhotos.map((item) => (
+            <View key={item.id} style={styles.growthPhotoWrap}>
               <Image
-                source={{ uri: photo.localUri ?? photo.remoteUrl ?? undefined }}
+                source={{ uri: item.imageUri }}
                 style={styles.growthPhoto}
                 contentFit="cover"
               />
@@ -962,6 +985,24 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 12,
     justifyContent: "space-between",
+  },
+  growthEmptyCard: {
+    width: "100%",
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    gap: 6,
+  },
+  growthEmptyTitle: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 13,
+    lineHeight: 18,
+    letterSpacing: 0.6,
+  },
+  growthEmptyBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 20,
   },
   growthPhotoWrap: {
     width: "47%",

@@ -17,7 +17,10 @@ jest.mock("expo-blur", () => ({
 }));
 
 jest.mock("expo-image", () => ({
-  Image: () => null,
+  Image: ({ source }: { source?: { uri?: string } }) => {
+    const { Text } = require("react-native");
+    return <Text>{source?.uri ?? "image"}</Text>;
+  },
 }));
 
 jest.mock("@/components/common/Icon/Icon", () => ({
@@ -144,5 +147,67 @@ describe("PlantDetail recent activity", () => {
     fireEvent.press(screen.getByText("VIEW ALL"));
 
     expect(mockPush).toHaveBeenCalledWith("/plant/plant-1/activity");
+  });
+
+  it("renders only real progress photos in Growth Progress without duplicating the primary image", () => {
+    renderWithProviders(
+      <PlantDetail
+        data={{
+          ...baseFixture,
+          photos: [
+            {
+              id: "photo-primary",
+              userId: "user-1",
+              plantId: "plant-1",
+              localUri: "file:///primary.jpg",
+              photoRole: "primary",
+              isPrimary: 1,
+              capturedAt: "2026-03-01T10:00:00.000Z",
+              createdAt: "2026-03-01T10:00:00.000Z",
+              updatedAt: "2026-03-01T10:00:00.000Z",
+              pending: 0,
+            },
+            {
+              id: "photo-progress-1",
+              userId: "user-1",
+              plantId: "plant-1",
+              localUri: "file:///progress-1.jpg",
+              photoRole: "progress",
+              isPrimary: 0,
+              capturedAt: "2026-03-02T10:00:00.000Z",
+              createdAt: "2026-03-02T10:00:00.000Z",
+              updatedAt: "2026-03-02T10:00:00.000Z",
+              pending: 0,
+            },
+            {
+              id: "photo-progress-2",
+              userId: "user-1",
+              plantId: "plant-1",
+              localUri: "file:///progress-2.jpg",
+              photoRole: "progress",
+              isPrimary: 0,
+              capturedAt: "2026-03-03T10:00:00.000Z",
+              createdAt: "2026-03-03T10:00:00.000Z",
+              updatedAt: "2026-03-03T10:00:00.000Z",
+              pending: 0,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("file:///primary.jpg")).toBeTruthy();
+    expect(screen.getByText("file:///progress-1.jpg")).toBeTruthy();
+    expect(screen.getByText("file:///progress-2.jpg")).toBeTruthy();
+    expect(screen.queryAllByText("file:///primary.jpg")).toHaveLength(1);
+  });
+
+  it("renders an intentional empty growth state when no progress photos exist", () => {
+    renderWithProviders(<PlantDetail data={baseFixture} />);
+
+    expect(screen.getByText("No progress photos yet")).toBeTruthy();
+    expect(
+      screen.getByText("Add a progress photo to start this plant's visual record."),
+    ).toBeTruthy();
   });
 });

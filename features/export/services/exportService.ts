@@ -1,4 +1,4 @@
-import * as FileSystem from "expo-file-system";
+import { Directory, File, Paths } from "expo-file-system";
 
 import { getDatabase } from "@/services/database/sqlite";
 import type {
@@ -98,7 +98,10 @@ interface PhotoRow {
   mime_type: string | null;
   width: number | null;
   height: number | null;
+  photo_role: "primary" | "progress" | null;
+  captured_at: string | null;
   taken_at: string | null;
+  caption: string | null;
   is_primary: number;
   created_at: string;
   updated_at: string;
@@ -205,7 +208,10 @@ function mapPhoto(row: PhotoRow): Photo {
     mimeType: row.mime_type,
     width: row.width,
     height: row.height,
+    photoRole: row.photo_role ?? (row.is_primary === 1 ? "primary" : "progress"),
+    capturedAt: row.captured_at,
     takenAt: row.taken_at,
+    caption: row.caption,
     isPrimary: row.is_primary,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -400,25 +406,19 @@ export async function exportCollectionData(user: AppUser): Promise<ExportResult>
     throw new Error("There isn't any collection data to export yet.");
   }
 
-  const baseDirectory = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
-  if (!baseDirectory) {
-    throw new Error("A safe export location isn't available on this device right now.");
-  }
-
-  const exportDirectory = `${baseDirectory}exports`;
-  await FileSystem.makeDirectoryAsync(exportDirectory, { intermediates: true });
-
   const fileName = buildFileName(new Date());
-  const fileUri = `${exportDirectory}/${fileName}`;
-  await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(payload, null, 2), {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  const exportDirectory = new Directory(Paths.document, "exports");
+  exportDirectory.create({ idempotent: true, intermediates: true });
+
+  const exportFile = new File(exportDirectory, fileName);
+  exportFile.create({ intermediates: true, overwrite: true });
+  exportFile.write(JSON.stringify(payload, null, 2));
 
   return {
     fileName,
-    fileUri,
+    fileUri: exportFile.uri,
     summary,
-    shared: await shareExportFile(fileUri),
+    shared: await shareExportFile(exportFile.uri),
   };
 }
 

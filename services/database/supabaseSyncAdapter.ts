@@ -216,7 +216,10 @@ async function loadPhotoRecord(entityId: string) {
     mime_type: string | null;
     width: number | null;
     height: number | null;
+    photo_role: "primary" | "progress" | null;
+    captured_at: string | null;
     taken_at: string | null;
+    caption: string | null;
     is_primary: number;
     created_at: string;
     updated_at: string;
@@ -244,7 +247,10 @@ async function loadPhotoRecord(entityId: string) {
     mime_type: row.mime_type,
     width: row.width,
     height: row.height,
+    photo_role: row.photo_role ?? (row.is_primary === 1 ? "primary" : "progress"),
+    captured_at: row.captured_at ?? row.taken_at ?? row.created_at,
     taken_at: row.taken_at,
+    caption: row.caption,
     is_primary: Boolean(row.is_primary),
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -445,7 +451,10 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
         mime_type: row.mime_type,
         width: row.width,
         height: row.height,
+        photo_role: row.photo_role,
+        captured_at: row.captured_at,
         taken_at: row.taken_at,
+        caption: row.caption,
         is_primary: row.is_primary,
         created_at: row.created_at,
         updated_at: row.updated_at,

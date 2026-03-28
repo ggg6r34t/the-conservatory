@@ -67,7 +67,10 @@ interface RemotePhotoRow extends MergeableRemoteRow {
   mime_type: string | null;
   width: number | null;
   height: number | null;
+  photo_role: "primary" | "progress" | null;
+  captured_at: string | null;
   taken_at: string | null;
+  caption: string | null;
   is_primary: boolean;
   created_at: string;
 }
@@ -164,11 +167,15 @@ async function fetchRemotePhotos(userId: string) {
       "id",
       "user_id",
       "plant_id",
+      "remote_url",
       "storage_path",
       "mime_type",
       "width",
       "height",
+      "photo_role",
+      "captured_at",
       "taken_at",
+      "caption",
       "is_primary",
       "created_at",
       "updated_at",
@@ -187,7 +194,7 @@ function logRemoteHydrationConflict(meta: ConflictLogMeta) {
     return;
   }
 
-  logger.info("sync.conflict.observed", meta);
+  logger.info("sync.conflict.observed", { ...meta });
 }
 
 async function shouldReplaceLocalUserPreferences(
@@ -231,6 +238,7 @@ async function shouldReplaceLocalUserPreferences(
     entityId: userId,
     winner: result.winner,
     ...telemetry,
+    source: "remote-hydration",
   });
 
   return result.winner === "remote";
@@ -277,6 +285,7 @@ async function shouldReplaceLocalRow(
     entityId: row.id,
     winner: result.winner,
     ...telemetry,
+    source: "remote-hydration",
   });
 
   return result.winner === "remote";
@@ -516,9 +525,9 @@ export async function hydrateRemoteUserData(userId: string) {
       await database.runAsync(
         `INSERT OR REPLACE INTO photos (
           id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type,
-          width, height, taken_at, is_primary, created_at, updated_at, pending,
+          width, height, photo_role, captured_at, taken_at, caption, is_primary, created_at, updated_at, pending,
           synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         row.id,
         row.user_id,
         row.plant_id,
@@ -528,7 +537,10 @@ export async function hydrateRemoteUserData(userId: string) {
         row.mime_type,
         row.width,
         row.height,
+        row.photo_role ?? (row.is_primary ? "primary" : "progress"),
+        row.captured_at ?? row.taken_at ?? row.created_at,
         row.taken_at,
+        row.caption ?? null,
         row.is_primary ? 1 : 0,
         row.created_at,
         row.updated_at,

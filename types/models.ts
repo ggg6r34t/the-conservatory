@@ -66,7 +66,10 @@ export interface Photo {
   mimeType?: string | null;
   width?: number | null;
   height?: number | null;
+  photoRole?: "primary" | "progress" | null;
+  capturedAt?: string | null;
   takenAt?: string | null;
+  caption?: string | null;
   isPrimary: number;
   createdAt: string;
   updatedAt: string;

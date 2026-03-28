@@ -17,6 +17,10 @@ export function useAddPlant() {
       wateringIntervalDays: number;
       notes?: string;
       photoUri?: string;
+      photoCapturedAt?: string;
+      photoMimeType?: string;
+      photoWidth?: number | null;
+      photoHeight?: number | null;
     }) =>
       createPlant({
         userId: user!.id,

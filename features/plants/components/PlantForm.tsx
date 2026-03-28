@@ -176,6 +176,10 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
     wateringIntervalDays: initialValues?.wateringIntervalDays ?? 7,
     notes: normalizeNotes(initialValues?.notes),
     photoUri: initialValues?.photoUri,
+    photoCapturedAt: initialValues?.photoCapturedAt,
+    photoMimeType: initialValues?.photoMimeType,
+    photoWidth: initialValues?.photoWidth,
+    photoHeight: initialValues?.photoHeight,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const speciesSuggestionQuery = useSpeciesSuggestion(values.photoUri);
@@ -242,6 +246,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
       !initialValues?.nickname &&
       !initialValues?.location &&
       !initialValues?.photoUri &&
+      !initialValues?.photoCapturedAt &&
       initialValues?.wateringIntervalDays == null &&
       !initialValues?.notes
     ) {
@@ -256,6 +261,10 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
       wateringIntervalDays: initialValues?.wateringIntervalDays ?? 7,
       notes: normalizeNotes(initialValues?.notes),
       photoUri: initialValues?.photoUri,
+      photoCapturedAt: initialValues?.photoCapturedAt,
+      photoMimeType: initialValues?.photoMimeType,
+      photoWidth: initialValues?.photoWidth,
+      photoHeight: initialValues?.photoHeight,
     });
     lastHydratedEditPlantId.current = plantId;
   }, [initialValues, mode, plantId]);
@@ -295,7 +304,14 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
         return;
       }
 
-      setValues((current) => ({ ...current, photoUri: asset.uri }));
+      setValues((current) => ({
+        ...current,
+        photoUri: asset.uri,
+        photoCapturedAt: asset.capturedAt ?? undefined,
+        photoMimeType: asset.mimeType ?? undefined,
+        photoWidth: asset.width ?? undefined,
+        photoHeight: asset.height ?? undefined,
+      }));
     } catch (error) {
       void alert.show({
         variant: "error",

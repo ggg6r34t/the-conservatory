@@ -17,6 +17,10 @@ export function useUpdatePlant(plantId: string) {
       wateringIntervalDays: number;
       notes?: string;
       photoUri?: string;
+      photoCapturedAt?: string;
+      photoMimeType?: string;
+      photoWidth?: number | null;
+      photoHeight?: number | null;
     }) =>
       updatePlant({
         userId: user!.id,

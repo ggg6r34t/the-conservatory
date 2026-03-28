@@ -136,7 +136,10 @@ describe("supabase sync adapter", () => {
         mime_type: "image/jpeg",
         width: null,
         height: null,
+        photo_role: "progress",
+        captured_at: "2026-03-20T09:00:00.000Z",
         taken_at: null,
+        caption: "Early growth",
         is_primary: 1,
         created_at: "2026-03-21T10:00:00.000Z",
         updated_at: "2026-03-21T10:00:00.000Z",
@@ -178,6 +181,9 @@ describe("supabase sync adapter", () => {
       expect.objectContaining({
         id: "photo-1",
         storage_path: "user-1/plant-1/photo-1.jpg",
+        photo_role: "progress",
+        captured_at: "2026-03-20T09:00:00.000Z",
+        caption: "Early growth",
       }),
       { onConflict: "id" },
     );

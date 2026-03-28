@@ -64,7 +64,10 @@ CREATE TABLE IF NOT EXISTS photos (
   mime_type TEXT,
   width INTEGER,
   height INTEGER,
+  photo_role TEXT NOT NULL DEFAULT 'progress',
+  captured_at TEXT,
   taken_at TEXT,
+  caption TEXT,
   is_primary INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
@@ -227,7 +230,10 @@ CREATE TABLE IF NOT EXISTS photos_v2 (
   mime_type TEXT,
   width INTEGER,
   height INTEGER,
+  photo_role TEXT NOT NULL DEFAULT 'progress',
+  captured_at TEXT,
   taken_at TEXT,
+  caption TEXT,
   is_primary INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
@@ -239,12 +245,18 @@ CREATE TABLE IF NOT EXISTS photos_v2 (
 
 INSERT INTO photos_v2 (
   id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type,
-  width, height, taken_at, is_primary, created_at, updated_at,
+  width, height, photo_role, captured_at, taken_at, caption, is_primary, created_at, updated_at,
   pending, synced_at, sync_error
 )
 SELECT
   id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type,
-  width, height, taken_at, is_primary, created_at, updated_at,
+  width, height,
+  CASE WHEN is_primary = 1 THEN 'primary' ELSE 'progress' END,
+  COALESCE(taken_at, created_at),
+  taken_at,
+  NULL,
+  is_primary,
+  created_at, updated_at,
   pending, synced_at, sync_error
 FROM photos;
 
@@ -373,6 +385,18 @@ async function ensurePlantChildForeignKeys(database: SQLiteDatabase) {
   await rebuildPlantChildTablesWithForeignKeys(database);
 }
 
+async function backfillPhotoTimelineMetadata(database: SQLiteDatabase) {
+  await database.execAsync(`
+UPDATE photos
+SET photo_role = CASE WHEN is_primary = 1 THEN 'primary' ELSE 'progress' END
+WHERE photo_role IS NULL OR TRIM(photo_role) = '';
+
+UPDATE photos
+SET captured_at = COALESCE(captured_at, taken_at, created_at)
+WHERE captured_at IS NULL;
+`);
+}
+
 export async function runDatabaseMigrations(database: SQLiteDatabase) {
   await database.execAsync(bootstrapSql);
   await database.execAsync("PRAGMA foreign_keys = ON;");
@@ -386,4 +410,13 @@ export async function runDatabaseMigrations(database: SQLiteDatabase) {
   await ensureColumn(database, "user_preferences", "sync_error", "TEXT");
   await ensureColumn(database, "care_logs", "current_condition", "TEXT");
   await ensurePlantChildForeignKeys(database);
+  await ensureColumn(
+    database,
+    "photos",
+    "photo_role",
+    "TEXT NOT NULL DEFAULT 'progress'",
+  );
+  await ensureColumn(database, "photos", "captured_at", "TEXT");
+  await ensureColumn(database, "photos", "caption", "TEXT");
+  await backfillPhotoTimelineMetadata(database);
 }

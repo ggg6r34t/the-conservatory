@@ -73,7 +73,10 @@ interface PhotoRow {
   mime_type: string | null;
   width: number | null;
   height: number | null;
+  photo_role: "primary" | "progress" | null;
+  captured_at: string | null;
   taken_at: string | null;
+  caption: string | null;
   is_primary: number;
   created_at: string;
   updated_at: string;
@@ -133,7 +136,11 @@ function toPhoto(row: PhotoRow): Photo {
     mimeType: row.mime_type,
     width: row.width,
     height: row.height,
+    photoRole:
+      row.photo_role ?? (row.is_primary === 1 ? "primary" : "progress"),
+    capturedAt: row.captured_at,
     takenAt: row.taken_at,
+    caption: row.caption,
     isPrimary: row.is_primary,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -313,7 +320,10 @@ export async function listGraveyardPlants(userId: string) {
       mime_type: photo.mimeType ?? null,
       width: photo.width ?? null,
       height: photo.height ?? null,
+      photo_role: photo.photoRole ?? (photo.isPrimary === 1 ? "primary" : "progress"),
+      captured_at: photo.capturedAt ?? null,
       taken_at: photo.takenAt ?? null,
+      caption: photo.caption ?? null,
       is_primary: photo.isPrimary,
       created_at: photo.createdAt,
       updated_at: photo.updatedAt,
@@ -402,7 +412,10 @@ export async function listPlants(input: {
       mime_type: photo.mimeType ?? null,
       width: photo.width ?? null,
       height: photo.height ?? null,
+      photo_role: photo.photoRole ?? (photo.isPrimary === 1 ? "primary" : "progress"),
+      captured_at: photo.capturedAt ?? null,
       taken_at: photo.takenAt ?? null,
+      caption: photo.caption ?? null,
       is_primary: photo.isPrimary,
       created_at: photo.createdAt,
       updated_at: photo.updatedAt,
@@ -605,6 +618,10 @@ export async function createPlant(input: {
   wateringIntervalDays: number;
   notes?: string;
   photoUri?: string;
+  photoCapturedAt?: string;
+  photoMimeType?: string;
+  photoWidth?: number | null;
+  photoHeight?: number | null;
 }) {
   const database = await getDatabase();
   const now = new Date().toISOString();
@@ -677,18 +694,21 @@ export async function createPlant(input: {
         await database.runAsync(
           `INSERT INTO photos (
             id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
-            taken_at, is_primary, created_at, updated_at, pending, synced_at, sync_error
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+            photo_role, captured_at, taken_at, caption, is_primary, created_at, updated_at, pending, synced_at, sync_error
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
           photoId,
           input.userId,
           plantId,
           input.photoUri,
           null,
           storagePath,
-          "image/jpeg",
-          null,
-          null,
+          input.photoMimeType ?? "image/jpeg",
+          input.photoWidth ?? null,
+          input.photoHeight ?? null,
+          "primary",
+          input.photoCapturedAt ?? transactionNowIso,
           transactionNowIso,
+          null,
           1,
           transactionNowIso,
           transactionNowIso,
@@ -731,6 +751,10 @@ export async function addPlantProgressPhoto(input: {
   userId: string;
   plantId: string;
   photoUri: string;
+  capturedAt?: string | null;
+  mimeType?: string | null;
+  width?: number | null;
+  height?: number | null;
 }) {
   const database = await getDatabase();
   const current = await getPlantById(input.userId, input.plantId);
@@ -753,18 +777,21 @@ export async function addPlantProgressPhoto(input: {
       await database.runAsync(
         `INSERT INTO photos (
           id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
-          taken_at, is_primary, created_at, updated_at, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+          photo_role, captured_at, taken_at, caption, is_primary, created_at, updated_at, pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         photoId,
         input.userId,
         input.plantId,
         input.photoUri,
         null,
         storagePath,
-        "image/jpeg",
-        null,
-        null,
+        input.mimeType ?? "image/jpeg",
+        input.width ?? null,
+        input.height ?? null,
+        "progress",
+        input.capturedAt ?? transactionNowIso,
         transactionNowIso,
+        null,
         0,
         transactionNowIso,
         transactionNowIso,
@@ -804,6 +831,10 @@ export async function updatePlant(input: {
     wateringIntervalDays: number;
     notes?: string;
     photoUri?: string;
+    photoCapturedAt?: string;
+    photoMimeType?: string;
+    photoWidth?: number | null;
+    photoHeight?: number | null;
   };
 }) {
   const database = await getDatabase();
@@ -872,11 +903,15 @@ export async function updatePlant(input: {
               input.patch.photoUri,
             );
           await database.runAsync(
-            "UPDATE photos SET local_uri = ?, remote_url = ?, storage_path = ?, mime_type = ?, updated_at = ?, pending = 1 WHERE id = ?;",
+            "UPDATE photos SET local_uri = ?, remote_url = ?, storage_path = ?, mime_type = ?, width = ?, height = ?, photo_role = ?, captured_at = COALESCE(?, captured_at), updated_at = ?, pending = 1 WHERE id = ?;",
             input.patch.photoUri,
             null,
             storagePath,
-            "image/jpeg",
+            input.patch.photoMimeType ?? "image/jpeg",
+            input.patch.photoWidth ?? null,
+            input.patch.photoHeight ?? null,
+            "primary",
+            input.patch.photoCapturedAt ?? null,
             transactionNowIso,
             existingPhoto.id,
           );
@@ -901,18 +936,21 @@ export async function updatePlant(input: {
           await database.runAsync(
             `INSERT INTO photos (
               id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
-              taken_at, is_primary, created_at, updated_at, pending, synced_at, sync_error
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+              photo_role, captured_at, taken_at, caption, is_primary, created_at, updated_at, pending, synced_at, sync_error
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
             photoId,
             input.userId,
             input.plantId,
             input.patch.photoUri,
             null,
             storagePath,
-            "image/jpeg",
-            null,
-            null,
+            input.patch.photoMimeType ?? "image/jpeg",
+            input.patch.photoWidth ?? null,
+            input.patch.photoHeight ?? null,
+            "primary",
+            input.patch.photoCapturedAt ?? transactionNowIso,
             transactionNowIso,
+            null,
             1,
             transactionNowIso,
             transactionNowIso,

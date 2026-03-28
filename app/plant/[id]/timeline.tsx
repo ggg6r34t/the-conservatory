@@ -18,188 +18,18 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
-import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
 import { AddProgressPhotoSheet } from "@/features/plants/components/AddProgressPhotoSheet";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
 import { usePlant } from "@/features/plants/hooks/usePlant";
+import { buildGrowthTimeline } from "@/features/plants/services/growthTimelineService";
 import {
   capturePlantImage,
   pickPlantImage,
+  type PlantImageAsset,
 } from "@/features/plants/services/photoService";
 import { useAlert } from "@/hooks/useAlert";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import { useSnackbar } from "@/hooks/useSnackbar";
-import type { CareLog, Photo, PlantWithRelations } from "@/types/models";
-
-type TimelineMoment = {
-  id: string;
-  imageUri: string;
-  timestamp: string;
-  dateChip: string;
-  headline: string;
-  body: string;
-};
-
-function resolvePhotoUri(photo: Photo | undefined) {
-  if (!photo) {
-    return null;
-  }
-  if (photo.remoteUrl) {
-    return photo.remoteUrl;
-  }
-  if (photo.localUri) {
-    return photo.localUri;
-  }
-  return null;
-}
-
-function formatTimelineDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "2-digit",
-    year: "numeric",
-  })
-    .format(new Date(value))
-    .toUpperCase();
-}
-
-function buildTimelineTitle(log: CareLog | null, index: number) {
-  if (!log) {
-    if (index === 0) {
-      return "The latest chapter";
-    }
-    if (index === 1) {
-      return "A new support system";
-    }
-    return "Arrival from the nursery";
-  }
-
-  switch (log.logType) {
-    case "water":
-      return "Hydration check-in";
-    case "mist":
-      return "Humidity window";
-    case "feed":
-      return "Nourishment day";
-    case "repot":
-      return "Fresh soil reset";
-    case "prune":
-      return "Shaping and balance";
-    case "inspect":
-      return "Close observation";
-    case "pest":
-      return "Recovery update";
-    case "note":
-    default:
-      return "A growth note";
-  }
-}
-
-function buildTimelineBody(input: {
-  log: CareLog | null;
-  plantName: string;
-  speciesName: string;
-  plantNotes?: string | null;
-}) {
-  const parsedNote = parseStructuredCareLogNote(input.log?.notes);
-  if (parsedNote.body) {
-    return parsedNote.body;
-  }
-
-  if (input.log) {
-    switch (input.log.logType) {
-      case "water":
-        return `${input.plantName} was watered deeply and left to settle into its regular rhythm.`;
-      case "mist":
-        return `${input.plantName} was lightly misted to keep foliage fresh and humidity stable.`;
-      case "feed":
-        return `${input.plantName} was fed to support stronger and more consistent growth.`;
-      case "repot":
-        return `${input.plantName} moved into a roomier pot with fresh mix to support root expansion.`;
-      case "prune":
-        return `${input.plantName} was pruned with care to shape growth and redirect energy.`;
-      case "inspect":
-        return `${input.plantName} was inspected for leaf health, stem condition, and overall vigor.`;
-      case "pest":
-        return `${input.plantName} received extra treatment and close follow-up monitoring.`;
-      case "note":
-      default:
-        return `A new observation was recorded for ${input.plantName} at this stage.`;
-    }
-  }
-
-  if (input.plantNotes?.trim()) {
-    return input.plantNotes.trim();
-  }
-
-  return `${input.plantName} continues its ${input.speciesName.toLowerCase()} journey, one frame at a time.`;
-}
-
-function findClosestLog(logs: CareLog[], timestamp: string) {
-  const targetTime = new Date(timestamp).getTime();
-  const maxDistance = 1000 * 60 * 60 * 24 * 21;
-  let bestMatch: CareLog | null = null;
-  let bestDistance = Number.POSITIVE_INFINITY;
-
-  for (const log of logs) {
-    const distance = Math.abs(new Date(log.loggedAt).getTime() - targetTime);
-    if (distance <= maxDistance && distance < bestDistance) {
-      bestMatch = log;
-      bestDistance = distance;
-    }
-  }
-
-  return bestMatch;
-}
-
-function buildTimelineMoments(data: PlantWithRelations | null | undefined) {
-  if (!data) {
-    return [] as TimelineMoment[];
-  }
-
-  const logs = [...data.logs].sort((left, right) =>
-    right.loggedAt.localeCompare(left.loggedAt),
-  );
-
-  return data.photos
-    .map((photo) => {
-      const imageUri = resolvePhotoUri(photo);
-      const timestamp = photo.takenAt ?? photo.updatedAt ?? photo.createdAt;
-
-      if (!imageUri) {
-        return null;
-      }
-
-      return { photo, imageUri, timestamp };
-    })
-    .filter(
-      (
-        item,
-      ): item is {
-        photo: Photo;
-        imageUri: string;
-        timestamp: string;
-      } => item !== null,
-    )
-    .sort((left, right) => right.timestamp.localeCompare(left.timestamp))
-    .map((item, index) => {
-      const matchedLog = findClosestLog(logs, item.timestamp);
-
-      return {
-        id: item.photo.id,
-        imageUri: item.imageUri,
-        timestamp: item.timestamp,
-        dateChip: formatTimelineDate(item.timestamp),
-        headline: buildTimelineTitle(matchedLog, index),
-        body: buildTimelineBody({
-          log: matchedLog,
-          plantName: data.plant.name,
-          speciesName: data.plant.speciesName,
-          plantNotes: data.plant.notes,
-        }),
-      };
-    });
-}
 
 export default function GrowthTimelineScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -219,17 +49,17 @@ export default function GrowthTimelineScreen() {
     getFloatingActionBottomOffset(insets.bottom) - insets.bottom;
 
   const timelineMoments = useMemo(
-    () => buildTimelineMoments(plantQuery.data ?? null),
+    () => buildGrowthTimeline(plantQuery.data ?? null),
     [plantQuery.data],
   );
 
   const plant = plantQuery.data?.plant ?? null;
 
-  const applyPhotoUpdate = async (photoUri: string) => {
+  const applyPhotoUpdate = async (photo: PlantImageAsset) => {
     setIsUploadingPhoto(true);
 
     try {
-      await addPlantProgressPhoto.mutateAsync(photoUri);
+      await addPlantProgressPhoto.mutateAsync(photo);
       snackbar.success("Progress photo saved successfully.");
     } catch (error) {
       void alert.show({
@@ -251,7 +81,7 @@ export default function GrowthTimelineScreen() {
       if (!asset) {
         return;
       }
-      await applyPhotoUpdate(asset.uri);
+      await applyPhotoUpdate(asset);
     } catch (error) {
       void alert.show({
         variant: "error",
@@ -270,7 +100,7 @@ export default function GrowthTimelineScreen() {
       if (!asset) {
         return;
       }
-      await applyPhotoUpdate(asset.uri);
+      await applyPhotoUpdate(asset);
     } catch (error) {
       void alert.show({
         variant: "error",
@@ -380,15 +210,17 @@ export default function GrowthTimelineScreen() {
                         { color: colors.secondaryContainer },
                       ]}
                     >
-                      {moment.dateChip}
+                      {moment.dateLabel}
                     </Text>
                   </View>
 
-                  <Text
-                    style={[styles.entryTitle, { color: colors.onSurface }]}
-                  >
-                    {moment.headline}
-                  </Text>
+                  {moment.associatedLog ? (
+                    <Text
+                      style={[styles.entryTitle, { color: colors.onSurface }]}
+                    >
+                      {moment.associatedLog.title}
+                    </Text>
+                  ) : null}
 
                   <View
                     style={[
@@ -403,14 +235,16 @@ export default function GrowthTimelineScreen() {
                     />
                   </View>
 
-                  <Text
-                    style={[
-                      styles.entryBody,
-                      { color: colors.onSurfaceVariant },
-                    ]}
-                  >
-                    {moment.body}
-                  </Text>
+                  {moment.caption || moment.associatedLog?.body ? (
+                    <Text
+                      style={[
+                        styles.entryBody,
+                        { color: colors.onSurfaceVariant },
+                      ]}
+                    >
+                      {moment.caption ?? moment.associatedLog?.body}
+                    </Text>
+                  ) : null}
                 </View>
               ))}
             </View>
