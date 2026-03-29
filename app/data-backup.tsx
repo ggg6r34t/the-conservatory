@@ -4,9 +4,9 @@ import { StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { CloudSyncControlCard } from "@/features/profile/components/CloudSyncControlCard";
 import { DataBackupExportCard } from "@/features/profile/components/DataBackupExportCard";
 import { DataBackupHeroCard } from "@/features/profile/components/DataBackupHeroCard";
-import { DataBackupOverviewCard } from "@/features/profile/components/DataBackupOverviewCard";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useBackupStatus } from "@/features/profile/hooks/useBackupStatus";
 import { useAlert } from "@/hooks/useAlert";
@@ -21,9 +21,14 @@ export default function DataBackupScreen() {
     overviewState,
     overviewSupportingLabel,
     overviewSecondaryValue,
-    remoteAvailability,
     syncMutation,
     canSync,
+    autoSyncEnabled,
+    autoSyncMutation,
+    canToggleAutoSync,
+    cloudSyncTitle,
+    cloudSyncDescription,
+    isSyncRunning,
   } = useBackupStatus();
 
   const handleSync = () => {
@@ -39,6 +44,29 @@ export default function DataBackupScreen() {
             error instanceof Error
               ? error.message
               : "We couldn't update your backup right now.",
+          primaryAction: { label: "Close", tone: "danger" },
+        });
+      },
+    });
+  };
+
+  const handleToggleAutoSync = () => {
+    autoSyncMutation.mutate(!autoSyncEnabled, {
+      onSuccess: () => {
+        snackbar.success(
+          !autoSyncEnabled
+            ? "Auto sync is now enabled for this conservatory."
+            : "Auto sync is now off. Local saves remain on this device until you sync manually.",
+        );
+      },
+      onError: (error) => {
+        void alert.show({
+          variant: "error",
+          title: "Unable to update auto sync",
+          message:
+            error instanceof Error
+              ? error.message
+              : "We couldn't update the auto sync setting right now.",
           primaryAction: { label: "Close", tone: "danger" },
         });
       },
@@ -66,21 +94,24 @@ export default function DataBackupScreen() {
             />
           </View>
 
-          <DataBackupOverviewCard
-            syncTitle={remoteAvailability.title}
-            syncDescription={remoteAvailability.description}
+          <CloudSyncControlCard
+            title={cloudSyncTitle}
+            description={cloudSyncDescription}
+            enabled={autoSyncEnabled}
+            disabled={autoSyncMutation.isPending || !canToggleAutoSync}
             statusTitle={overviewState}
             statusValue={overviewSecondaryValue}
             statusDetail={overviewSupportingLabel}
+            onToggle={handleToggleAutoSync}
             onOpenDetails={() => router.push("/backup-details")}
           />
 
           <PrimaryButton
-            label={syncMutation.isPending ? "Syncing Now..." : "Sync Now"}
+            label={isSyncRunning ? "Syncing Now..." : "Sync Now"}
             icon="sync"
             iconFamily="MaterialIcons"
-            loading={syncMutation.isPending}
-            disabled={syncMutation.isPending || !canSync}
+            loading={isSyncRunning}
+            disabled={isSyncRunning || !canSync}
             onPress={handleSync}
           />
         </View>

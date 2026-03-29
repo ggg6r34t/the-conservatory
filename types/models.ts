@@ -25,6 +25,7 @@ export interface AppUser {
 export interface UserPreferences {
   userId: string;
   remindersEnabled: boolean;
+  autoSyncEnabled: boolean;
   preferredTheme: "linen-light";
   timezone: string;
   defaultWateringHour: number;

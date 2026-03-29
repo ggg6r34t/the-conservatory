@@ -1,20 +1,21 @@
-import { screen, waitFor } from "@testing-library/react-native";
+import { fireEvent, screen } from "@testing-library/react-native";
 import React from "react";
 
 import DataBackupScreen from "@/app/data-backup";
 import { renderWithProviders } from "@/tests/utils/renderWithProviders";
 
-const mockGetBackupSummary = jest.fn();
-const mockGetRemoteBackupAvailability = jest.fn();
+const mockMutate = jest.fn();
+const mockUseBackupStatus = jest.fn();
 const mockPrimaryButton = jest.fn(
-  (_props: { label: string; disabled?: boolean }) => null,
+  (props: {
+    label: string;
+    disabled?: boolean;
+    onPress?: () => void;
+  }) => null,
 );
 
-jest.mock("@/features/profile/api/profileClient", () => ({
-  getBackupSummary: (...args: unknown[]) => mockGetBackupSummary(...args),
-  getRemoteBackupAvailability: (...args: unknown[]) =>
-    mockGetRemoteBackupAvailability(...args),
-  runBackupSync: jest.fn().mockResolvedValue(undefined),
+jest.mock("@/features/profile/hooks/useBackupStatus", () => ({
+  useBackupStatus: () => mockUseBackupStatus(),
 }));
 
 jest.mock("@/features/auth/hooks/useAuth", () => ({
@@ -27,13 +28,12 @@ jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
-jest.mock("@/hooks/useNetworkState", () => ({
-  useNetworkState: () => ({ isOffline: false }),
-}));
-
 jest.mock("@/components/common/Buttons/PrimaryButton", () => ({
-  PrimaryButton: (props: { label: string; disabled?: boolean }) =>
-    mockPrimaryButton(props),
+  PrimaryButton: (props: {
+    label: string;
+    disabled?: boolean;
+    onPress?: () => void;
+  }) => mockPrimaryButton(props),
 }));
 
 jest.mock("@/features/profile/components/ProfileScreenScaffold", () => ({
@@ -42,63 +42,61 @@ jest.mock("@/features/profile/components/ProfileScreenScaffold", () => ({
 }));
 
 describe("DataBackupScreen", () => {
+  const baseStatus = {
+    overviewState: "Auto sync is on",
+    overviewSupportingLabel: "Cloud backup is enabled and healthy.",
+    overviewSecondaryValue: "Mar 29, 6:00 PM",
+    syncMutation: { isPending: false, mutate: jest.fn() },
+    canSync: true,
+    autoSyncEnabled: true,
+    autoSyncMutation: { isPending: false, mutate: mockMutate },
+    canToggleAutoSync: true,
+    cloudSyncTitle: "Auto-sync Conservatory",
+    cloudSyncDescription:
+      "Automatically back up plants, care history, reminders, and progress photos to cloud storage.",
+    isSyncRunning: false,
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetBackupSummary.mockResolvedValue({
-      activePlants: 2,
-      archivedPlants: 1,
-      photos: 4,
-      careLogs: 6,
-      reminders: 2,
-      pendingSyncUser: 1,
-      failedSyncUser: 0,
-      pendingSyncQueueAccount: 2,
-      failedSyncQueueAccount: 1,
-      pendingSyncDevice: 3,
-      failedSyncDevice: 1,
-      processingSync: 0,
-      completedSync: 3,
-    });
+    mockUseBackupStatus.mockReturnValue(baseStatus);
   });
 
-  it("renders a local-only state when remote backup is unavailable", async () => {
-    mockGetRemoteBackupAvailability.mockResolvedValue({
-      state: "local-only",
-      canSync: false,
-      title: "Local device only",
-      description: "Your conservatory is currently stored only on this device.",
-    });
-
+  it("renders the mockup-aligned cloud sync control with auto sync enabled", () => {
     renderWithProviders(<DataBackupScreen />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Local device only")).toBeTruthy();
-    });
-
-    expect(mockPrimaryButton).toHaveBeenLastCalledWith(
-      expect.objectContaining({ label: "Update Backup Now", disabled: true }),
+    expect(screen.getByText("Auto-sync Conservatory")).toBeTruthy();
+    expect(screen.getByText("Auto sync is on")).toBeTruthy();
+    expect(mockPrimaryButton).toHaveBeenCalledWith(
+      expect.objectContaining({ label: "Sync Now", disabled: false }),
     );
   });
 
-  it("renders an active online backup state when backup is reachable", async () => {
-    mockGetRemoteBackupAvailability.mockResolvedValue({
-      state: "available",
-      canSync: true,
-      title: "Remote backup available",
-      description: "Supabase is configured and reachable.",
+  it("lets the user disable auto sync from the cloud sync card", () => {
+    renderWithProviders(<DataBackupScreen />);
+
+    fireEvent.press(screen.getByRole("switch"));
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      false,
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    );
+  });
+
+  it("keeps manual sync truthful while a canonical sync run is already active", () => {
+    mockUseBackupStatus.mockReturnValue({
+      ...baseStatus,
+      isSyncRunning: true,
+      canSync: false,
     });
 
     renderWithProviders(<DataBackupScreen />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Remote backup available")).toBeTruthy();
-    });
-
-    expect(screen.getByText("Pending changes (account)")).toBeTruthy();
-    expect(screen.getByText("Pending changes on this device")).toBeTruthy();
-
-    expect(mockPrimaryButton).toHaveBeenLastCalledWith(
-      expect.objectContaining({ label: "Update Backup Now", disabled: false }),
+    expect(mockPrimaryButton).toHaveBeenCalledWith(
+      expect.objectContaining({ label: "Syncing Now...", disabled: true }),
     );
   });
 });

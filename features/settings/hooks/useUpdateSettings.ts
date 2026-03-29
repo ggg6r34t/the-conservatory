@@ -11,6 +11,7 @@ export function useUpdateSettings() {
   return useMutation({
     mutationFn: (patch: {
       remindersEnabled?: boolean;
+      autoSyncEnabled?: boolean;
       defaultWateringHour?: number;
       timezone?: string;
     }) => updateUserPreferences(user!.id, patch),

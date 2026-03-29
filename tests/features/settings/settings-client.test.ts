@@ -17,6 +17,7 @@ describe("settingsClient", () => {
     const getFirstAsync = jest.fn().mockResolvedValue({
       user_id: "user-1",
       reminders_enabled: 1,
+      auto_sync_enabled: 1,
       preferred_theme: "linen-light",
       timezone: "UTC",
       default_watering_hour: 9,
@@ -40,12 +41,14 @@ describe("settingsClient", () => {
 
     const result = await updateUserPreferences("user-1", {
       remindersEnabled: false,
+      autoSyncEnabled: false,
       timezone: "America/New_York",
       defaultWateringHour: 7,
     });
 
     expect(runAsync).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE user_preferences"),
+      0,
       0,
       "America/New_York",
       7,
@@ -71,6 +74,7 @@ describe("settingsClient", () => {
       expect.objectContaining({
         userId: "user-1",
         remindersEnabled: false,
+        autoSyncEnabled: false,
         timezone: "America/New_York",
         defaultWateringHour: 7,
         pending: 1,
@@ -87,6 +91,7 @@ describe("settingsClient", () => {
       .mockResolvedValueOnce({
         user_id: "user-1",
         reminders_enabled: 1,
+        auto_sync_enabled: 1,
         preferred_theme: "linen-light",
         timezone: "UTC",
         default_watering_hour: 9,
@@ -113,6 +118,7 @@ describe("settingsClient", () => {
       expect.stringContaining("INSERT OR IGNORE INTO user_preferences"),
       "user-1",
       1,
+      1,
       "linen-light",
       "UTC",
       9,
@@ -124,6 +130,7 @@ describe("settingsClient", () => {
       null,
     );
     expect(result.pending).toBe(0);
+    expect(result.autoSyncEnabled).toBe(true);
     expect(result.syncedAt).toBeNull();
   });
 });

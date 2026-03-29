@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS local_auth_credentials (
 CREATE TABLE IF NOT EXISTS user_preferences (
   user_id TEXT PRIMARY KEY NOT NULL,
   reminders_enabled INTEGER NOT NULL DEFAULT 1,
+  auto_sync_enabled INTEGER NOT NULL DEFAULT 1,
   preferred_theme TEXT NOT NULL DEFAULT 'linen-light',
   timezone TEXT NOT NULL DEFAULT 'UTC',
   default_watering_hour INTEGER NOT NULL DEFAULT 9,
@@ -405,6 +406,12 @@ export async function runDatabaseMigrations(database: SQLiteDatabase) {
     "user_preferences",
     "pending",
     "INTEGER NOT NULL DEFAULT 0",
+  );
+  await ensureColumn(
+    database,
+    "user_preferences",
+    "auto_sync_enabled",
+    "INTEGER NOT NULL DEFAULT 1",
   );
   await ensureColumn(database, "user_preferences", "synced_at", "TEXT");
   await ensureColumn(database, "user_preferences", "sync_error", "TEXT");

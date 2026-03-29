@@ -1,5 +1,5 @@
-import { bootstrapUserDataSync } from "@/services/database/bootstrapSync";
 import { getDatabase } from "@/services/database/sqlite";
+import { runUserDataSync } from "@/services/database/userDataSync";
 import { probeRemoteBackendAvailability } from "@/services/supabase/backendReadiness";
 
 export interface BackupSummary {
@@ -209,15 +209,10 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
 }
 
 export async function runBackupSync(userId: string) {
-  const remoteAvailability = await probeRemoteBackendAvailability();
-
-  if (!remoteAvailability.canSync) {
-    throw new Error(
-      remoteAvailability.detail ?? remoteAvailability.description,
-    );
-  }
-
-  await bootstrapUserDataSync(userId);
+  await runUserDataSync({
+    userId,
+    trigger: "manual",
+  });
 }
 
 export async function getRemoteBackupAvailability() {
@@ -226,25 +221,25 @@ export async function getRemoteBackupAvailability() {
   if (availability.state === "available") {
     return {
       ...availability,
-      title: "Online backup available",
+      title: "Cloud sync available",
       description:
-        "Online backup is reachable, so recent changes can be saved and restored.",
+        "Cloud backup is reachable, so local changes can be replayed safely and restored across devices.",
     };
   }
 
   if (availability.state === "local-only") {
     return {
       ...availability,
-      title: "This device only",
+      title: "Local-only mode",
       description:
-        "Your conservatory is currently saved only on this device. Connect your account backup to save online.",
+        "This build is currently storing your conservatory only on this device until cloud sync is configured.",
     };
   }
 
   return {
     ...availability,
-    title: "Online backup unavailable",
+    title: "Cloud sync unavailable",
     description:
-      "Online backup can't be reached right now. Your conservatory is still available on this device.",
+      "Cloud sync can't be reached right now. Your conservatory is still safe on this device.",
   };
 }

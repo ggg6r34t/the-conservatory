@@ -2,39 +2,28 @@ import { useMemo } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { queryKeys } from "@/config/constants";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   getBackupSummary,
   getRemoteBackupAvailability,
   runBackupSync,
 } from "@/features/profile/api/profileClient";
+import { useUserDataSyncState } from "@/features/profile/hooks/useUserDataSyncState";
+import { deriveCloudSyncStatus } from "@/features/profile/services/cloudSyncStatusService";
+import { invalidateBackupQueries } from "@/features/profile/utils/invalidateBackupQueries";
+import { useSettings } from "@/features/settings/hooks/useSettings";
+import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 import { useNetworkState } from "@/hooks/useNetworkState";
 import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
-
-function formatLastSuccessfulSync(value: string | null) {
-  if (!value) {
-    return "Not yet synced";
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return "Sync recently observed";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(parsed);
-}
 
 export function useBackupStatus() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const network = useNetworkState();
   const backendConfiguration = getBackendConfigurationSummary();
+  const settingsQuery = useSettings();
+  const updateSettings = useUpdateSettings();
+  const syncRuntime = useUserDataSyncState();
 
   const summaryQuery = useQuery({
     queryKey: ["profile-backup-summary", user?.id],
@@ -52,17 +41,9 @@ export function useBackupStatus() {
   const syncMutation = useMutation({
     mutationFn: () => runBackupSync(user!.id),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.plants }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.graveyard }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.preferences }),
-        queryClient.invalidateQueries({
-          queryKey: ["profile-backup-summary", user?.id],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["profile-backup-availability", user?.id],
-        }),
-      ]);
+      await invalidateBackupQueries(queryClient, user?.id).catch(
+        () => undefined,
+      );
     },
   });
 
@@ -83,16 +64,16 @@ export function useBackupStatus() {
         state: backendConfiguration.mode,
         title:
           backendConfiguration.mode === "cloud"
-            ? "Checking online backup"
+            ? "Checking cloud sync"
             : backendConfiguration.mode === "local-development"
-              ? "This device only"
-              : "Online backup unavailable",
+              ? "Local-only mode"
+              : "Cloud sync unavailable",
         description:
           backendConfiguration.mode === "cloud"
-            ? "Checking whether your online backup is reachable."
+            ? "Checking whether cloud sync is reachable for this build."
             : backendConfiguration.mode === "local-development"
               ? "This build is currently storing your conservatory on this device only."
-              : "Online backup isn't configured for this build yet.",
+              : "Cloud sync isn't configured for this build yet.",
         canSync: false,
       }
     );
@@ -111,65 +92,39 @@ export function useBackupStatus() {
         summary.pendingSyncQueueDevice > 0 ||
         summary.processingSync > 0),
   );
+  const autoSyncEnabled = settingsQuery.data?.autoSyncEnabled ?? true;
+  const isSyncRunning = syncRuntime.isRunning || syncMutation.isPending;
+  const cloudSyncStatus = useMemo(
+    () =>
+      deriveCloudSyncStatus({
+        autoSyncEnabled,
+        remoteAvailability,
+        isOffline: network.isOffline,
+        isSyncRunning,
+        hasIssues,
+        hasPending,
+        lastSuccessfulSyncAt: summary?.lastSuccessfulSyncAt ?? null,
+      }),
+    [
+      autoSyncEnabled,
+      hasIssues,
+      hasPending,
+      isSyncRunning,
+      network.isOffline,
+      remoteAvailability,
+      summary?.lastSuccessfulSyncAt,
+    ],
+  );
 
-  const systemStatus = useMemo(() => {
-    if (network.isOffline) {
-      return {
-        title: "Offline mode",
-        description:
-          "Your archive remains available on this device while cloud sync waits for a connection.",
-      };
-    }
-
-    if (
-      remoteAvailability.state === "local-only" ||
-      remoteAvailability.state === "unavailable"
-    ) {
-      return {
-        title: remoteAvailability.title,
-        description: remoteAvailability.description,
-      };
-    }
-
-    if (hasIssues) {
-      return {
-        title: "Needs attention",
-        description:
-          "Some recent backup activity still needs a closer look before everything feels settled.",
-      };
-    }
-
-    if (hasPending || syncMutation.isPending) {
-      return {
-        title: "Sync in progress",
-        description:
-          "Recent changes are being gathered and prepared for your account backup.",
-      };
-    }
-
-    if (summary?.lastSuccessfulSyncAt) {
-      return {
-        title: "All systems operational",
-        description:
-          "A recent successful sync has been observed locally for your conservatory.",
-      };
-    }
-
-    return {
-      title: "Ready to back up",
-      description:
-        "Your archive is ready whenever you'd like to refresh its online backup.",
-      };
-  }, [
-    hasIssues,
-    hasPending,
-    network.isOffline,
-    remoteAvailability.description,
-    remoteAvailability.state,
-    remoteAvailability.title,
-    summary?.lastSuccessfulSyncAt,
-    syncMutation.isPending,
-  ]);
+  const autoSyncMutation = useMutation({
+    mutationFn: (nextValue: boolean) =>
+      updateSettings.mutateAsync({ autoSyncEnabled: nextValue }),
+    onSuccess: async () => {
+      await invalidateBackupQueries(queryClient, user?.id).catch(
+        () => undefined,
+      );
+    },
+  });
 
   return {
     user,
@@ -178,29 +133,22 @@ export function useBackupStatus() {
     remoteAvailability,
     remoteAvailabilityQuery,
     syncMutation,
-    systemStatus,
+    autoSyncMutation,
+    autoSyncEnabled,
+    isAutoSyncPending: autoSyncMutation.isPending || settingsQuery.isLoading,
+    isSyncRunning,
     lastSuccessfulSyncAt: summary?.lastSuccessfulSyncAt ?? null,
-    overviewState: systemStatus.title,
-    overviewSecondaryValue:
-      remoteAvailability.state === "available" &&
-      !hasIssues &&
-      !hasPending &&
-      !syncMutation.isPending &&
-      summary?.lastSuccessfulSyncAt
-        ? formatLastSuccessfulSync(summary.lastSuccessfulSyncAt)
-        : network.isOffline
-          ? "Awaiting connection"
-          : "Review details",
-    overviewSupportingLabel:
-      network.isOffline ||
-      hasIssues ||
-      hasPending ||
-      syncMutation.isPending ||
-      !summary?.lastSuccessfulSyncAt
-        ? systemStatus.description
-        : "Recent successful sync observed",
+    overviewState: cloudSyncStatus.statusTitle,
+    overviewSecondaryValue: cloudSyncStatus.statusValue,
+    overviewSupportingLabel: cloudSyncStatus.statusDetail,
     hasIssues,
     hasPending,
-    canSync: Boolean(user?.id) && remoteAvailability.canSync,
+    canSync:
+      Boolean(user?.id) && remoteAvailability.canSync && !isSyncRunning,
+    canToggleAutoSync: Boolean(user?.id),
+    cloudSyncTitle: "Auto-sync Conservatory",
+    cloudSyncDescription:
+      "Automatically back up plants, care history, reminders, and progress photos to cloud storage.",
+    backendMode: backendConfiguration.mode,
   };
 }

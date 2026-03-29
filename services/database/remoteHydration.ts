@@ -50,6 +50,7 @@ interface RemotePlantRow extends MergeableRemoteRow {
 interface RemoteUserPreferencesRow {
   user_id: string;
   reminders_enabled: boolean;
+  auto_sync_enabled: boolean;
   preferred_theme: "linen-light";
   timezone: string;
   default_watering_hour: number;
@@ -336,6 +337,7 @@ export async function hydrateRemoteUserData(userId: string) {
       [
         "user_id",
         "reminders_enabled",
+        "auto_sync_enabled",
         "preferred_theme",
         "timezone",
         "default_watering_hour",
@@ -469,11 +471,12 @@ export async function hydrateRemoteUserData(userId: string) {
     ) {
       await database.runAsync(
         `INSERT OR REPLACE INTO user_preferences (
-          user_id, reminders_enabled, preferred_theme, timezone, default_watering_hour,
+          user_id, reminders_enabled, auto_sync_enabled, preferred_theme, timezone, default_watering_hour,
           created_at, updated_at, updated_by, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         preferences.user_id,
         preferences.reminders_enabled ? 1 : 0,
+        preferences.auto_sync_enabled ? 1 : 0,
         preferences.preferred_theme,
         preferences.timezone,
         preferences.default_watering_hour,

@@ -63,6 +63,7 @@ async function loadUserPreferencesRecord(entityId: string) {
   const row = await database.getFirstAsync<{
     user_id: string;
     reminders_enabled: number;
+    auto_sync_enabled: number;
     preferred_theme: "linen-light";
     timezone: string;
     default_watering_hour: number;
@@ -78,6 +79,7 @@ async function loadUserPreferencesRecord(entityId: string) {
   return {
     user_id: row.user_id,
     reminders_enabled: Boolean(row.reminders_enabled),
+    auto_sync_enabled: Boolean(row.auto_sync_enabled),
     preferred_theme: row.preferred_theme,
     timezone: row.timezone,
     default_watering_hour: row.default_watering_hour,

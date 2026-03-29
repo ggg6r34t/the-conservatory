@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
 import type { SyncOperation } from "@/services/database/sync";
+import { notifySyncQueueChanged } from "@/services/database/syncSignals";
 import { createId } from "@/utils/id";
 
 interface SyncOutboxOperation {
@@ -77,6 +78,7 @@ export async function runAtomicMutationWithSyncOutbox<T>(
     throw new Error("Atomic sync mutation completed without a result.");
   }
 
+  notifySyncQueueChanged();
   return result;
 }
 

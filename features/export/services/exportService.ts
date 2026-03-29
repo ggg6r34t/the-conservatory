@@ -146,6 +146,7 @@ interface GraveyardRow {
 interface PreferencesRow {
   user_id: string;
   reminders_enabled: number;
+  auto_sync_enabled: number;
   preferred_theme: "linen-light";
   timezone: string;
   default_watering_hour: number;
@@ -262,6 +263,7 @@ function mapPreferences(row: PreferencesRow): UserPreferences {
   return {
     userId: row.user_id,
     remindersEnabled: Boolean(row.reminders_enabled),
+    autoSyncEnabled: Boolean(row.auto_sync_enabled),
     preferredTheme: row.preferred_theme,
     timezone: row.timezone,
     defaultWateringHour: row.default_watering_hour,

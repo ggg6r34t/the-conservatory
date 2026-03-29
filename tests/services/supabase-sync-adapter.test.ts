@@ -293,6 +293,7 @@ describe("supabase sync adapter", () => {
       getFirstAsync: jest.fn().mockResolvedValue({
         user_id: "user-1",
         reminders_enabled: 0,
+        auto_sync_enabled: 0,
         preferred_theme: "linen-light",
         timezone: "America/New_York",
         default_watering_hour: 7,
@@ -326,6 +327,7 @@ describe("supabase sync adapter", () => {
       expect.objectContaining({
         user_id: "user-1",
         reminders_enabled: false,
+        auto_sync_enabled: false,
         timezone: "America/New_York",
       }),
       { onConflict: "user_id" },

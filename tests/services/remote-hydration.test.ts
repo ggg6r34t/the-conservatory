@@ -38,6 +38,7 @@ describe("remoteHydration user preferences", () => {
     mockRemoteTables({
       user_id: "user-1",
       reminders_enabled: false,
+      auto_sync_enabled: true,
       preferred_theme: "linen-light",
       timezone: "America/New_York",
       default_watering_hour: 7,
@@ -71,6 +72,7 @@ describe("remoteHydration user preferences", () => {
       expect.stringContaining("INSERT OR REPLACE INTO user_preferences"),
       "user-1",
       0,
+      1,
       "linen-light",
       "America/New_York",
       7,
@@ -87,6 +89,7 @@ describe("remoteHydration user preferences", () => {
     mockRemoteTables({
       user_id: "user-1",
       reminders_enabled: false,
+      auto_sync_enabled: false,
       preferred_theme: "linen-light",
       timezone: "America/New_York",
       default_watering_hour: 7,

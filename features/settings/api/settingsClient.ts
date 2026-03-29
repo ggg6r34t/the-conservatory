@@ -10,6 +10,7 @@ function defaultPreferences(userId: string): UserPreferences {
   return {
     userId,
     remindersEnabled: true,
+    autoSyncEnabled: true,
     preferredTheme: "linen-light",
     timezone: "UTC",
     defaultWateringHour: 9,
@@ -31,6 +32,7 @@ function assertValidUserId(userId: string) {
 function mapPreferences(row: {
   user_id: string;
   reminders_enabled: number;
+  auto_sync_enabled: number;
   preferred_theme: "linen-light";
   timezone: string;
   default_watering_hour: number;
@@ -44,6 +46,7 @@ function mapPreferences(row: {
   return {
     userId: row.user_id,
     remindersEnabled: Boolean(row.reminders_enabled),
+    autoSyncEnabled: Boolean(row.auto_sync_enabled),
     preferredTheme: row.preferred_theme,
     timezone: row.timezone,
     defaultWateringHour: row.default_watering_hour,
@@ -63,6 +66,7 @@ async function readPreferencesRow(
   return database.getFirstAsync<{
     user_id: string;
     reminders_enabled: number;
+    auto_sync_enabled: number;
     preferred_theme: "linen-light";
     timezone: string;
     default_watering_hour: number;
@@ -87,11 +91,12 @@ export async function getUserPreferences(userId: string) {
   const preferences = defaultPreferences(userId);
   await database.runAsync(
     `INSERT OR IGNORE INTO user_preferences (
-      user_id, reminders_enabled, preferred_theme, timezone, default_watering_hour,
+      user_id, reminders_enabled, auto_sync_enabled, preferred_theme, timezone, default_watering_hour,
       created_at, updated_at, updated_by, pending, synced_at, sync_error
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
     preferences.userId,
     Number(preferences.remindersEnabled),
+    Number(preferences.autoSyncEnabled),
     preferences.preferredTheme,
     preferences.timezone,
     preferences.defaultWateringHour,
@@ -116,7 +121,7 @@ export async function updateUserPreferences(
   patch: Partial<
     Pick<
       UserPreferences,
-      "remindersEnabled" | "defaultWateringHour" | "timezone"
+      "remindersEnabled" | "autoSyncEnabled" | "defaultWateringHour" | "timezone"
     >
   >,
 ) {
@@ -149,10 +154,11 @@ export async function updateUserPreferences(
     perform: async (transactionNowIso) => {
       await database.runAsync(
         `UPDATE user_preferences
-         SET reminders_enabled = ?, timezone = ?, default_watering_hour = ?, updated_at = ?, updated_by = ?,
+         SET reminders_enabled = ?, auto_sync_enabled = ?, timezone = ?, default_watering_hour = ?, updated_at = ?, updated_by = ?,
              pending = 1, sync_error = NULL
          WHERE user_id = ?;`,
         Number(next.remindersEnabled),
+        Number(next.autoSyncEnabled),
         next.timezone,
         next.defaultWateringHour,
         transactionNowIso,
