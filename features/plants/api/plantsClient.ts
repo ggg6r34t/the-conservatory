@@ -268,6 +268,9 @@ export interface GraveyardPlantListItem extends GraveyardPlant {
   nickname?: string | null;
   plantNotes?: string | null;
   primaryPhotoUri?: string | null;
+  photoCount: number;
+  careLogCount: number;
+  hasPrimaryPhoto: boolean;
 }
 
 export interface PlantListItem extends Plant {
@@ -308,6 +311,16 @@ export async function listGraveyardPlants(userId: string) {
      ORDER BY is_primary DESC, updated_at DESC, created_at DESC;`,
     userId,
   );
+  const careLogCounts = await database.getAllAsync<{
+    plant_id: string;
+    total: number;
+  }>(
+    `SELECT plant_id, COUNT(*) AS total
+     FROM care_logs
+     WHERE user_id = ?
+     GROUP BY plant_id;`,
+    userId,
+  );
   const hydratedPhotos = await hydratePhotosForDisplay(photos);
   const photoByPlantId = buildPhotoByPlantIdMap(
     hydratedPhotos.map((photo) => ({
@@ -332,6 +345,27 @@ export async function listGraveyardPlants(userId: string) {
       sync_error: photo.syncError ?? null,
     })),
   );
+  const photoCountByPlantId = new Map<string, number>();
+  const hasPrimaryPhotoByPlantId = new Map<string, boolean>();
+
+  for (const photo of hydratedPhotos) {
+    if (!resolveRenderablePhotoUri(photo)) {
+      continue;
+    }
+
+    photoCountByPlantId.set(
+      photo.plantId,
+      (photoCountByPlantId.get(photo.plantId) ?? 0) + 1,
+    );
+
+    if (photo.isPrimary === 1) {
+      hasPrimaryPhotoByPlantId.set(photo.plantId, true);
+    }
+  }
+
+  const careLogCountByPlantId = new Map(
+    careLogCounts.map((row) => [row.plant_id, row.total]),
+  );
 
   return rows.map((row) => ({
     id: row.id,
@@ -353,6 +387,9 @@ export async function listGraveyardPlants(userId: string) {
     primaryPhotoUri: resolveRenderablePhotoUri(
       photoByPlantId.get(row.plant_id),
     ),
+    photoCount: photoCountByPlantId.get(row.plant_id) ?? 0,
+    careLogCount: careLogCountByPlantId.get(row.plant_id) ?? 0,
+    hasPrimaryPhoto: hasPrimaryPhotoByPlantId.get(row.plant_id) ?? false,
   }));
 }
 

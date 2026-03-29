@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -19,6 +19,7 @@ import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient"
 import { MemorialEntrySheet } from "@/features/plants/components/MemorialEntrySheet";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { useUpdateGraveyardMemorial } from "@/features/plants/hooks/useUpdateGraveyardMemorial";
+import { selectMemorialRoles } from "@/features/plants/services/memorialSelectionService";
 import { useAlert } from "@/hooks/useAlert";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import { useSnackbar } from "@/hooks/useSnackbar";
@@ -65,19 +66,6 @@ function buildCauseLabel(memorial: GraveyardPlantListItem) {
   return memorial.causeOfPassing;
 }
 
-function getMemorialAt(
-  memorials: GraveyardPlantListItem[],
-  index: number,
-): GraveyardPlantListItem | null {
-  if (!memorials.length) {
-    return null;
-  }
-
-  return (
-    memorials[index] ?? memorials[index % memorials.length] ?? memorials[0]
-  );
-}
-
 function GrayscaleImage({
   uri,
   style,
@@ -104,16 +92,21 @@ export default function GraveyardScreen() {
   const graveyardQuery = useGraveyard();
   const updateMemorial = useUpdateGraveyardMemorial();
   const { onRefresh, refreshing } = usePullToRefreshSync();
-  const memorials = graveyardQuery.data ?? [];
+  const memorials = useMemo(
+    () => graveyardQuery.data ?? [],
+    [graveyardQuery.data],
+  );
   const [selectedMemorial, setSelectedMemorial] =
     useState<GraveyardPlantListItem | null>(null);
-
-  const featuredMemorial = getMemorialAt(memorials, 0);
-  const reflectionMemorial = getMemorialAt(memorials, 1);
-  const tributeMemorial = getMemorialAt(memorials, 0);
-  const tributeCompanion = getMemorialAt(memorials, 1);
-  const compactMemorial =
-    getMemorialAt(memorials, 1) ?? getMemorialAt(memorials, 0);
+  const {
+    featuredMemorial,
+    reflectionMemorial,
+    tributeMemorial,
+    compactMemorials,
+  } = useMemo(() => selectMemorialRoles(memorials), [memorials]);
+  const compactMemorial = compactMemorials[0] ?? null;
+  const tributeCompanion = compactMemorials[1] ?? null;
+  const hasMemorials = memorials.length > 0;
 
   return (
     <SafeAreaView
@@ -168,6 +161,25 @@ export default function GraveyardScreen() {
           A quiet space to honor the green companions that have returned to the
           earth. Every wilted leaf is a lesson learned for the next season.
         </Text>
+
+        {!hasMemorials ? (
+          <View
+            style={[
+              styles.emptyCard,
+              { backgroundColor: colors.surfaceContainerLow },
+            ]}
+          >
+            <Text style={[styles.emptyTitle, { color: colors.primary }]}>
+              No memorials yet
+            </Text>
+            <Text
+              style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}
+            >
+              Plants moved into the Graveyard will be remembered here with their
+              archive details, memorial notes, and preserved history.
+            </Text>
+          </View>
+        ) : null}
 
         {featuredMemorial ? (
           <Pressable
@@ -425,45 +437,49 @@ export default function GraveyardScreen() {
           </View>
         ) : null}
 
-        <View
-          style={[
-            styles.quoteCard,
-            { backgroundColor: colors.tertiaryContainer },
-          ]}
-        >
-          <Icon
-            name="format-quote-open"
-            size={40}
-            color={colors.primaryFixed}
-            style={styles.quoteIcon}
-          />
-          <Text style={[styles.quoteText, { color: colors.primaryFixed }]}>
-            &quot;A garden is a grand teacher. It teaches patience and careful
-            watchfulness; it teaches industry and thrift; above all it teaches
-            entire trust.&quot;
-          </Text>
-          <Text style={[styles.quoteAuthor, { color: colors.primaryFixed }]}>
-            — GERTRUDE JEKYLL
-          </Text>
-        </View>
-
-        <View style={styles.closingBlock}>
+        {hasMemorials ? (
           <View
             style={[
-              styles.closingRule,
-              { backgroundColor: colors.surfaceContainerHigh },
+              styles.quoteCard,
+              { backgroundColor: colors.tertiaryContainer },
             ]}
-          />
-          <Text style={[styles.closingTitle, { color: colors.onSurface }]}>
-            Don&apos;t be discouraged, gardener.
-          </Text>
-          <Text
-            style={[styles.closingBody, { color: colors.onSurfaceVariant }]}
           >
-            Every master gardener has a secret graveyard. It&apos;s the soil
-            from which expertise grows.
-          </Text>
-        </View>
+            <Icon
+              name="format-quote-open"
+              size={40}
+              color={colors.primaryFixed}
+              style={styles.quoteIcon}
+            />
+            <Text style={[styles.quoteText, { color: colors.primaryFixed }]}>
+              &quot;A garden is a grand teacher. It teaches patience and careful
+              watchfulness; it teaches industry and thrift; above all it teaches
+              entire trust.&quot;
+            </Text>
+            <Text style={[styles.quoteAuthor, { color: colors.primaryFixed }]}>
+              — GERTRUDE JEKYLL
+            </Text>
+          </View>
+        ) : null}
+
+        {hasMemorials ? (
+          <View style={styles.closingBlock}>
+            <View
+              style={[
+                styles.closingRule,
+                { backgroundColor: colors.surfaceContainerHigh },
+              ]}
+            />
+            <Text style={[styles.closingTitle, { color: colors.onSurface }]}>
+              Don&apos;t be discouraged, gardener.
+            </Text>
+            <Text
+              style={[styles.closingBody, { color: colors.onSurfaceVariant }]}
+            >
+              Every master gardener has a secret graveyard. It&apos;s the soil
+              from which expertise grows.
+            </Text>
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -485,6 +501,23 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 31,
     maxWidth: 320,
+  },
+  emptyCard: {
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingVertical: 22,
+    gap: 8,
+    ...shadowScale.elevatedCard,
+  },
+  emptyTitle: {
+    fontFamily: "NotoSerif_400Regular",
+    fontSize: 24,
+    lineHeight: 32,
+  },
+  emptyBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 14,
+    lineHeight: 22,
   },
   nativeImage: {
     width: "100%",
