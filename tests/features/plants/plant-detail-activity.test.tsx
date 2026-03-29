@@ -90,8 +90,86 @@ describe("PlantDetail recent activity", () => {
     renderWithProviders(<PlantDetail data={baseFixture} />);
 
     expect(screen.getByText("No care entries yet")).toBeTruthy();
+    expect(screen.getByText("STABLE")).toBeTruthy();
+    expect(screen.queryByText("Healthy")).toBeNull();
     expect(screen.queryByText(/Full Soak & Fertilize/i)).toBeNull();
     expect(screen.queryByText(/Propagation Pruning/i)).toBeNull();
+  });
+
+  it("maps thriving plants to the canonical THRIVING label", () => {
+    renderWithProviders(
+      <PlantDetail
+        data={{
+          ...baseFixture,
+          plant: {
+            ...baseFixture.plant,
+            lastWateredAt: "2026-03-27T10:00:00.000Z",
+            nextWaterDueAt: "2026-04-02T10:00:00.000Z",
+          },
+          reminders: [
+            {
+              id: "reminder-1",
+              userId: "user-1",
+              plantId: "plant-1",
+              reminderType: "water",
+              frequencyDays: 7,
+              enabled: 1,
+              nextDueAt: "2026-04-02T10:00:00.000Z",
+              createdAt: "2026-03-01T10:00:00.000Z",
+              updatedAt: "2026-03-27T10:00:00.000Z",
+              pending: 0,
+            },
+          ],
+          logs: [
+            {
+              id: "log-1",
+              userId: "user-1",
+              plantId: "plant-1",
+              logType: "water",
+              notes: "Watered on schedule.",
+              loggedAt: "2026-03-27T10:00:00.000Z",
+              createdAt: "2026-03-27T10:00:00.000Z",
+              updatedAt: "2026-03-27T10:00:00.000Z",
+              pending: 0,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("THRIVING")).toBeTruthy();
+    expect(screen.queryByText("Healthy")).toBeNull();
+  });
+
+  it("maps due plants to the canonical NEEDS WATER label", () => {
+    renderWithProviders(
+      <PlantDetail
+        data={{
+          ...baseFixture,
+          plant: {
+            ...baseFixture.plant,
+            nextWaterDueAt: "2026-03-20T10:00:00.000Z",
+          },
+          reminders: [
+            {
+              id: "reminder-1",
+              userId: "user-1",
+              plantId: "plant-1",
+              reminderType: "water",
+              frequencyDays: 7,
+              enabled: 1,
+              nextDueAt: "2026-03-20T10:00:00.000Z",
+              createdAt: "2026-03-01T10:00:00.000Z",
+              updatedAt: "2026-03-20T10:00:00.000Z",
+              pending: 0,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("NEEDS WATER")).toBeTruthy();
+    expect(screen.queryByText("Healthy")).toBeNull();
   });
 
   it("renders saved condition on real activity entries", () => {

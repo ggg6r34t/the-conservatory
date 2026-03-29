@@ -35,15 +35,3 @@ export function buildPlantStatusMap(input: {
     ]),
   ) as Map<string, PlantStatus>;
 }
-
-export function getLibraryPlantBadgeLabel(status: PlantStatus) {
-  if (status.healthState === "thriving") {
-    return "THRIVING";
-  }
-
-  if (status.healthState === "needs_attention") {
-    return "NEEDS WATER";
-  }
-
-  return "STABLE";
-}

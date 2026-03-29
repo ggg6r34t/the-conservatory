@@ -20,10 +20,10 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
+import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
 import { usePlants } from "@/features/plants/hooks/usePlants";
 import {
   buildPlantStatusMap,
-  getLibraryPlantBadgeLabel,
 } from "@/features/plants/services/plantLibraryStatusService";
 import { usePlantStore } from "@/features/plants/stores/usePlantStore";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
@@ -31,30 +31,6 @@ import { formatDueLabel } from "@/utils/dateFormatter";
 
 function formatMetaLabel(nextWateringDate: string | null) {
   return `NEXT WATER: ${formatDueLabel(nextWateringDate).toUpperCase()}`;
-}
-
-function getBadgeColors(input: {
-  colors: ReturnType<typeof useTheme>["colors"];
-  badgeLabel: "THRIVING" | "NEEDS WATER" | "STABLE";
-}) {
-  if (input.badgeLabel === "THRIVING") {
-    return {
-      backgroundColor: input.colors.primaryContainer,
-      color: input.colors.surfaceBright,
-    };
-  }
-
-  if (input.badgeLabel === "NEEDS WATER") {
-    return {
-      backgroundColor: input.colors.secondaryContainer,
-      color: input.colors.secondaryOnContainer,
-    };
-  }
-
-  return {
-    backgroundColor: input.colors.surfaceContainerHigh,
-    color: input.colors.onSurfaceVariant,
-  };
 }
 
 function chunkPlants(plants: PlantListItem[]) {
@@ -172,13 +148,8 @@ export default function LibraryScreen() {
               <View key={`row-${rowIndex}`} style={styles.galleryRow}>
                 {row.map((plant) => {
                   const plantStatus = plantStatusMap.get(plant.id);
-                  const badgeLabel = plantStatus
-                    ? getLibraryPlantBadgeLabel(plantStatus)
-                    : null;
-                  const needsAttention = badgeLabel === "NEEDS WATER";
-                  const badgeColors = badgeLabel
-                    ? getBadgeColors({ colors, badgeLabel })
-                    : null;
+                  const needsAttention =
+                    plantStatus?.healthState === "needs_attention";
 
                   return (
                     <Link
@@ -211,24 +182,12 @@ export default function LibraryScreen() {
                               ]}
                             />
                           )}
-                          {badgeLabel ? (
-                            <View
-                              style={[
-                                styles.statusChip,
-                                {
-                                  backgroundColor: badgeColors?.backgroundColor,
-                                },
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.statusChipLabel,
-                                  { color: badgeColors?.color },
-                                ]}
-                              >
-                                {badgeLabel}
-                              </Text>
-                            </View>
+                          {plantStatus ? (
+                            <PlantStatusBadge
+                              healthState={plantStatus.healthState}
+                              variant="compact"
+                              style={styles.statusChip}
+                            />
                           ) : null}
                         </View>
 
@@ -343,14 +302,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 10,
     left: 10,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  statusChipLabel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 9,
-    letterSpacing: 1.3,
   },
   copy: {
     gap: 6,

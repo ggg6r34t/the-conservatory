@@ -10,8 +10,10 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHealthInsight";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import { AddProgressPhotoSheet } from "@/features/plants/components/AddProgressPhotoSheet";
+import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
 import { buildGrowthTimeline } from "@/features/plants/services/growthTimelineService";
+import { derivePlantStatus } from "@/features/plants/services/plantStatusService";
 import {
   capturePlantImage,
   pickPlantImage,
@@ -62,16 +64,6 @@ function getPrimaryPhoto(data: PlantWithRelations) {
   return (
     data.photos.find((photo) => photo.isPrimary === 1) ?? data.photos[0] ?? null
   );
-}
-
-function getPlantStatus(plant: Plant) {
-  if (!plant.nextWaterDueAt) {
-    return "Healthy";
-  }
-
-  return new Date(plant.nextWaterDueAt).getTime() <= Date.now()
-    ? "Needs Attention"
-    : "Healthy";
 }
 
 function getFamilyLabel(speciesName: string) {
@@ -254,9 +246,17 @@ export function PlantDetail({ data }: PlantDetailProps) {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [mediaSheetVisible, setMediaSheetVisible] = useState(false);
   const primaryPhoto = getPrimaryPhoto(data);
-  const status = getPlantStatus(data.plant);
   const careGuide = buildCareGuide(data.plant);
   const recentActivity = buildRecentActivity(data);
+  const plantStatus = useMemo(
+    () =>
+      derivePlantStatus({
+        plant: data.plant,
+        reminders: data.reminders,
+        logs: data.logs,
+      }),
+    [data.logs, data.plant, data.reminders],
+  );
   const growthTimeline = useMemo(() => buildGrowthTimeline(data), [data]);
   const growthPhotos = useMemo(
     () => growthTimeline.slice(-3).reverse(),
@@ -354,35 +354,14 @@ export function PlantDetail({ data }: PlantDetailProps) {
           </View>
         )}
 
-        <View
+        <PlantStatusBadge
+          healthState={plantStatus.healthState}
+          variant="detail"
           style={[
             styles.statusCard,
             { backgroundColor: colors.surfaceContainerLowest },
           ]}
-        >
-          <View
-            style={[
-              styles.statusIconWrap,
-              { backgroundColor: colors.surfaceContainerHigh },
-            ]}
-          >
-            <Icon
-              name={status === "Healthy" ? "leaf" : "water-alert"}
-              size={13}
-              color={colors.primary}
-            />
-          </View>
-          <View style={styles.statusCopy}>
-            <Text
-              style={[styles.statusEyebrow, { color: colors.onSurfaceVariant }]}
-            >
-              STATUS
-            </Text>
-            <Text style={[styles.statusValue, { color: colors.onSurface }]}>
-              {status}
-            </Text>
-          </View>
-        </View>
+        />
       </View>
 
       <View style={styles.identity}>
@@ -767,33 +746,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 14,
     bottom: 14,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
     ...shadowScale.elevatedCard,
-  },
-  statusIconWrap: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statusCopy: {
-    gap: 0,
-  },
-  statusEyebrow: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 9,
-    letterSpacing: 1.3,
-  },
-  statusValue: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 13,
-    lineHeight: 17,
   },
   identity: {
     gap: 8,

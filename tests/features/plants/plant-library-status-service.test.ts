@@ -1,7 +1,6 @@
-import {
-  buildPlantStatusMap,
-  getLibraryPlantBadgeLabel,
-} from "@/features/plants/services/plantLibraryStatusService";
+import { buildPlantStatusMap } from "@/features/plants/services/plantLibraryStatusService";
+import { getPlantStatusBadgePresentation } from "@/features/plants/services/plantStatusBadgePresentation";
+import { tokens } from "@/styles/tokens";
 import type { CareLog, CareReminder, Plant } from "@/types/models";
 
 function createPlant(id: string, overrides?: Partial<Plant>): Plant {
@@ -78,9 +77,24 @@ describe("plantLibraryStatusService", () => {
       now,
     });
 
-    expect(getLibraryPlantBadgeLabel(statusMap.get("thriving")!)).toBe("THRIVING");
-    expect(getLibraryPlantBadgeLabel(statusMap.get("due")!)).toBe("NEEDS WATER");
-    expect(getLibraryPlantBadgeLabel(statusMap.get("stable")!)).toBe("STABLE");
+    expect(
+      getPlantStatusBadgePresentation({
+        healthState: statusMap.get("thriving")!.healthState,
+        colors: tokens.colors,
+      }).label,
+    ).toBe("THRIVING");
+    expect(
+      getPlantStatusBadgePresentation({
+        healthState: statusMap.get("due")!.healthState,
+        colors: tokens.colors,
+      }).label,
+    ).toBe("NEEDS WATER");
+    expect(
+      getPlantStatusBadgePresentation({
+        healthState: statusMap.get("stable")!.healthState,
+        colors: tokens.colors,
+      }).label,
+    ).toBe("STABLE");
   });
 
   it("never marks plants without a valid schedule as thriving", () => {
@@ -100,6 +114,11 @@ describe("plantLibraryStatusService", () => {
     const status = statusMap.get("unscheduled");
 
     expect(status?.healthState).toBe("stable");
-    expect(getLibraryPlantBadgeLabel(status!)).toBe("STABLE");
+    expect(
+      getPlantStatusBadgePresentation({
+        healthState: status!.healthState,
+        colors: tokens.colors,
+      }).label,
+    ).toBe("STABLE");
   });
 });

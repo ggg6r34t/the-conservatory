@@ -8,8 +8,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
+import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
 import { selectPlantHighlights } from "@/features/plants/services/plantSelectionService";
-import type { PlantHealthState } from "@/features/plants/services/plantStatusService";
 import type { CareLog, CareReminder } from "@/types/models";
 import { formatDueLabel, formatEditorialDate } from "@/utils/dateFormatter";
 
@@ -17,45 +17,6 @@ interface PlantHighlightsProps {
   plants: PlantListItem[];
   reminders: CareReminder[];
   logs: CareLog[];
-}
-
-function getHealthLabel(healthState: PlantHealthState) {
-  switch (healthState) {
-    case "needs_attention":
-      return "NEEDS ATTENTION";
-    case "thriving":
-      return "THRIVING";
-    case "stable":
-    default:
-      return "STABLE";
-  }
-}
-
-function getStackedStatusLabel(healthState: PlantHealthState) {
-  if (healthState === "needs_attention") {
-    return ["NEEDS", "ATTENTION"] as const;
-  }
-
-  if (healthState === "thriving") {
-    return ["THRIVING", ""] as const;
-  }
-
-  return ["STABLE", ""] as const;
-}
-
-function getStatusColor(input: {
-  colors: ReturnType<typeof useTheme>["colors"];
-  healthState: PlantHealthState;
-}) {
-  if (input.healthState === "needs_attention") {
-    return input.colors.error;
-  }
-
-  if (input.healthState === "thriving") {
-    return input.colors.primary;
-  }
-
-  return input.colors.onSurfaceVariant;
 }
 
 function toTitleCase(value: string) {
@@ -145,16 +106,11 @@ export function PlantHighlights({
           <View style={styles.featuredCard}>
             <View style={styles.featuredMedia}>
               <PlantImage plant={featuredPlant} style={styles.featuredImage} />
-              <View
-                style={[
-                  styles.chip,
-                  { backgroundColor: colors.surfaceContainerLowest },
-                ]}
-              >
-                <Text style={[styles.chipLabel, { color: colors.primary }]}>
-                  {getHealthLabel(featuredStatus.healthState)}
-                </Text>
-              </View>
+              <PlantStatusBadge
+                healthState={featuredStatus.healthState}
+                variant="compact"
+                style={styles.chip}
+              />
             </View>
             <View style={styles.featuredCopyRow}>
               <View style={styles.featuredCopy}>
@@ -207,47 +163,11 @@ export function PlantHighlights({
                     plant={leftSecondaryPlant}
                     style={styles.secondaryImage}
                   />
-                  <View
-                    style={[
-                      styles.statusCard,
-                      { backgroundColor: colors.surfaceContainerLowest },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statusLabel,
-                        { color: colors.onSurfaceVariant },
-                      ]}
-                    >
-                      STATUS
-                    </Text>
-                    <Text
-                      style={[
-                        styles.statusValue,
-                        {
-                          color: getStatusColor({
-                            colors,
-                            healthState: leftSecondaryStatus!.healthState,
-                          }),
-                        },
-                      ]}
-                    >
-                      {getStackedStatusLabel(leftSecondaryStatus!.healthState)[0]}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.statusValue,
-                        {
-                          color: getStatusColor({
-                            colors,
-                            healthState: leftSecondaryStatus!.healthState,
-                          }),
-                        },
-                      ]}
-                    >
-                      {getStackedStatusLabel(leftSecondaryStatus!.healthState)[1]}
-                    </Text>
-                  </View>
+                  <PlantStatusBadge
+                    healthState={leftSecondaryStatus!.healthState}
+                    variant="compact"
+                    style={styles.statusCard}
+                  />
                 </View>
                 <View style={styles.secondaryCopy}>
                   <Text
@@ -282,24 +202,11 @@ export function PlantHighlights({
                     plant={rightSecondaryPlant}
                     style={styles.secondaryImage}
                   />
-                  <View
-                    style={[
-                      styles.secondaryDot,
-                      { backgroundColor: colors.surfaceContainerLowest },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.secondaryDotInner,
-                        {
-                          backgroundColor: getStatusColor({
-                            colors,
-                            healthState: rightSecondaryStatus!.healthState,
-                          }),
-                        },
-                      ]}
-                    />
-                  </View>
+                  <PlantStatusBadge
+                    healthState={rightSecondaryStatus!.healthState}
+                    variant="compact"
+                    style={styles.secondaryBadge}
+                  />
                 </View>
                 <View style={styles.secondaryCopy}>
                   <Text
@@ -418,14 +325,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 16,
     left: 16,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  chipLabel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 9,
-    letterSpacing: 1.1,
   },
   featuredCopyRow: {
     flexDirection: "row",
@@ -504,35 +403,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 12,
     bottom: 12,
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
   },
-  statusLabel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 8,
-    letterSpacing: 1.4,
-    marginBottom: 5,
-  },
-  statusValue: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 11,
-    lineHeight: 14,
-  },
-  secondaryDot: {
+  secondaryBadge: {
     position: "absolute",
     top: 12,
     left: 12,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryDotInner: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
   },
   secondaryName: {
     fontFamily: "NotoSerif_700Bold",

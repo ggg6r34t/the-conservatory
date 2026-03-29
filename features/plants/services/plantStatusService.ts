@@ -21,6 +21,18 @@ export interface PlantStatus {
   lastWateredAt: string | null;
 }
 
+export function getPlantStatusLabel(healthState: PlantHealthState) {
+  switch (healthState) {
+    case "thriving":
+      return "THRIVING";
+    case "needs_attention":
+      return "NEEDS WATER";
+    case "stable":
+    default:
+      return "STABLE";
+  }
+}
+
 function startOfDay(value: Date) {
   const date = new Date(value);
   date.setHours(0, 0, 0, 0);
@@ -48,7 +60,7 @@ function toTimestamp(value: string | null | undefined) {
   return Number.isNaN(timestamp) ? null : timestamp;
 }
 
-function latestIso(values: Array<string | null | undefined>) {
+function latestIso(values: (string | null | undefined)[]) {
   const latest = values
     .map((value) => ({ value, timestamp: toTimestamp(value) }))
     .filter(
@@ -62,7 +74,10 @@ function latestIso(values: Array<string | null | undefined>) {
 
 function getPrimaryWaterReminder(reminders: CareReminder[]) {
   return reminders
-    .filter((reminder) => reminder.reminderType === "water" && Boolean(reminder.enabled))
+    .filter(
+      (reminder) =>
+        reminder.reminderType === "water" && Boolean(reminder.enabled),
+    )
     .sort((left, right) => {
       const leftDue = toTimestamp(left.nextDueAt) ?? Number.POSITIVE_INFINITY;
       const rightDue = toTimestamp(right.nextDueAt) ?? Number.POSITIVE_INFINITY;
@@ -107,7 +122,11 @@ function resolveEffectiveNextWateringDate(input: {
       ? addDays(input.lastWateredAt, input.plant.wateringIntervalDays)
       : null;
 
-  const candidates = [
+  const candidates: {
+    value: string | null;
+    source: Exclude<EffectiveNextWateringSource, "none">;
+    updatedAt: string | null;
+  }[] = [
     {
       value: input.reminder?.nextDueAt ?? null,
       source: "reminder" as const,
@@ -123,22 +142,26 @@ function resolveEffectiveNextWateringDate(input: {
       source: "derived" as const,
       updatedAt: input.lastWateredAt,
     },
-  ].filter(
-    (candidate): candidate is {
+  ];
+
+  const filteredCandidates = candidates.filter(
+    (
+      candidate,
+    ): candidate is {
       value: string;
       source: Exclude<EffectiveNextWateringSource, "none">;
       updatedAt: string | null;
     } => candidate.value != null,
   );
 
-  if (candidates.length === 0) {
+  if (filteredCandidates.length === 0) {
     return {
       effectiveNextWateringDate: null,
       effectiveNextWateringSource: "none",
     };
   }
 
-  const selected = [...candidates].sort((left, right) => {
+  const selected = [...filteredCandidates].sort((left, right) => {
     const leftUpdatedAt = toTimestamp(left.updatedAt) ?? 0;
     const rightUpdatedAt = toTimestamp(right.updatedAt) ?? 0;
 
@@ -186,7 +209,10 @@ export function derivePlantStatus(input: {
   const startToday = startOfDay(now).getTime();
   const endToday = endOfDay(now).getTime();
   const isOverdue = dueTimestamp != null ? dueTimestamp < startToday : false;
-  const isDue = dueTimestamp != null ? dueTimestamp >= startToday && dueTimestamp <= endToday : false;
+  const isDue =
+    dueTimestamp != null
+      ? dueTimestamp >= startToday && dueTimestamp <= endToday
+      : false;
   const daysUntilDue =
     effectiveNextWateringDate != null
       ? calculateDaysUntilDue(effectiveNextWateringDate, now)
@@ -197,9 +223,12 @@ export function derivePlantStatus(input: {
     Math.max(1, Math.floor(input.plant.wateringIntervalDays / 3)),
   );
   const recentlyWateredCutoff = new Date(now);
-  recentlyWateredCutoff.setDate(recentlyWateredCutoff.getDate() - recentThresholdDays);
+  recentlyWateredCutoff.setDate(
+    recentlyWateredCutoff.getDate() - recentThresholdDays,
+  );
   const isRecentlyWatered =
-    (toTimestamp(resolvedLastWateredAt) ?? 0) >= recentlyWateredCutoff.getTime();
+    (toTimestamp(resolvedLastWateredAt) ?? 0) >=
+    recentlyWateredCutoff.getTime();
 
   let healthState: PlantHealthState = "stable";
   if (isDue || isOverdue) {

@@ -38,7 +38,7 @@ export default function PlantDetailRoute() {
               <Icon name="arrow-left" size={20} color={colors.primary} />
             </Pressable>
             <Text style={[styles.brand, { color: colors.primary }]}>
-              Living Gallery
+              Plant Details
             </Text>
           </View>
 
