@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import {
   Pressable,
@@ -15,40 +14,16 @@ import {
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
 import { MonthlyHighlightMonthSection } from "@/features/journal/components/MonthlyHighlightMonthSection";
 import { MonthlyHighlightsHero } from "@/features/journal/components/MonthlyHighlightsHero";
-import { buildMonthlyHighlightSections } from "@/features/journal/utils/buildMonthlyHighlightSections";
-import { usePlants } from "@/features/plants/hooks/usePlants";
+import { useMonthlyHighlights } from "@/features/journal/hooks/useMonthlyHighlights";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 
 export default function MonthlyHighlightsScreen() {
   const { colors, spacing } = useTheme();
   const router = useRouter();
   const { onRefresh, refreshing } = usePullToRefreshSync();
-  const plantsQuery = usePlants();
-  const plants = plantsQuery.data ?? [];
-  const highlightablePlants = plants.filter((plant) => plant.primaryPhotoUri);
-  const plantIds = highlightablePlants.map((plant) => plant.id);
-
-  const logsQuery = useQuery({
-    queryKey: ["care-logs", "monthly-highlights", plantIds.join("|")],
-    queryFn: () => listCareLogsForPlants(plantIds),
-    enabled: plantIds.length > 0,
-  });
-  const hasError = plantsQuery.isError || logsQuery.isError;
-
-  const sections = buildMonthlyHighlightSections({
-    items: highlightablePlants.map((plant) => ({
-      id: plant.id,
-      name: plant.name,
-      speciesName: plant.speciesName,
-      imageUri: plant.primaryPhotoUri!,
-      updatedAt: plant.updatedAt,
-      location: plant.location,
-    })),
-    logs: logsQuery.data ?? [],
-  });
+  const { sections, isError: hasError } = useMonthlyHighlights();
 
   return (
     <SafeAreaView
@@ -140,8 +115,8 @@ export default function MonthlyHighlightsScreen() {
             <Text
               style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}
             >
-              Add plant photos and care activity to start building your monthly
-              archive.
+              Add progress photos to start building monthly highlights from
+              real growth moments.
             </Text>
           </View>
         )}

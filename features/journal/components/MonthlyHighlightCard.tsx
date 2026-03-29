@@ -10,7 +10,7 @@ import {
 } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
-import type { MonthlyHighlightCardItem } from "@/features/journal/utils/buildMonthlyHighlightSections";
+import type { MonthlyHighlightCardItem } from "@/features/journal/services/monthlyHighlightsService";
 
 export function MonthlyHighlightCard({
   highlight,

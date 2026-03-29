@@ -5,7 +5,7 @@ import { MonthlyHighlightCard } from "@/features/journal/components/MonthlyHighl
 import type {
   MonthlyHighlightCardItem,
   MonthlyHighlightSection,
-} from "@/features/journal/utils/buildMonthlyHighlightSections";
+} from "@/features/journal/services/monthlyHighlightsService";
 
 function splitIntoColumns(items: MonthlyHighlightCardItem[]) {
   const left: MonthlyHighlightCardItem[] = [];

@@ -510,6 +510,29 @@ export async function listPlants(input: {
     .map((item) => item.plant);
 }
 
+export async function listPhotosForPlants(input: {
+  userId: string;
+  plantIds: string[];
+}) {
+  if (!input.plantIds.length) {
+    return [] as Photo[];
+  }
+
+  const database = await getDatabase();
+  const uniquePlantIds = [...new Set(input.plantIds)];
+  const placeholders = uniquePlantIds.map(() => "?").join(", ");
+  const rows = await database.getAllAsync<PhotoRow>(
+    `SELECT * FROM photos
+     WHERE user_id = ?
+       AND plant_id IN (${placeholders})
+     ORDER BY created_at DESC;`,
+    input.userId,
+    ...uniquePlantIds,
+  );
+
+  return hydratePhotosForDisplay(rows);
+}
+
 export async function getPlantById(
   userId: string,
   plantId: string,

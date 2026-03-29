@@ -24,8 +24,8 @@ import { useJournalSummary } from "@/features/ai/hooks/useJournalSummary";
 import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
+import { useMonthlyHighlights } from "@/features/journal/hooks/useMonthlyHighlights";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
-import { usePlants } from "@/features/plants/hooks/usePlants";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import type { CareLog } from "@/types/models";
 
@@ -39,13 +39,6 @@ function formatMonthYear(value: Date) {
     month: "long",
     year: "numeric",
   }).format(value);
-}
-
-function formatHighlightDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "2-digit",
-  }).format(new Date(value));
 }
 
 function formatSectionLabel(value: Date) {
@@ -195,7 +188,10 @@ export default function JournalScreen() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { onRefresh, refreshing } = usePullToRefreshSync();
-  const plantsQuery = usePlants();
+  const {
+    plantsQuery,
+    previewItems: monthlyHighlights,
+  } = useMonthlyHighlights();
   const plants = plantsQuery.data ?? [];
   const featuredPlant = plants[0];
   const fabBottomOffset = getFloatingActionBottomOffset(insets.bottom);
@@ -230,21 +226,7 @@ export default function JournalScreen() {
 
   const sections = buildSections(entries);
   const monthLabel = formatMonthYear(new Date());
-  const monthlyHighlights = plants
-    .filter((plant) => plant.primaryPhotoUri)
-    .slice(0, 6)
-    .map((plant) => {
-      const latestLog = entries.find(
-        (entry) => entry.plant.id === plant.id,
-      )?.log;
-
-      return {
-        id: plant.id,
-        name: plant.name,
-        imageUri: plant.primaryPhotoUri!,
-        dateLabel: formatHighlightDate(latestLog?.loggedAt ?? plant.updatedAt),
-      };
-    });
+  const hasMonthlyHighlights = monthlyHighlights.length > 0;
   const summaryQuery = useJournalSummary({
     userId: user?.id,
     logs: entries.map((entry) => entry.log),
@@ -283,52 +265,56 @@ export default function JournalScreen() {
 
         {featuredPlant ? (
           <>
-            <View style={styles.highlightsHeader}>
-              <Text
-                style={[styles.highlightsTitle, { color: colors.onSurface }]}
-              >
-                Monthly Highlights
-              </Text>
-              <Link href="/highlights" asChild>
-                <Pressable accessibilityRole="button">
+            {hasMonthlyHighlights ? (
+              <>
+                <View style={styles.highlightsHeader}>
                   <Text
-                    style={[
-                      styles.viewAll,
-                      { color: colors.secondaryOnContainer },
-                    ]}
+                    style={[styles.highlightsTitle, { color: colors.onSurface }]}
                   >
-                    VIEW ALL
+                    Monthly Highlights
                   </Text>
-                </Pressable>
-              </Link>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.highlightsRow}
-            >
-              {monthlyHighlights.map((highlight) => (
-                <Link
-                  href={`/plant/${highlight.id}` as const}
-                  key={highlight.id}
-                  asChild
-                >
-                  <View style={styles.highlightCard}>
-                    <Image
-                      source={{ uri: highlight.imageUri }}
-                      style={styles.highlightImage}
-                      contentFit="cover"
-                    />
-                    <View style={styles.highlightDateWrap}>
-                      <Text style={styles.highlightDate}>
-                        {highlight.dateLabel.toUpperCase()}
+                  <Link href="/highlights" asChild>
+                    <Pressable accessibilityRole="button">
+                      <Text
+                        style={[
+                          styles.viewAll,
+                          { color: colors.secondaryOnContainer },
+                        ]}
+                      >
+                        VIEW ALL
                       </Text>
-                    </View>
-                  </View>
-                </Link>
-              ))}
-            </ScrollView>
+                    </Pressable>
+                  </Link>
+                </View>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.highlightsRow}
+                >
+                  {monthlyHighlights.map((highlight) => (
+                    <Link
+                      href={`/plant/${highlight.id}` as const}
+                      key={`${highlight.id}-${highlight.date}`}
+                      asChild
+                    >
+                      <View style={styles.highlightCard}>
+                        <Image
+                          source={{ uri: highlight.imageUri }}
+                          style={styles.highlightImage}
+                          contentFit="cover"
+                        />
+                        <View style={styles.highlightDateWrap}>
+                          <Text style={styles.highlightDate}>
+                            {highlight.dateLabel}
+                          </Text>
+                        </View>
+                      </View>
+                    </Link>
+                  ))}
+                </ScrollView>
+              </>
+            ) : null}
 
             {summaryQuery.data ? (
               <JournalSummaryCard summary={summaryQuery.data} />

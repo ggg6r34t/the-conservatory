@@ -28,11 +28,15 @@ type ResolvedTimelinePhoto = {
   caption: string | null;
 };
 
-function resolvePhotoRole(photo: Pick<Photo, "photoRole" | "isPrimary">) {
+export function resolveGrowthTimelinePhotoRole(
+  photo: Pick<Photo, "photoRole" | "isPrimary">,
+) {
   return photo.photoRole ?? (photo.isPrimary === 1 ? "primary" : "progress");
 }
 
-function resolvePhotoUri(photo: Pick<Photo, "localUri" | "remoteUrl">) {
+export function resolveGrowthTimelinePhotoUri(
+  photo: Pick<Photo, "localUri" | "remoteUrl">,
+) {
   if (photo.remoteUrl) {
     return photo.remoteUrl;
   }
@@ -44,7 +48,7 @@ function resolvePhotoUri(photo: Pick<Photo, "localUri" | "remoteUrl">) {
   return null;
 }
 
-function resolvePhotoTimestamp(
+export function resolveGrowthTimelinePhotoTimestamp(
   photo: Pick<Photo, "capturedAt" | "takenAt" | "createdAt">,
 ) {
   return normalizeIsoTimestamp(
@@ -219,11 +223,11 @@ export function buildGrowthTimeline(
       }
 
       seenPhotoIds.add(photo.id);
-      return resolvePhotoRole(photo) === "progress";
+      return resolveGrowthTimelinePhotoRole(photo) === "progress";
     })
     .map((photo) => {
-      const imageUri = resolvePhotoUri(photo);
-      const timestamp = resolvePhotoTimestamp(photo);
+      const imageUri = resolveGrowthTimelinePhotoUri(photo);
+      const timestamp = resolveGrowthTimelinePhotoTimestamp(photo);
 
       if (!imageUri || !timestamp) {
         return null;

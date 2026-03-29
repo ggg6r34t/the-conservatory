@@ -14,8 +14,8 @@ export function MonthlyHighlightsHero() {
         Monthly{"\n"}Highlights
       </Text>
       <Text style={[styles.description, { color: colors.onSurfaceVariant }]}>
-        A curated visual record of your collection&apos;s growth and seasonal
-        shifts.
+        A curated visual record of the plants that showed real progress through
+        each month.
       </Text>
     </View>
   );
