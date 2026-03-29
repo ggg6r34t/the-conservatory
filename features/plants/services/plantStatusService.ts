@@ -15,6 +15,9 @@ export interface PlantStatus {
   isDue: boolean;
   isOverdue: boolean;
   daysUntilDue: number | null;
+  daysSinceWatered: number | null;
+  thrivingBufferDays: number | null;
+  recentWateredWindowDays: number | null;
   isRecentlyWatered: boolean;
   healthState: PlantHealthState;
   latestActivityAt: string;
@@ -106,6 +109,28 @@ function calculateDaysUntilDue(targetIso: string, now: Date) {
   const target = startOfDay(new Date(targetIso)).getTime();
 
   return Math.round((target - start) / (1000 * 60 * 60 * 24));
+}
+
+function calculateDaysSince(referenceIso: string, now: Date) {
+  const start = startOfDay(now).getTime();
+  const reference = startOfDay(new Date(referenceIso)).getTime();
+
+  return Math.round((start - reference) / (1000 * 60 * 60 * 24));
+}
+
+function resolveEffectiveWateringIntervalDays(input: {
+  reminder: CareReminder | undefined;
+  plant: PlantListItem;
+}) {
+  if ((input.reminder?.frequencyDays ?? 0) > 0) {
+    return input.reminder!.frequencyDays;
+  }
+
+  if (input.plant.wateringIntervalDays > 0) {
+    return input.plant.wateringIntervalDays;
+  }
+
+  return null;
 }
 
 function resolveEffectiveNextWateringDate(input: {
@@ -204,6 +229,10 @@ export function derivePlantStatus(input: {
       plant: input.plant,
       lastWateredAt: resolvedLastWateredAt,
     });
+  const effectiveIntervalDays = resolveEffectiveWateringIntervalDays({
+    reminder: activeReminder,
+    plant: input.plant,
+  });
 
   const dueTimestamp = toTimestamp(effectiveNextWateringDate);
   const startToday = startOfDay(now).getTime();
@@ -217,27 +246,40 @@ export function derivePlantStatus(input: {
     effectiveNextWateringDate != null
       ? calculateDaysUntilDue(effectiveNextWateringDate, now)
       : null;
-
-  const recentThresholdDays = Math.min(
-    3,
-    Math.max(1, Math.floor(input.plant.wateringIntervalDays / 3)),
-  );
-  const recentlyWateredCutoff = new Date(now);
-  recentlyWateredCutoff.setDate(
-    recentlyWateredCutoff.getDate() - recentThresholdDays,
-  );
+  const daysSinceWatered =
+    resolvedLastWateredAt != null
+      ? calculateDaysSince(resolvedLastWateredAt, now)
+      : null;
+  const thrivingBufferDays =
+    effectiveIntervalDays != null
+      ? Math.max(2, Math.ceil(effectiveIntervalDays * 0.25))
+      : null;
+  const recentWateredWindowDays =
+    effectiveIntervalDays != null
+      ? Math.max(2, Math.floor(effectiveIntervalDays * 0.4))
+      : null;
+  const hasValidSchedule =
+    effectiveNextWateringDate != null && effectiveIntervalDays != null;
+  const hasRealWateringEvent = daysSinceWatered != null;
   const isRecentlyWatered =
-    (toTimestamp(resolvedLastWateredAt) ?? 0) >=
-    recentlyWateredCutoff.getTime();
+    daysSinceWatered != null &&
+    recentWateredWindowDays != null &&
+    daysSinceWatered <= recentWateredWindowDays;
 
   let healthState: PlantHealthState = "stable";
-  if (isDue || isOverdue) {
+  if (daysUntilDue != null && daysUntilDue <= 0) {
     healthState = "needs_attention";
   } else if (
-    effectiveNextWateringDate != null &&
+    hasValidSchedule &&
+    hasRealWateringEvent &&
     isRecentlyWatered &&
     daysUntilDue != null &&
-    daysUntilDue > 2
+    daysSinceWatered != null &&
+    thrivingBufferDays != null &&
+    recentWateredWindowDays != null &&
+    daysUntilDue >= thrivingBufferDays &&
+    daysSinceWatered <= recentWateredWindowDays &&
+    daysUntilDue > 0
   ) {
     healthState = "thriving";
   }
@@ -248,6 +290,9 @@ export function derivePlantStatus(input: {
     isDue,
     isOverdue,
     daysUntilDue,
+    daysSinceWatered,
+    thrivingBufferDays,
+    recentWateredWindowDays,
     isRecentlyWatered,
     healthState,
     latestActivityAt:
