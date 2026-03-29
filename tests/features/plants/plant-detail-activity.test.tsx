@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react-native";
+import { screen, waitFor } from "@testing-library/react-native";
 import React from "react";
 import { fireEvent } from "@testing-library/react-native";
 
@@ -7,6 +7,10 @@ import { renderWithProviders } from "@/tests/utils/renderWithProviders";
 import type { PlantWithRelations } from "@/types/models";
 
 const mockPush = jest.fn();
+const mockRecordCareEvent = jest.fn();
+const mockUpdateCareLogNote = jest.fn();
+const mockSnackbarSuccess = jest.fn();
+const mockSnackbarWarning = jest.fn();
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush }),
@@ -56,12 +60,57 @@ jest.mock("@/features/plants/hooks/useAddPlantProgressPhoto", () => ({
   }),
 }));
 
+jest.mock("@/features/care-logs/components/WaterNowNoteSheet", () => ({
+  WaterNowNoteSheet: ({
+    visible,
+    onSave,
+  }: {
+    visible: boolean;
+    onSave: (note: string) => void;
+  }) => {
+    if (!visible) {
+      return null;
+    }
+
+    const ReactNative = require("react-native");
+    return (
+      <ReactNative.View>
+        <ReactNative.Text>Add a note</ReactNative.Text>
+        <ReactNative.TextInput
+          placeholder="What changed today?"
+          onChangeText={() => undefined}
+        />
+        <ReactNative.Pressable onPress={() => onSave("Watered thoroughly.")}>
+          <ReactNative.Text>Save Note</ReactNative.Text>
+        </ReactNative.Pressable>
+      </ReactNative.View>
+    );
+  },
+}));
+
+jest.mock("@/features/care-logs/hooks/useRecordCareEvent", () => ({
+  useRecordCareEvent: () => ({
+    mutateAsync: (...args: unknown[]) => mockRecordCareEvent(...args),
+    isPending: false,
+  }),
+}));
+
+jest.mock("@/features/care-logs/hooks/useUpdateCareLogNote", () => ({
+  useUpdateCareLogNote: () => ({
+    mutateAsync: (...args: unknown[]) => mockUpdateCareLogNote(...args),
+    isPending: false,
+  }),
+}));
+
 jest.mock("@/hooks/useAlert", () => ({
   useAlert: () => ({ show: jest.fn().mockResolvedValue(undefined) }),
 }));
 
 jest.mock("@/hooks/useSnackbar", () => ({
-  useSnackbar: () => ({ success: jest.fn() }),
+  useSnackbar: () => ({
+    success: (...args: unknown[]) => mockSnackbarSuccess(...args),
+    warning: (...args: unknown[]) => mockSnackbarWarning(...args),
+  }),
 }));
 
 const baseFixture: PlantWithRelations = {
@@ -84,6 +133,20 @@ const baseFixture: PlantWithRelations = {
 describe("PlantDetail recent activity", () => {
   beforeEach(() => {
     mockPush.mockClear();
+    mockRecordCareEvent.mockReset();
+    mockUpdateCareLogNote.mockReset();
+    mockSnackbarSuccess.mockReset();
+    mockSnackbarWarning.mockReset();
+    mockRecordCareEvent.mockResolvedValue({
+      careLog: { id: "log-1" },
+      warningMessage: null,
+    });
+    mockUpdateCareLogNote.mockResolvedValue({
+      careLog: {
+        id: "log-1",
+        notes: "Watered thoroughly.",
+      },
+    });
   });
 
   it("renders an honest empty state and no fabricated activity cards", () => {
@@ -225,6 +288,61 @@ describe("PlantDetail recent activity", () => {
     fireEvent.press(screen.getByText("VIEW ALL"));
 
     expect(mockPush).toHaveBeenCalledWith("/plant/plant-1/activity");
+  });
+
+  it("records Water Now as a real water event instead of routing into the generic form", async () => {
+    renderWithProviders(<PlantDetail data={baseFixture} />);
+
+    fireEvent.press(screen.getByText("Water Now"));
+
+    expect(mockRecordCareEvent).toHaveBeenCalledWith({
+      logType: "water",
+    });
+    expect(mockPush).not.toHaveBeenCalledWith("/care-log/plant-1");
+  });
+
+  it("offers an optional Add note follow-up that updates the same saved water log", async () => {
+    renderWithProviders(<PlantDetail data={baseFixture} />);
+
+    fireEvent.press(screen.getByText("Water Now"));
+
+    await waitFor(() => {
+      expect(mockSnackbarSuccess).toHaveBeenCalledWith(
+        "Watered and saved to care history.",
+        expect.objectContaining({
+          action: expect.objectContaining({
+            label: "Add note",
+          }),
+        }),
+      );
+    });
+
+    const snackbarOptions = mockSnackbarSuccess.mock.calls[0]?.[1] as
+      | {
+          action?: {
+            label: string;
+            onPress: () => void;
+          };
+        }
+      | undefined;
+
+    expect(snackbarOptions?.action?.label).toBe("Add note");
+
+    snackbarOptions?.action?.onPress();
+
+    await waitFor(() => {
+      expect(screen.getByText("Add a note")).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByText("Save Note"));
+
+    await waitFor(() => {
+      expect(mockUpdateCareLogNote).toHaveBeenCalledWith({
+        careLogId: "log-1",
+        notes: "Watered thoroughly.",
+      });
+    });
+    expect(mockRecordCareEvent).toHaveBeenCalledTimes(1);
   });
 
   it("renders only real progress photos in Growth Progress without duplicating the primary image", () => {

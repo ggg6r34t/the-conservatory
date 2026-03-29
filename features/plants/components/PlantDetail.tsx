@@ -10,6 +10,9 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHealthInsight";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import { AddProgressPhotoSheet } from "@/features/plants/components/AddProgressPhotoSheet";
+import { WaterNowNoteSheet } from "@/features/care-logs/components/WaterNowNoteSheet";
+import { useRecordCareEvent } from "@/features/care-logs/hooks/useRecordCareEvent";
+import { useUpdateCareLogNote } from "@/features/care-logs/hooks/useUpdateCareLogNote";
 import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
 import { buildGrowthTimeline } from "@/features/plants/services/growthTimelineService";
@@ -243,8 +246,12 @@ export function PlantDetail({ data }: PlantDetailProps) {
   const alert = useAlert();
   const snackbar = useSnackbar();
   const addPlantProgressPhoto = useAddPlantProgressPhoto(data.plant.id);
+  const recordCareEvent = useRecordCareEvent(data.plant.id);
+  const updateCareLogNote = useUpdateCareLogNote(data.plant.id);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [mediaSheetVisible, setMediaSheetVisible] = useState(false);
+  const [waterNoteSheetVisible, setWaterNoteSheetVisible] = useState(false);
+  const [activeWaterLogId, setActiveWaterLogId] = useState<string | null>(null);
   const primaryPhoto = getPrimaryPhoto(data);
   const careGuide = buildCareGuide(data.plant);
   const recentActivity = buildRecentActivity(data);
@@ -283,6 +290,65 @@ export function PlantDetail({ data }: PlantDetailProps) {
 
   const handleAddPhoto = () => {
     setMediaSheetVisible(true);
+  };
+
+  const handleWaterNow = async () => {
+    try {
+      const result = await recordCareEvent.mutateAsync({
+        logType: "water",
+      });
+
+      setActiveWaterLogId(result.careLog.id);
+
+      if (result.warningMessage) {
+        snackbar.warning(result.warningMessage, {
+          action: {
+            label: "Add note",
+            onPress: () => {
+              setWaterNoteSheetVisible(true);
+            },
+          },
+        });
+      } else {
+        snackbar.success("Watered and saved to care history.", {
+          action: {
+            label: "Add note",
+            onPress: () => {
+              setWaterNoteSheetVisible(true);
+            },
+          },
+        });
+      }
+    } catch (error) {
+      void alert.show({
+        variant: "error",
+        title: "Unable to log watering",
+        message: error instanceof Error ? error.message : "Try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+      });
+    }
+  };
+
+  const handleSaveWaterNote = async (note: string) => {
+    if (!activeWaterLogId) {
+      return;
+    }
+
+    try {
+      await updateCareLogNote.mutateAsync({
+        careLogId: activeWaterLogId,
+        notes: note,
+      });
+      setWaterNoteSheetVisible(false);
+      snackbar.success("Note added to that watering entry.");
+    } catch (error) {
+      void alert.show({
+        variant: "error",
+        title: "Unable to save note",
+        message: error instanceof Error ? error.message : "Try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+      });
+    }
   };
 
   const handleCapturePhoto = async () => {
@@ -332,6 +398,14 @@ export function PlantDetail({ data }: PlantDetailProps) {
         onClose={() => setMediaSheetVisible(false)}
         onCapture={handleCapturePhoto}
         onPickFromLibrary={handlePickPhoto}
+      />
+      <WaterNowNoteSheet
+        visible={waterNoteSheetVisible}
+        onClose={() => setWaterNoteSheetVisible(false)}
+        onSave={(note) => {
+          void handleSaveWaterNote(note);
+        }}
+        saving={updateCareLogNote.isPending}
       />
 
       <View style={styles.heroWrap}>
@@ -395,7 +469,10 @@ export function PlantDetail({ data }: PlantDetailProps) {
           label="Water Now"
           icon="water-drop"
           iconFamily="MaterialIcons"
-          onPress={() => router.push(`/care-log/${data.plant.id}` as const)}
+          onPress={() => {
+            void handleWaterNow();
+          }}
+          loading={recordCareEvent.isPending}
         />
 
         <SecondaryButton

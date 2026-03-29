@@ -48,7 +48,7 @@ export function getPlantStatusBadgePresentation(input: {
       labelLines: [label, ""],
       icon: "leaf",
       iconColor: input.colors.primary,
-      iconBackgroundColor: input.colors.secondaryFixed,
+      iconBackgroundColor: input.colors.primaryFixed,
       labelColor: input.colors.onSurface,
       badgeBackgroundColor: input.colors.secondaryFixed,
       badgeForegroundColor: input.colors.primary,

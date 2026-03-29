@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { queryKeys } from "@/config/constants";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { createCareLog } from "@/features/care-logs/api/careLogsClient";
+import { invalidateCareLogQueries } from "@/features/care-logs/utils/invalidateCareLogQueries";
 import type { CareLogCondition, CareLogType } from "@/types/models";
 
-export function useAddLog(plantId: string) {
+export function useRecordCareEvent(plantId: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -20,19 +20,10 @@ export function useAddLog(plantId: string) {
         plantId,
         ...input,
       }),
-    onSuccess: () => {
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.careLogs(plantId) })
-        .catch(() => undefined);
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.plant(plantId) })
-        .catch(() => undefined);
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.plants })
-        .catch(() => undefined);
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.dashboard })
-        .catch(() => undefined);
+    onSuccess: async () => {
+      await invalidateCareLogQueries(queryClient, plantId).catch(
+        () => undefined,
+      );
     },
   });
 }

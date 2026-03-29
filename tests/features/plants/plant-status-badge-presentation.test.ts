@@ -13,7 +13,9 @@ describe("plantStatusBadgePresentation", () => {
     expect(presentation.labelLines).toEqual(["THRIVING", ""]);
     expect(presentation.icon).toBe("leaf");
     expect(presentation.iconColor).toBe(tokens.colors.primary);
-    expect(presentation.iconBackgroundColor).toBe(tokens.colors.secondaryFixed);
+    expect(presentation.iconBackgroundColor).toBe(
+      tokens.colors.primaryFixed,
+    );
   });
 
   it("returns the canonical stable presentation", () => {

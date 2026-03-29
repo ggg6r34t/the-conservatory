@@ -16,7 +16,8 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { useObservationTagging } from "@/features/ai/hooks/useObservationTagging";
 import { buildCareLogNoteForSave } from "@/features/ai/services/observationTaggingService";
 import type { ObservationTag } from "@/features/ai/types/ai";
-import { useAddLog } from "@/features/care-logs/hooks/useAddLog";
+import { useRecordCareEvent } from "@/features/care-logs/hooks/useRecordCareEvent";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import type { CareLogCondition, CareLogType } from "@/types/models";
 
 interface CareLogFormProps {
@@ -53,14 +54,15 @@ const conditionOptions: CareLogCondition[] = [
 export function CareLogForm({ plantId }: CareLogFormProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const snackbar = useSnackbar();
   const [notes, setNotes] = useState("");
-  const [logType, setLogType] = useState<CareLogType>("water");
-  const [condition, setCondition] = useState<CareLogCondition>("Healthy");
+  const [logType, setLogType] = useState<CareLogType>("inspect");
+  const [condition, setCondition] = useState<CareLogCondition | null>(null);
   const [suggestedRefinement, setSuggestedRefinement] = useState<string | null>(
     null,
   );
   const [selectedTags, setSelectedTags] = useState<ObservationTag[]>([]);
-  const addLog = useAddLog(plantId);
+  const recordCareEvent = useRecordCareEvent(plantId);
   const observationTagging = useObservationTagging();
   const now = new Date();
   const timeLabel = new Intl.DateTimeFormat("en-US", {
@@ -76,11 +78,16 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
         acceptedRefinement: suggestedRefinement,
         tags: selectedTags,
       });
-      await addLog.mutateAsync({
+      const result = await recordCareEvent.mutateAsync({
         logType,
-        currentCondition: condition,
+        currentCondition: condition ?? undefined,
         notes: finalNote,
       });
+      if (result.warningMessage) {
+        snackbar.warning(result.warningMessage);
+      } else {
+        snackbar.success("Care log saved.");
+      }
       router.back();
     } catch (error) {
       Alert.alert(
@@ -303,10 +310,9 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
             color={colors.onSurface}
           />
           <Text style={[styles.timeLabel, { color: colors.onSurface }]}>
-            {nowLabel}
+            Logged now: {nowLabel}
           </Text>
         </View>
-        <Icon name="chevron-right" size={22} color={colors.onSurfaceVariant} />
       </View>
 
       <View style={styles.section}>
@@ -321,7 +327,11 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
             return (
               <Pressable
                 key={option}
-                onPress={() => setCondition(option)}
+                onPress={() =>
+                  setCondition((current) =>
+                    current === option ? null : option,
+                  )
+                }
                 style={[
                   styles.conditionChip,
                   {
@@ -350,7 +360,7 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
       <PrimaryButton
         label="Save Care Log"
         onPress={handleSubmit}
-        loading={addLog.isPending}
+        loading={recordCareEvent.isPending}
       />
     </View>
   );

@@ -10,6 +10,15 @@ import {
 import type { CareLog, CareLogCondition, CareLogType } from "@/types/models";
 import { createId } from "@/utils/id";
 
+export interface RecordCareEventResult {
+  careLog: CareLog;
+  warningMessage: string | null;
+}
+
+export interface UpdateCareLogNoteResult {
+  careLog: CareLog;
+}
+
 function mapCareLog(row: {
   id: string;
   user_id: string;
@@ -108,7 +117,7 @@ export async function createCareLog(input: {
   logType: CareLogType;
   currentCondition?: CareLogCondition;
   notes?: string;
-}) {
+}): Promise<RecordCareEventResult> {
   const database = await getDatabase();
   const now = new Date().toISOString();
   const logId = createId("log");
@@ -234,15 +243,99 @@ export async function createCareLog(input: {
     } | null;
   };
 
+  let warningMessage: string | null = null;
   if (execution.reminderInput) {
-    await upsertReminder({
-      userId: input.userId,
-      plantId: input.plantId,
-      frequencyDays: execution.reminderInput.frequencyDays,
-      nextDueAt: execution.reminderInput.nextDueAt,
-      enabled: true,
-    });
+    try {
+      await upsertReminder({
+        userId: input.userId,
+        plantId: input.plantId,
+        frequencyDays: execution.reminderInput.frequencyDays,
+        nextDueAt: execution.reminderInput.nextDueAt,
+        enabled: true,
+      });
+    } catch {
+      warningMessage =
+        "Care log saved on this device, but the reminder schedule needs another retry.";
+    }
   }
 
-  return execution.careLog;
+  return {
+    careLog: execution.careLog,
+    warningMessage,
+  };
+}
+
+export async function updateCareLogNote(input: {
+  userId: string;
+  plantId: string;
+  careLogId: string;
+  notes: string;
+}): Promise<UpdateCareLogNoteResult> {
+  const database = await getDatabase();
+  const now = new Date().toISOString();
+  const trimmedNotes = input.notes.trim();
+
+  if (!trimmedNotes) {
+    throw new Error("Add a note before saving.");
+  }
+
+  const careLog = await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: now,
+    perform: async (transactionNowIso) => {
+      await database.runAsync(
+        `UPDATE care_logs
+         SET notes = ?, updated_at = ?, updated_by = ?, pending = 1, synced_at = NULL, sync_error = NULL
+         WHERE id = ? AND user_id = ? AND plant_id = ?;`,
+        trimmedNotes,
+        transactionNowIso,
+        input.userId,
+        input.careLogId,
+        input.userId,
+        input.plantId,
+      );
+
+      const updated = await database.getFirstAsync<{
+        id: string;
+        user_id: string;
+        plant_id: string;
+        log_type: CareLogType;
+        current_condition: CareLogCondition | null;
+        notes: string | null;
+        logged_at: string;
+        created_at: string;
+        updated_at: string;
+        updated_by: string | null;
+        pending: number;
+        synced_at: string | null;
+        sync_error: string | null;
+      }>(
+        "SELECT * FROM care_logs WHERE id = ? AND user_id = ? AND plant_id = ? LIMIT 1;",
+        input.careLogId,
+        input.userId,
+        input.plantId,
+      );
+
+      if (!updated) {
+        throw new Error("Unable to find the saved care event for note update.");
+      }
+
+      return {
+        result: mapCareLog(updated),
+        operations: [
+          {
+            entity: "care_logs",
+            entityId: input.careLogId,
+            operation: "update",
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+              notes: trimmedNotes,
+            },
+          },
+        ],
+      };
+    },
+  });
+
+  return { careLog };
 }
