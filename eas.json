@@ -50,6 +50,9 @@
       "channel": "production",
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENABLE_SYNC_TRIALS": "true"
       }
     }
   },
