@@ -99,8 +99,9 @@ export async function upsertReminderInTransaction(
   },
 ): Promise<{ reminderId: string; operation: "insert" | "update" }> {
   const existing = await database.getFirstAsync<{ id: string }>(
-    "SELECT id FROM care_reminders WHERE plant_id = ? LIMIT 1;",
+    "SELECT id FROM care_reminders WHERE plant_id = ? AND user_id = ? LIMIT 1;",
     input.plantId,
+    input.userId,
   );
 
   if (existing) {

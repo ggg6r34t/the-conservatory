@@ -1,6 +1,5 @@
 const mockGetDatabase = jest.fn();
 const mockGetPlantById = jest.fn();
-const mockUpsertReminder = jest.fn();
 const mockUpsertReminderInTransaction = jest
   .fn()
   .mockResolvedValue({ reminderId: "reminder-1", operation: "insert" });
@@ -19,7 +18,6 @@ jest.mock("@/features/settings/api/settingsClient", () => ({
 }));
 
 jest.mock("@/features/notifications/api/remindersClient", () => ({
-  upsertReminder: (...args: unknown[]) => mockUpsertReminder(...args),
   upsertReminderInTransaction: (...args: unknown[]) =>
     mockUpsertReminderInTransaction(...args),
 }));
@@ -32,7 +30,6 @@ jest.mock("@/features/notifications/services/remindersScheduler", () => ({
 describe("care logs client", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUpsertReminder.mockResolvedValue(undefined);
     mockUpsertReminderInTransaction.mockResolvedValue({ reminderId: "reminder-1", operation: "insert" });
     mockReschedulePlantReminder.mockResolvedValue(undefined);
   });
