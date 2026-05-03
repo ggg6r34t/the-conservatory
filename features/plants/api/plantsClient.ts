@@ -900,10 +900,7 @@ export async function updatePlant(input: {
     photoHeight?: number | null;
   };
 }) {
-  if (
-    input.patch.wateringIntervalDays !== undefined &&
-    (input.patch.wateringIntervalDays < 1 || input.patch.wateringIntervalDays > 60)
-  ) {
+  if (input.patch.wateringIntervalDays < 1 || input.patch.wateringIntervalDays > 60) {
     throw new Error("Watering interval must be between 1 and 60 days.");
   }
   const database = await getDatabase();
