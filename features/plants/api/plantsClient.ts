@@ -683,6 +683,9 @@ export async function createPlant(input: {
   photoWidth?: number | null;
   photoHeight?: number | null;
 }) {
+  if (input.wateringIntervalDays < 1 || input.wateringIntervalDays > 60) {
+    throw new Error("Watering interval must be between 1 and 60 days.");
+  }
   const database = await getDatabase();
   const now = new Date().toISOString();
   const plantId = createId("plant");
@@ -897,6 +900,12 @@ export async function updatePlant(input: {
     photoHeight?: number | null;
   };
 }) {
+  if (
+    input.patch.wateringIntervalDays !== undefined &&
+    (input.patch.wateringIntervalDays < 1 || input.patch.wateringIntervalDays > 60)
+  ) {
+    throw new Error("Watering interval must be between 1 and 60 days.");
+  }
   const database = await getDatabase();
   const current = await getPlantById(input.userId, input.plantId);
   if (!current) {
