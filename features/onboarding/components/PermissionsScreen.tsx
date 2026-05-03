@@ -130,7 +130,7 @@ export function PermissionsScreen({
   }, []);
 
   const handlePermissionRequest = async (
-    key: "notifications" | "media" | "location",
+    key: "notifications" | "media",
   ) => {
     const currentState = permissions.permissions[key];
     if (currentState === "denied") {
@@ -238,20 +238,6 @@ export function PermissionsScreen({
             onPress={() => handlePermissionRequest("media")}
           />
 
-          <PermissionCard
-            title="Location"
-            body="Get precise local weather alerts and UV indices to optimize your outdoor botanical care."
-            icon="location-on"
-            actionLabel={getPermissionActionLabel(
-              permissions.permissions.location,
-              "Use Location",
-            )}
-            disabled={
-              permissions.activeKey !== null ||
-              permissions.permissions.location === "unavailable"
-            }
-            onPress={() => handlePermissionRequest("location")}
-          />
         </View>
 
         <View

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   getPermissionSnapshot,
-  requestLocationPermission,
   requestMediaPermissions,
   requestNotificationPermission,
   type OnboardingPermissionSnapshot,
@@ -15,7 +14,6 @@ type PermissionKey = keyof OnboardingPermissionSnapshot;
 const INITIAL_SNAPSHOT: OnboardingPermissionSnapshot = {
   notifications: "undetermined",
   media: "undetermined",
-  location: "undetermined",
 };
 
 export function useOnboardingPermissions() {
@@ -52,10 +50,8 @@ export function useOnboardingPermissions() {
     try {
       if (key === "notifications") {
         nextState = await requestNotificationPermission();
-      } else if (key === "media") {
-        nextState = await requestMediaPermissions();
       } else {
-        nextState = await requestLocationPermission();
+        nextState = await requestMediaPermissions();
       }
 
       setPermissions((current) => ({
@@ -83,10 +79,6 @@ export function useOnboardingPermissions() {
 
       if (permissions.media === "undetermined") {
         await requestPermission("media");
-      }
-
-      if (permissions.location === "undetermined") {
-        await requestPermission("location");
       }
     } finally {
       setContinueLoading(false);

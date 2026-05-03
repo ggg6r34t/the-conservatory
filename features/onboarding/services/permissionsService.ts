@@ -14,7 +14,6 @@ import { logger } from "@/utils/logger";
 export interface OnboardingPermissionSnapshot {
   notifications: PermissionState;
   media: PermissionState;
-  location: PermissionState;
 }
 
 function mapExpoPermissionStatus(
@@ -107,16 +106,14 @@ export async function requestLocationPermission(): Promise<PermissionState> {
 }
 
 export async function getPermissionSnapshot(): Promise<OnboardingPermissionSnapshot> {
-  const [notifications, media, location] = await Promise.all([
+  const [notifications, media] = await Promise.all([
     getNotificationPermissionState(),
     getMediaPermissionState(),
-    getLocationPermissionState(),
   ]);
 
   return {
     notifications,
     media,
-    location,
   };
 }
 
