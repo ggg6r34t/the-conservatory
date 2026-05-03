@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   Image,
@@ -217,16 +216,6 @@ export default function ProfileScreen() {
     setAvatarFailed(false);
   }, [avatarSource]);
 
-  const showSubscriptionAlert = (title: string) => {
-    void alert.show({
-      variant: "info",
-      title,
-      message: "This subscription feature is coming soon.",
-      icon: "sprout",
-      primaryAction: { label: "Close", tone: "primary" },
-    });
-  };
-
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
@@ -354,65 +343,6 @@ export default function ProfileScreen() {
               onPress={() => router.push("/specimen-tags")}
             />
           </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text
-            style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
-          >
-            SUBSCRIPTION
-          </Text>
-          <LinearGradient
-            colors={[colors.primary, colors.primaryContainer]}
-            start={{ x: 0.08, y: 0.08 }}
-            end={{ x: 0.92, y: 0.92 }}
-            style={styles.subscriptionCard}
-          >
-            <View style={styles.subscriptionCardContent}>
-              <Text
-                style={[
-                  styles.subscriptionCardTitle,
-                  { color: colors.onPrimary },
-                ]}
-              >
-                Conservatory Premium
-              </Text>
-              <Text
-                style={[
-                  styles.subscriptionCardBody,
-                  { color: colors.primaryFixed },
-                ]}
-              >
-                Access expert diagnostics and unlimited specimen tracking.
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => showSubscriptionAlert("Manage Plan")}
-                style={[
-                  styles.subscriptionButton,
-                  { backgroundColor: colors.secondaryContainer },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.subscriptionButtonLabel,
-                    { color: colors.onSecondaryContainer },
-                  ]}
-                >
-                  Manage Plan
-                </Text>
-              </Pressable>
-            </View>
-
-            <Image
-              source={require("@/assets/images/potted-plant.png")}
-              resizeMode="contain"
-              style={[
-                styles.subscriptionCardGlyph,
-                { tintColor: colors.primaryFixed },
-              ]}
-            />
-          </LinearGradient>
         </View>
 
         <View style={styles.section}>
@@ -739,52 +669,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
     gap: 2,
-  },
-  subscriptionCard: {
-    minHeight: 208,
-    borderRadius: 30,
-    overflow: "hidden",
-    paddingHorizontal: 24,
-    paddingVertical: 26,
-    justifyContent: "space-between",
-  },
-  subscriptionCardContent: {
-    maxWidth: 236,
-    gap: 10,
-    zIndex: 1,
-  },
-  subscriptionCardTitle: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 31,
-    lineHeight: 37,
-  },
-  subscriptionCardBody: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 15,
-    lineHeight: 23,
-    opacity: 0.84,
-  },
-  subscriptionButton: {
-    alignSelf: "flex-start",
-    minHeight: 56,
-    borderRadius: 999,
-    paddingHorizontal: 20,
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  subscriptionButtonLabel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  subscriptionCardGlyph: {
-    position: "absolute",
-    right: -10,
-    bottom: -18,
-    width: 156,
-    height: 156,
-    opacity: 0.14,
-    transform: [{ rotate: "12deg" }],
   },
   row: {
     minHeight: 68,
