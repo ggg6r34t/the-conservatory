@@ -362,7 +362,7 @@ export default function ProfileScreen() {
             />
             <ProfileRow
               icon="bell-ring-outline"
-              label="Watering Alerts"
+              label="Reminders Enabled"
               onPress={() => {
                 updateSettings.mutate({ remindersEnabled: !remindersEnabled });
               }}
