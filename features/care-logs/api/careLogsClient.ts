@@ -3,6 +3,7 @@ import { upsertReminderInTransaction } from "@/features/notifications/api/remind
 import { reschedulePlantReminder } from "@/features/notifications/services/remindersScheduler";
 import { getPlantById } from "@/features/plants/api/plantsClient";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
+import { extractEmbeddedTags } from "@/services/database/migrations";
 import { getDatabase } from "@/services/database/sqlite";
 import {
   runAtomicMutationWithSyncOutbox,
@@ -27,6 +28,7 @@ function mapCareLog(row: {
   log_type: CareLogType;
   current_condition: CareLogCondition | null;
   notes: string | null;
+  tags: string | null;
   logged_at: string;
   created_at: string;
   updated_at: string;
@@ -42,6 +44,7 @@ function mapCareLog(row: {
     logType: row.log_type,
     currentCondition: row.current_condition,
     notes: row.notes,
+    tags: row.tags ? (JSON.parse(row.tags) as string[]) : null,
     loggedAt: row.logged_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -67,6 +70,7 @@ export async function listCareLogs(plantId: string) {
     log_type: CareLogType;
     current_condition: CareLogCondition | null;
     notes: string | null;
+    tags: string | null;
     logged_at: string;
     created_at: string;
     updated_at: string;
@@ -97,6 +101,7 @@ export async function listCareLogsForPlants(plantIds: string[]) {
     log_type: CareLogType;
     current_condition: CareLogCondition | null;
     notes: string | null;
+    tags: string | null;
     logged_at: string;
     created_at: string;
     updated_at: string;
@@ -122,20 +127,27 @@ export async function createCareLog(input: {
   const database = await getDatabase();
   const now = new Date().toISOString();
   const logId = createId("log");
+  const { cleanNotes, tags: extractedTags } = input.notes
+    ? extractEmbeddedTags(input.notes)
+    : { cleanNotes: null, tags: [] };
+
+  const tagsJson = extractedTags.length > 0 ? JSON.stringify(extractedTags) : null;
+
   const execution = (await runAtomicMutationWithSyncOutbox(database, {
     nowIso: now,
     perform: async (transactionNowIso) => {
       await database.runAsync(
         `INSERT INTO care_logs (
-          id, user_id, plant_id, log_type, current_condition, notes, logged_at, created_at, updated_at, updated_by,
+          id, user_id, plant_id, log_type, current_condition, notes, tags, logged_at, created_at, updated_at, updated_by,
           pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         logId,
         input.userId,
         input.plantId,
         input.logType,
         input.currentCondition ?? null,
-        input.notes ?? null,
+        cleanNotes || null,
+        tagsJson,
         transactionNowIso,
         transactionNowIso,
         transactionNowIso,
@@ -241,6 +253,7 @@ export async function createCareLog(input: {
         log_type: CareLogType;
         current_condition: CareLogCondition | null;
         notes: string | null;
+        tags: string | null;
         logged_at: string;
         created_at: string;
         updated_at: string;
@@ -300,14 +313,18 @@ export async function updateCareLogNote(input: {
     throw new Error("Add a note before saving.");
   }
 
+  const { cleanNotes: finalNotes, tags: extractedTags } = extractEmbeddedTags(trimmedNotes);
+  const tagsJson = extractedTags.length > 0 ? JSON.stringify(extractedTags) : null;
+
   const careLog = await runAtomicMutationWithSyncOutbox(database, {
     nowIso: now,
     perform: async (transactionNowIso) => {
       await database.runAsync(
         `UPDATE care_logs
-         SET notes = ?, updated_at = ?, updated_by = ?, pending = 1, synced_at = NULL, sync_error = NULL
+         SET notes = ?, tags = ?, updated_at = ?, updated_by = ?, pending = 1, synced_at = NULL, sync_error = NULL
          WHERE id = ? AND user_id = ? AND plant_id = ?;`,
-        trimmedNotes,
+        finalNotes || null,
+        tagsJson,
         transactionNowIso,
         input.userId,
         input.careLogId,
@@ -322,6 +339,7 @@ export async function updateCareLogNote(input: {
         log_type: CareLogType;
         current_condition: CareLogCondition | null;
         notes: string | null;
+        tags: string | null;
         logged_at: string;
         created_at: string;
         updated_at: string;

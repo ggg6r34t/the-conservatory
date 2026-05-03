@@ -398,6 +398,49 @@ WHERE captured_at IS NULL;
 `);
 }
 
+export function extractEmbeddedTags(notes: string): { cleanNotes: string; tags: string[] } {
+  const metaPattern = /\n\n\[meta:(\{[^}]+\})\]/g;
+  const tags: string[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = metaPattern.exec(notes)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1]) as { tags?: unknown };
+      if (Array.isArray(parsed.tags)) {
+        for (const tag of parsed.tags) {
+          if (typeof tag === "string") {
+            tags.push(tag);
+          }
+        }
+      }
+    } catch {
+      // malformed meta — skip
+    }
+  }
+
+  const cleanNotes = notes.replace(/\n\n\[meta:\{[^}]+\}\]/g, "").trim();
+  return { cleanNotes, tags };
+}
+
+async function backfillEmbeddedTagsFromNotes(database: SQLiteDatabase) {
+  const rows = await database.getAllAsync<{ id: string; notes: string | null }>(
+    `SELECT id, notes FROM care_logs WHERE tags IS NULL AND notes LIKE '%[meta:%';`,
+  );
+
+  for (const row of rows) {
+    if (!row.notes) continue;
+    const { cleanNotes, tags } = extractEmbeddedTags(row.notes);
+    if (tags.length === 0) continue;
+
+    await database.runAsync(
+      `UPDATE care_logs SET notes = ?, tags = ? WHERE id = ?;`,
+      cleanNotes || null,
+      JSON.stringify(tags),
+      row.id,
+    );
+  }
+}
+
 export async function runDatabaseMigrations(database: SQLiteDatabase) {
   await database.execAsync(bootstrapSql);
   await database.execAsync("PRAGMA foreign_keys = ON;");
@@ -426,4 +469,6 @@ export async function runDatabaseMigrations(database: SQLiteDatabase) {
   await ensureColumn(database, "photos", "captured_at", "TEXT");
   await ensureColumn(database, "photos", "caption", "TEXT");
   await backfillPhotoTimelineMetadata(database);
+  await ensureColumn(database, "care_logs", "tags", "TEXT");
+  await backfillEmbeddedTagsFromNotes(database);
 }
