@@ -76,7 +76,7 @@ describe("userDataSync", () => {
     await flushMicrotasks();
     expect(mockSyncPendingChanges).toHaveBeenCalledTimes(1);
 
-    release?.();
+    if (release) (release as () => void)();
     await Promise.all([first, second]);
     await new Promise((resolve) => setTimeout(resolve, 0));
 

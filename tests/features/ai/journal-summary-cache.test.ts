@@ -17,11 +17,14 @@ jest.mock("@/features/ai/services/aiCache", () => {
     getCachedValue: jest.fn(async (key: string) =>
       store.has(key) ? store.get(key) : null,
     ),
-  
-  buildJournalSummaryStateSignature,
-  getJournalMonthlySummary,
-} from "@/features/ai/services/journalSummaryService";
-import type { CareLog, Plant } from "@/types/models";
+    setCachedValue: jest.fn(async (key: string, value: unknown) => {
+      store.set(key, value);
+    }),
+    removeCachedValue: jest.fn(async (key: string) => {
+      store.delete(key);
+    }),
+  };
+});
 
 function createPlant(overrides?: Partial<Plant>): Plant {
   return {
@@ -48,6 +51,7 @@ function createLog(id: string, loggedAt: string): CareLog {
     createdAt: loggedAt,
     updatedAt: loggedAt,
     pending: 0,
+    tags: null,
   };
 }
 

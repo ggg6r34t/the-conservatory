@@ -5,16 +5,19 @@ This folder is organized around the core production docs the repo actively keeps
 ## Current Structure
 
 ### Root
+
 - [SCREEN_INVENTORY.md](./SCREEN_INVENTORY.md)
   Current route and screen inventory for the app.
 
 ### Design
+
 - [design/DESIGN.md](./design/DESIGN.md)
   Full implementation-facing design system reference.
 - [design/DESIGN_QUICK_REFERENCE.md](./design/DESIGN_QUICK_REFERENCE.md)
   Fast token and UI pattern cheat sheet.
 
 ### Architecture
+
 - [architecture/ARCHITECTURE.md](./architecture/ARCHITECTURE.md)
   High-level application architecture, feature boundaries, and routing model.
 - [architecture/SYNC_AND_DATA_MODEL.md](./architecture/SYNC_AND_DATA_MODEL.md)
@@ -23,12 +26,20 @@ This folder is organized around the core production docs the repo actively keeps
   Route grouping, user flows, and navigation responsibilities.
 
 ### Engineering
+
 - [engineering/ENGINEERING_GUIDELINES.md](./engineering/ENGINEERING_GUIDELINES.md)
   Implementation conventions, code organization, and day-to-day engineering expectations.
+- [engineering/V1_IMPLEMENTATION_SUMMARY.md](./engineering/V1_IMPLEMENTATION_SUMMARY.md)
+  Internal summary of completed V1 product and engineering implementation work.
+
+### Superpowers Plans
+
+- [superpowers/plans/2026-05-02-production-readiness.md](./superpowers/plans/2026-05-02-production-readiness.md)
+  Implementation plan for all Tier 1–3 production readiness fixes (EAS sync flag, location permission, subscription card, reminder atomicity, users hydration, store persistence, tags column).
 
 ## Kept Set
 
-The repo now intentionally keeps this lean 8-file set:
+The repo now intentionally keeps this lean 10-file set:
 
 1. `docs/README.md`
 2. `docs/SCREEN_INVENTORY.md`
@@ -38,6 +49,8 @@ The repo now intentionally keeps this lean 8-file set:
 6. `docs/architecture/SYNC_AND_DATA_MODEL.md`
 7. `docs/architecture/NAVIGATION_MAP.md`
 8. `docs/engineering/ENGINEERING_GUIDELINES.md`
+9. `docs/engineering/V1_IMPLEMENTATION_SUMMARY.md`
+10. `docs/superpowers/plans/2026-05-02-production-readiness.md`
 
 ## Maintenance Guidance
 

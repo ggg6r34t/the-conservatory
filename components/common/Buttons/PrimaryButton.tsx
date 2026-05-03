@@ -21,6 +21,7 @@ interface PrimaryButtonProps {
   href?: Href;
   loading?: boolean;
   disabled?: boolean;
+  fullWidth?: boolean;
   icon?: string;
   iconFamily?: React.ComponentProps<typeof Icon>["family"];
   iconPosition?: "leading" | "trailing";
@@ -34,6 +35,7 @@ export function PrimaryButton({
   href,
   loading = false,
   disabled = false,
+  fullWidth = false,
   icon,
   iconFamily,
   iconPosition = "leading",
@@ -140,6 +142,7 @@ export function PrimaryButton({
       disabled={disabled || loading}
       style={({ pressed }) => [
         compact && styles.inlinePressable,
+        fullWidth && styles.fullWidth,
         pressed && !disabled && !loading && styles.pressed,
       ]}
     >
@@ -151,6 +154,9 @@ export function PrimaryButton({
 const styles = StyleSheet.create({
   inlinePressable: {
     alignSelf: "flex-start",
+  },
+  fullWidth: {
+    alignSelf: "stretch",
   },
   gradient: {
     minHeight: 58,

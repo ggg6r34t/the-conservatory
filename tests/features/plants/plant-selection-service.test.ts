@@ -16,7 +16,10 @@ function createPlant(id: string, overrides?: Partial<Plant>): Plant {
   };
 }
 
-function createReminder(plantId: string, overrides?: Partial<CareReminder>): CareReminder {
+function createReminder(
+  plantId: string,
+  overrides?: Partial<CareReminder>,
+): CareReminder {
   return {
     id: `reminder-${plantId}`,
     userId: "user-1",
@@ -209,22 +212,24 @@ describe("plantSelectionService", () => {
 
   it("only marks due or overdue secondary plants as needing attention", () => {
     const selection = selectPlantHighlights({
-      plants: [createPlant("due"), createPlant("stable"), createPlant("thriving")],
+      plants: [
+        createPlant("due"),
+        createPlant("stable"),
+        createPlant("thriving"),
+      ],
       reminders: [
         createReminder("due", { nextDueAt: "2026-03-24T09:00:00.000Z" }),
         createReminder("stable", { nextDueAt: "2026-03-26T09:00:00.000Z" }),
         createReminder("thriving", { nextDueAt: "2026-03-29T09:00:00.000Z" }),
       ],
-      logs: [
-        createLog("thriving", { loggedAt: "2026-03-23T08:00:00.000Z" }),
-      ],
+      logs: [createLog("thriving", { loggedAt: "2026-03-23T08:00:00.000Z" })],
       now,
     });
 
     expect(selection.featuredPlant?.status.healthState).toBe("needs_attention");
     expect(
-      selection.secondaryPlants.find((item) => item.plant.id === "stable")?.status
-        .healthState,
+      selection.secondaryPlants.find((item) => item.plant.id === "stable")
+        ?.status.healthState,
     ).toBe("stable");
   });
 
@@ -261,8 +266,8 @@ describe("plantSelectionService", () => {
   it("returns no featured or secondary plants when there are no active plants", () => {
     const selection = selectPlantHighlights({
       plants: [
-        createPlant("archived", { status: "archived" }),
-        createPlant("memorial", { status: "memorial" }),
+        createPlant("archived", { status: "graveyard" }),
+        createPlant("memorial", { status: "graveyard" }),
       ],
       reminders: [],
       logs: [],

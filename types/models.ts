@@ -86,7 +86,7 @@ export interface CareLog {
   logType: CareLogType;
   currentCondition?: CareLogCondition | null;
   notes?: string | null;
-  tags: string[] | null;
+  tags?: string[] | null;
   loggedAt: string;
   createdAt: string;
   updatedAt: string;
