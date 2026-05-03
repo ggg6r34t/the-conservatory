@@ -117,6 +117,17 @@ interface RemoteGraveyardRow extends MergeableRemoteRow {
   updated_by: string | null;
 }
 
+interface RemoteUserRow {
+  id: string;
+  email: string;
+  display_name: string;
+  avatar_url: string | null;
+  role: string;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+}
+
 async function fetchRemoteRows<T>(
   table: string,
   columns: string,
@@ -158,6 +169,32 @@ async function fetchRemoteRowsSafe<T>(
       ok: false,
       rows: [] as T[],
     };
+  }
+}
+
+async function fetchRemoteUserRowSafe(userId: string) {
+  try {
+    if (!supabase) {
+      return { ok: true, rows: [] as RemoteUserRow[] };
+    }
+
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, email, display_name, avatar_url, role, created_at, updated_at, updated_by")
+      .eq("id", userId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return { ok: true, rows: (data ?? []) as RemoteUserRow[] };
+  } catch (error) {
+    logger.warn("sync.remote_hydration.fetch_failed", {
+      table: "users",
+      userId,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return { ok: false, rows: [] as RemoteUserRow[] };
   }
 }
 
@@ -243,6 +280,23 @@ async function shouldReplaceLocalUserPreferences(
   });
 
   return result.winner === "remote";
+}
+
+async function shouldReplaceLocalUser(
+  database: SQLiteDatabase,
+  userId: string,
+  remoteUpdatedAt: string,
+) {
+  const localRow = await database.getFirstAsync<{ updated_at: string }>(
+    `SELECT updated_at FROM users WHERE id = ? LIMIT 1;`,
+    userId,
+  );
+
+  if (!localRow) {
+    return true;
+  }
+
+  return remoteUpdatedAt > localRow.updated_at;
 }
 
 async function shouldReplaceLocalRow(
@@ -331,6 +385,7 @@ export async function hydrateRemoteUserData(userId: string) {
     careLogsResult,
     remindersResult,
     graveyardResult,
+    usersResult,
   ] = await Promise.all([
     fetchRemoteRowsSafe<RemoteUserPreferencesRow>(
       "user_preferences",
@@ -416,6 +471,7 @@ export async function hydrateRemoteUserData(userId: string) {
       ].join(", "),
       userId,
     ),
+    fetchRemoteUserRowSafe(userId),
   ]);
 
   const plants = plantsResult.rows;
@@ -424,6 +480,7 @@ export async function hydrateRemoteUserData(userId: string) {
   const careLogs = careLogsResult.rows;
   const reminders = remindersResult.rows;
   const graveyardPlants = graveyardResult.rows;
+  const remoteUser = usersResult.rows[0] ?? null;
 
   const hydratedPhotos = await Promise.all(
     photos.map(async (row) => {
@@ -465,6 +522,22 @@ export async function hydrateRemoteUserData(userId: string) {
   const syncedAt = new Date().toISOString();
 
   await database.withTransactionAsync(async () => {
+    if (remoteUser && (await shouldReplaceLocalUser(database, userId, remoteUser.updated_at))) {
+      await database.runAsync(
+        `INSERT OR REPLACE INTO users (
+          id, email, display_name, avatar_url, role, created_at, updated_at, updated_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+        remoteUser.id,
+        remoteUser.email,
+        remoteUser.display_name,
+        remoteUser.avatar_url ?? null,
+        remoteUser.role,
+        remoteUser.created_at,
+        remoteUser.updated_at,
+        remoteUser.updated_by ?? remoteUser.id,
+      );
+    }
+
     if (
       preferences &&
       (await shouldReplaceLocalUserPreferences(database, userId, preferences))
