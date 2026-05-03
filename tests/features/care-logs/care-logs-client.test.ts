@@ -81,6 +81,7 @@ describe("care logs client", () => {
       "note",
       "Declining",
       "Leaves softened near the base.",
+      null,
       expect.any(String),
       expect.any(String),
       expect.any(String),
@@ -378,6 +379,7 @@ describe("care logs client", () => {
     expect(runAsync).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE care_logs"),
       "Watered more deeply than usual.",
+      null,
       expect.any(String),
       "user-1",
       "log-1",
