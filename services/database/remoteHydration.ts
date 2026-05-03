@@ -534,7 +534,7 @@ export async function hydrateRemoteUserData(userId: string) {
         remoteUser.role,
         remoteUser.created_at,
         remoteUser.updated_at,
-        remoteUser.updated_by ?? remoteUser.id,
+        remoteUser.updated_by,
       );
     }
 
