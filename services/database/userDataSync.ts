@@ -9,7 +9,8 @@ export type UserDataSyncTrigger =
   | "auto-bootstrap"
   | "auto-foreground"
   | "auto-network"
-  | "auto-queue";
+  | "auto-queue"
+  | "auto-settings";
 
 export interface UserDataSyncSnapshot {
   isRunning: boolean;
