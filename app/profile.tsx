@@ -22,7 +22,6 @@ import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { usePlants } from "@/features/plants/hooks/usePlants";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
-import { useAlert } from "@/hooks/useAlert";
 
 type ProfileRowProps = {
   icon: string;
@@ -171,7 +170,6 @@ function ProfileRow({
 
 export default function ProfileScreen() {
   const { colors, spacing } = useTheme();
-  const alert = useAlert();
   const { user, signOut, isSigningOut } = useAuth();
   const router = useRouter();
   const [showDeveloperMenu, setShowDeveloperMenu] = useState(false);
