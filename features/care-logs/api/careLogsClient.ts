@@ -1,5 +1,6 @@
 import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
-import { upsertReminder } from "@/features/notifications/api/remindersClient";
+import { upsertReminderInTransaction } from "@/features/notifications/api/remindersClient";
+import { reschedulePlantReminder } from "@/features/notifications/services/remindersScheduler";
 import { getPlantById } from "@/features/plants/api/plantsClient";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import { getDatabase } from "@/services/database/sqlite";
@@ -203,6 +204,28 @@ export async function createCareLog(input: {
           });
 
           if (optimized.nextDueAt) {
+            const { reminderId, operation: reminderOp } = await upsertReminderInTransaction(
+              database,
+              transactionNowIso,
+              {
+                userId: input.userId,
+                plantId: input.plantId,
+                frequencyDays: plant.plant.wateringIntervalDays,
+                nextDueAt: optimized.nextDueAt,
+                enabled: true,
+              },
+            );
+            operations.push({
+              entity: "care_reminders",
+              entityId: reminderId,
+              operation: reminderOp,
+              payload: {
+                userId: input.userId,
+                plantId: input.plantId,
+                frequencyDays: plant.plant.wateringIntervalDays,
+                enabled: true,
+              },
+            });
             reminderInput = {
               frequencyDays: plant.plant.wateringIntervalDays,
               nextDueAt: optimized.nextDueAt,
@@ -246,13 +269,11 @@ export async function createCareLog(input: {
   let warningMessage: string | null = null;
   if (execution.reminderInput) {
     try {
-      await upsertReminder({
-        userId: input.userId,
-        plantId: input.plantId,
-        frequencyDays: execution.reminderInput.frequencyDays,
-        nextDueAt: execution.reminderInput.nextDueAt,
-        enabled: true,
-      });
+      const plantData = await getPlantById(input.userId, input.plantId);
+      const reminder = plantData?.reminders[0];
+      if (reminder) {
+        await reschedulePlantReminder(reminder, plantData?.plant.name ?? "plant");
+      }
     } catch {
       warningMessage =
         "Care log saved on this device, but the reminder schedule needs another retry.";

@@ -1,6 +1,7 @@
 import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
-import { upsertReminder } from "@/features/notifications/api/remindersClient";
+import { upsertReminderInTransaction } from "@/features/notifications/api/remindersClient";
 import { cancelReminderNotification } from "@/features/notifications/services/notificationService";
+import { reschedulePlantReminder } from "@/features/notifications/services/remindersScheduler";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import { getDatabase } from "@/services/database/sqlite";
 import {
@@ -791,6 +792,30 @@ export async function createPlant(input: {
         });
       }
 
+      const { reminderId, operation: reminderOp } = await upsertReminderInTransaction(
+        database,
+        transactionNowIso,
+        {
+          userId: input.userId,
+          plantId,
+          frequencyDays: input.wateringIntervalDays,
+          nextDueAt: nextWaterDueAt,
+          enabled: true,
+        },
+      );
+
+      operations.push({
+        entity: "care_reminders",
+        entityId: reminderId,
+        operation: reminderOp,
+        payload: {
+          userId: input.userId,
+          plantId,
+          frequencyDays: input.wateringIntervalDays,
+          enabled: true,
+        },
+      });
+
       return {
         result: plantId,
         operations,
@@ -798,15 +823,13 @@ export async function createPlant(input: {
     },
   });
 
-  await upsertReminder({
-    userId: input.userId,
-    plantId,
-    frequencyDays: input.wateringIntervalDays,
-    nextDueAt: nextWaterDueAt,
-    enabled: true,
-  });
-
   const created = await getPlantById(input.userId, plantId);
+  if (created) {
+    const reminder = created.reminders[0];
+    if (reminder) {
+      void reschedulePlantReminder(reminder, created.plant.name).catch(() => undefined);
+    }
+  }
   return created!;
 }
 
@@ -1051,6 +1074,30 @@ export async function updatePlant(input: {
         },
       });
 
+      const { reminderId, operation: reminderOp } = await upsertReminderInTransaction(
+        database,
+        transactionNowIso,
+        {
+          userId: input.userId,
+          plantId: input.plantId,
+          frequencyDays: input.patch.wateringIntervalDays,
+          nextDueAt: nextWaterDueAt ?? null,
+          enabled: true,
+        },
+      );
+
+      operations.push({
+        entity: "care_reminders",
+        entityId: reminderId,
+        operation: reminderOp,
+        payload: {
+          userId: input.userId,
+          plantId: input.plantId,
+          frequencyDays: input.patch.wateringIntervalDays,
+          enabled: true,
+        },
+      });
+
       return {
         result: input.plantId,
         operations,
@@ -1058,15 +1105,13 @@ export async function updatePlant(input: {
     },
   });
 
-  await upsertReminder({
-    userId: input.userId,
-    plantId: input.plantId,
-    frequencyDays: input.patch.wateringIntervalDays,
-    nextDueAt: nextWaterDueAt ?? null,
-    enabled: true,
-  });
-
   const updated = await getPlantById(input.userId, input.plantId);
+  if (updated) {
+    const reminder = updated.reminders[0];
+    if (reminder) {
+      void reschedulePlantReminder(reminder, updated.plant.name).catch(() => undefined);
+    }
+  }
   return updated!;
 }
 

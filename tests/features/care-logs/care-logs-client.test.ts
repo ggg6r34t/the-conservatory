@@ -1,6 +1,10 @@
 const mockGetDatabase = jest.fn();
 const mockGetPlantById = jest.fn();
 const mockUpsertReminder = jest.fn();
+const mockUpsertReminderInTransaction = jest
+  .fn()
+  .mockResolvedValue({ reminderId: "reminder-1", operation: "insert" });
+const mockReschedulePlantReminder = jest.fn().mockResolvedValue(undefined);
 
 jest.mock("@/services/database/sqlite", () => ({
   getDatabase: (...args: unknown[]) => mockGetDatabase(...args),
@@ -16,12 +20,21 @@ jest.mock("@/features/settings/api/settingsClient", () => ({
 
 jest.mock("@/features/notifications/api/remindersClient", () => ({
   upsertReminder: (...args: unknown[]) => mockUpsertReminder(...args),
+  upsertReminderInTransaction: (...args: unknown[]) =>
+    mockUpsertReminderInTransaction(...args),
+}));
+
+jest.mock("@/features/notifications/services/remindersScheduler", () => ({
+  reschedulePlantReminder: (...args: unknown[]) =>
+    mockReschedulePlantReminder(...args),
 }));
 
 describe("care logs client", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUpsertReminder.mockResolvedValue(undefined);
+    mockUpsertReminderInTransaction.mockResolvedValue({ reminderId: "reminder-1", operation: "insert" });
+    mockReschedulePlantReminder.mockResolvedValue(undefined);
   });
 
   it("persists current condition when creating a care log", async () => {
@@ -246,10 +259,28 @@ describe("care logs client", () => {
         pending: 0,
       },
       photos: [],
-      reminders: [],
+      reminders: [
+        {
+          id: "reminder-1",
+          userId: "user-1",
+          plantId: "plant-1",
+          reminderType: "water",
+          frequencyDays: 7,
+          enabled: 1,
+          nextDueAt: "2026-03-31T09:00:00.000Z",
+          lastTriggeredAt: null,
+          notificationId: null,
+          createdAt: "2026-03-01T10:00:00.000Z",
+          updatedAt: "2026-03-24T10:00:00.000Z",
+          updatedBy: "user-1",
+          pending: 1,
+          syncedAt: null,
+          syncError: null,
+        },
+      ],
       logs: [],
     });
-    mockUpsertReminder.mockRejectedValue(new Error("scheduler unavailable"));
+    mockReschedulePlantReminder.mockRejectedValue(new Error("scheduler unavailable"));
 
     mockGetDatabase.mockResolvedValue({
       runAsync,

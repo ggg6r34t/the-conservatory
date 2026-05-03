@@ -87,6 +87,62 @@ export async function listReminders(userId: string, plantId?: string) {
   return rows.map(mapReminder);
 }
 
+export async function upsertReminderInTransaction(
+  database: Awaited<ReturnType<typeof getDatabase>>,
+  nowIso: string,
+  input: {
+    userId: string;
+    plantId: string;
+    frequencyDays: number;
+    nextDueAt: string | null;
+    enabled: boolean;
+  },
+): Promise<{ reminderId: string; operation: "insert" | "update" }> {
+  const existing = await database.getFirstAsync<{ id: string }>(
+    "SELECT id FROM care_reminders WHERE plant_id = ? LIMIT 1;",
+    input.plantId,
+  );
+
+  if (existing) {
+    await database.runAsync(
+      `UPDATE care_reminders
+       SET frequency_days = ?, next_due_at = ?, enabled = ?, updated_at = ?, updated_by = ?, pending = 1
+       WHERE id = ?;`,
+      input.frequencyDays,
+      input.nextDueAt,
+      Number(input.enabled),
+      nowIso,
+      input.userId,
+      existing.id,
+    );
+    return { reminderId: existing.id, operation: "update" };
+  }
+
+  const reminderId = createId("reminder");
+  await database.runAsync(
+    `INSERT INTO care_reminders (
+      id, user_id, plant_id, reminder_type, frequency_days, enabled, next_due_at, last_triggered_at,
+      notification_id, created_at, updated_at, updated_by, pending, synced_at, sync_error
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+    reminderId,
+    input.userId,
+    input.plantId,
+    "water",
+    input.frequencyDays,
+    Number(input.enabled),
+    input.nextDueAt,
+    null,
+    null,
+    nowIso,
+    nowIso,
+    input.userId,
+    1,
+    null,
+    null,
+  );
+  return { reminderId, operation: "insert" };
+}
+
 export async function upsertReminder(input: {
   userId: string;
   plantId: string;

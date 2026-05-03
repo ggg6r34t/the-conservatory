@@ -1,6 +1,10 @@
 const mockGetDatabase = jest.fn();
 const mockCancelReminderNotification = jest.fn().mockResolvedValue(undefined);
 const mockUpsertReminder = jest.fn().mockResolvedValue(undefined);
+const mockUpsertReminderInTransaction = jest
+  .fn()
+  .mockResolvedValue({ reminderId: "reminder-1", operation: "insert" });
+const mockReschedulePlantReminder = jest.fn().mockResolvedValue(undefined);
 
 jest.mock("@/services/database/sqlite", () => ({
   getDatabase: (...args: unknown[]) => mockGetDatabase(...args),
@@ -11,12 +15,19 @@ jest.mock("@/features/notifications/services/notificationService", () => ({
     mockCancelReminderNotification(...args),
 }));
 
+jest.mock("@/features/notifications/services/remindersScheduler", () => ({
+  reschedulePlantReminder: (...args: unknown[]) =>
+    mockReschedulePlantReminder(...args),
+}));
+
 jest.mock("@/features/settings/api/settingsClient", () => ({
   getUserPreferences: jest.fn().mockResolvedValue({ defaultWateringHour: 9 }),
 }));
 
 jest.mock("@/features/notifications/api/remindersClient", () => ({
   upsertReminder: (...args: unknown[]) => mockUpsertReminder(...args),
+  upsertReminderInTransaction: (...args: unknown[]) =>
+    mockUpsertReminderInTransaction(...args),
 }));
 
 jest.mock("@/services/supabase/storage", () => ({
@@ -96,8 +107,9 @@ describe("plants client", () => {
   it("rolls back plant creation when outbox insert fails", async () => {
     const runAsync = jest
       .fn()
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error("sync queue unavailable"));
+      .mockResolvedValueOnce(undefined) // plant INSERT
+      .mockResolvedValueOnce(undefined) // reminder INSERT (upsertReminderInTransaction)
+      .mockRejectedValueOnce(new Error("sync queue unavailable")); // sync_queue INSERT
     const withTransactionAsync = jest.fn(
       async (callback: () => Promise<void>) => callback(),
     );
@@ -105,7 +117,7 @@ describe("plants client", () => {
     mockGetDatabase.mockResolvedValue({
       runAsync,
       withTransactionAsync,
-      getFirstAsync: jest.fn(),
+      getFirstAsync: jest.fn().mockResolvedValue(null), // no existing reminder
     });
 
     const { createPlant } = require("@/features/plants/api/plantsClient");
