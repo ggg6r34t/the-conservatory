@@ -1,35 +1,11 @@
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import { useEffect } from "react";
+import { tokens } from "@/styles/tokens";
 
 interface ErrorBoundaryProps {
   error: Error;
   retry: () => void;
 }
-
-const COLORS = {
-  background: "#faf9f7",
-  titleText: "#1c1c1e",
-  bodyText: "#6e6e73",
-  buttonBackground: "#4a7c59",
-  buttonText: "#ffffff",
-};
-
-const FONTS = {
-  title: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 26,
-  },
-  body: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 14,
-  },
-  button: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 13,
-    letterSpacing: 1.4,
-  },
-};
 
 export default function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   useEffect(() => {
@@ -40,31 +16,22 @@ export default function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
     error?.message ?? "An unexpected error occurred. Please try again.";
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: COLORS.background }]}
-      edges={["top", "bottom", "left", "right"]}
-    >
+    <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={[styles.title, { color: COLORS.titleText }]}>
-          Something went wrong
-        </Text>
+        <Text style={styles.title}>Something went wrong</Text>
 
-        <Text style={[styles.body, { color: COLORS.bodyText }]}>
-          {errorMessage}
-        </Text>
+        <Text style={styles.body}>{errorMessage}</Text>
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Try again"
           onPress={retry}
           style={({ pressed }) => [
             styles.button,
-            { backgroundColor: COLORS.buttonBackground },
             pressed && styles.buttonPressed,
           ]}
         >
-          <Text style={[styles.buttonLabel, { color: COLORS.buttonText }]}>
-            TRY AGAIN
-          </Text>
+          <Text style={styles.buttonLabel}>TRY AGAIN</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -74,40 +41,44 @@ export default function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: tokens.colors.background,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: tokens.spacing.lg,
   },
   content: {
     alignItems: "center",
-    gap: 16,
+    gap: tokens.spacing.md,
     maxWidth: 280,
   },
   title: {
-    ...FONTS.title,
+    ...tokens.typography.title,
+    color: tokens.colors.onBackground,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: tokens.spacing.xs,
   },
   body: {
-    ...FONTS.body,
+    ...tokens.typography.body,
+    color: tokens.colors.onSurfaceVariant,
     textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 8,
+    marginBottom: tokens.spacing.xs,
   },
   button: {
-    paddingHorizontal: 24,
+    backgroundColor: tokens.colors.primary,
+    paddingHorizontal: tokens.spacing.lg,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: tokens.radius.sm,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    marginTop: tokens.spacing.xs,
     minWidth: 160,
   },
   buttonPressed: {
     opacity: 0.85,
   },
   buttonLabel: {
-    ...FONTS.button,
+    ...tokens.typography.label,
+    color: tokens.colors.onPrimary,
     textAlign: "center",
   },
 });
