@@ -807,4 +807,26 @@ export async function logout() {
   await clearSession();
 }
 
+async function clearAllLocalUserData() {
+  const database = await getDatabase();
+  await database.execAsync(`
+    DELETE FROM care_logs;
+    DELETE FROM care_reminders;
+    DELETE FROM photos;
+    DELETE FROM plants;
+    DELETE FROM graveyard_plants;
+    DELETE FROM sync_queue;
+    DELETE FROM user_preferences;
+    DELETE FROM users;
+  `);
+}
+
+export async function deleteAccount(userId: string): Promise<void> {
+  // Provider integration point
+  await supabase?.functions.invoke("delete-account", {
+    body: { userId },
+  });
+  await clearAllLocalUserData();
+}
+
 export { AuthClientError };

@@ -1,18 +1,53 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { deleteAccount } from "@/features/auth/api/authClient";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { tokens } from "@/styles/tokens";
 
 export default function PrivacySecurityScreen() {
   const { colors } = useTheme();
   const alert = useAlert();
   const snackbar = useSnackbar();
-  const [dataSharingEnabled, setDataSharingEnabled] = useState(false);
+  const router = useRouter();
+  const { user } = useAuth();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    const confirmed = await alert.confirm({
+      variant: "destructive",
+      title: "Delete Account",
+      message:
+        "Are you sure you want to delete your account? This action cannot be undone.",
+      primaryAction: { label: "Delete Account", tone: "danger" },
+      secondaryAction: { label: "Cancel" },
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      await deleteAccount(user?.id ?? "");
+      router.replace("/(auth)/login");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "We couldn't delete your account right now.";
+      snackbar.error(message);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <ProfileScreenScaffold
@@ -20,64 +55,6 @@ export default function PrivacySecurityScreen() {
       subtitle="Account safety"
       description="Your botanical journey is a private one. We ensure your data is as protected as a rare orchid in a climate-controlled conservatory."
     >
-      <View
-        style={[
-          styles.card,
-          styles.analyticsCard,
-          { backgroundColor: colors.surfaceContainerLowest },
-        ]}
-      >
-        <View>
-          <View
-            style={[
-              styles.analyticsIconWrap,
-              { backgroundColor: colors.tertiaryFixed },
-            ]}
-          >
-            <Icon
-              name="analytics"
-              family="MaterialIcons"
-              size={22}
-              color={colors.tertiary}
-            />
-          </View>
-          <Text style={[styles.cardTitle, { color: colors.primary }]}>
-            Usage Insights
-          </Text>
-          <Text style={[styles.cardBody, { color: colors.onSurfaceVariant }]}>
-            Share anonymous growth data to help us improve the plant care
-            algorithms for the entire community.
-          </Text>
-        </View>
-
-        <View style={styles.analyticsFooter}>
-          <Text style={[styles.analyticsLabel, { color: colors.primary }]}>
-            DATA SHARING
-          </Text>
-          <Pressable
-            accessibilityRole="switch"
-            accessibilityState={{ checked: dataSharingEnabled }}
-            onPress={() => setDataSharingEnabled((current) => !current)}
-            style={[
-              styles.toggleTrack,
-              {
-                backgroundColor: dataSharingEnabled
-                  ? colors.primary
-                  : colors.surfaceContainerHigh,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.toggleThumb,
-                dataSharingEnabled && styles.toggleThumbEnabled,
-                { backgroundColor: colors.surfaceBright },
-              ]}
-            />
-          </Pressable>
-        </View>
-      </View>
-
       <View
         style={[
           styles.card,
@@ -124,6 +101,30 @@ export default function PrivacySecurityScreen() {
         </Pressable>
       </View>
 
+      <View
+        style={[
+          styles.card,
+          styles.policyCard,
+          { backgroundColor: colors.surfaceContainerLowest },
+        ]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void Linking.openURL("https://conservatory.app/privacy")}
+          style={styles.policyRow}
+        >
+          <Text style={[styles.policyLabel, { color: colors.primary }]}>
+            Privacy Policy
+          </Text>
+          <Icon
+            name="open-in-new"
+            family="MaterialIcons"
+            size={18}
+            color={colors.onSurfaceVariant}
+          />
+        </Pressable>
+      </View>
+
       <View style={styles.dangerSection}>
         <View
           style={[
@@ -149,15 +150,9 @@ export default function PrivacySecurityScreen() {
             icon="delete-forever"
             iconFamily="MaterialIcons"
             tone="danger"
-            onPress={() => {
-              void alert.show({
-                variant: "destructive",
-                title: "Delete account",
-                message:
-                  "Account deletion isn't available in this build yet. Your conservatory is still safe.",
-                primaryAction: { label: "Close", tone: "danger" },
-              });
-            }}
+            loading={deleting}
+            disabled={deleting}
+            onPress={() => void handleDeleteAccount()}
           />
 
           <Text style={[styles.dangerNote, { color: colors.outline }]}>
@@ -174,57 +169,11 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     padding: 20,
   },
-  analyticsCard: {
-    minHeight: 224,
-    justifyContent: "space-between",
-  },
-  analyticsIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
   cardTitle: {
     fontFamily: "NotoSerif_700Bold",
     fontSize: 20,
     lineHeight: 26,
     marginBottom: 6,
-  },
-  cardBody: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 14,
-    lineHeight: 24,
-    maxWidth: 258,
-  },
-  analyticsFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 20,
-    marginTop: 20,
-  },
-  analyticsLabel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 11,
-    lineHeight: 15,
-    letterSpacing: 1.8,
-  },
-  toggleTrack: {
-    width: 42,
-    height: 24,
-    borderRadius: 999,
-    paddingHorizontal: 2,
-    justifyContent: "center",
-  },
-  toggleThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-  },
-  toggleThumbEnabled: {
-    alignSelf: "flex-end",
   },
   archiveCard: {
     alignItems: "center",
@@ -261,6 +210,22 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_700Bold",
     fontSize: 15,
     lineHeight: 20,
+  },
+  policyCard: {
+    borderRadius: 26,
+    paddingVertical: 4,
+  },
+  policyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+  },
+  policyLabel: {
+    fontFamily: "Manrope_600SemiBold",
+    fontSize: 16,
+    lineHeight: 22,
   },
   dangerSection: {
     gap: 28,
