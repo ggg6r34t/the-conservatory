@@ -148,6 +148,7 @@ CREATE INDEX IF NOT EXISTS idx_plants_user_id ON plants(user_id);
 CREATE INDEX IF NOT EXISTS idx_plants_next_water_due_at ON plants(next_water_due_at);
 CREATE INDEX IF NOT EXISTS idx_care_logs_plant_id ON care_logs(plant_id);
 CREATE INDEX IF NOT EXISTS idx_care_reminders_plant_id ON care_reminders(plant_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_care_reminders_unique_plant_user ON care_reminders(plant_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_photos_plant_id ON photos(plant_id);
 CREATE INDEX IF NOT EXISTS idx_local_auth_credentials_email ON local_auth_credentials(email);
 CREATE INDEX IF NOT EXISTS idx_sync_queue_status_retry ON sync_queue(status, next_retry_at);
@@ -363,6 +364,7 @@ ALTER TABLE graveyard_plants_v2 RENAME TO graveyard_plants;
 CREATE INDEX IF NOT EXISTS idx_photos_plant_id ON photos(plant_id);
 CREATE INDEX IF NOT EXISTS idx_care_logs_plant_id ON care_logs(plant_id);
 CREATE INDEX IF NOT EXISTS idx_care_reminders_plant_id ON care_reminders(plant_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_care_reminders_unique_plant_user ON care_reminders(plant_id, user_id);
 `);
   } finally {
     await database.execAsync("PRAGMA foreign_keys = ON;");
@@ -471,4 +473,7 @@ export async function runDatabaseMigrations(database: SQLiteDatabase) {
   await backfillPhotoTimelineMetadata(database);
   await ensureColumn(database, "care_logs", "tags", "TEXT");
   await backfillEmbeddedTagsFromNotes(database);
+  await database.execAsync(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_care_reminders_unique_plant_user ON care_reminders(plant_id, user_id);",
+  );
 }
