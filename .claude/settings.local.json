@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git stash *)",
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(node -e ' *)",
+      "Bash(npm test *)",
+      "Bash(Get-Content \"C:\\\\Users\\\\ghyor\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ghyor-OneDrive-Desktop-Projects-the-conservatory\\\\cacc4f70-a567-45ab-9f9d-dcf16f184b15\\\\tasks\\\\bv0k7q4ps.output\" -Wait)",
+      "Bash(Select-String -Pattern \"Test Suites:|Tests:|FAIL |PASS \" --LineBuffered)",
+      "Bash(Get-Content \"C:\\\\Users\\\\ghyor\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ghyor-OneDrive-Desktop-Projects-the-conservatory\\\\cacc4f70-a567-45ab-9f9d-dcf16f184b15\\\\tasks\\\\bv0k7q4ps.output\")",
+      "Bash(Select-String -Pattern \"Test Suites:|Tests:|FAIL |Suites\")",
+      "Bash(Select-Object -Last 10)"
+    ]
+  }
+}
