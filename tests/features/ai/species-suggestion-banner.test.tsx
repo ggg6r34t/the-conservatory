@@ -20,7 +20,7 @@ describe("SpeciesSuggestionBanner", () => {
       />,
     );
 
-    getByText("Likely Monstera deliciosa · Moderate confidence");
+    getByText("Likely Monstera deliciosa · Pattern match");
     getByText("Bright indirect light keeps growth even.");
     getByText("Pattern match");
 
@@ -45,7 +45,7 @@ describe("SpeciesSuggestionBanner", () => {
       />,
     );
 
-    getByText("Likely Ficus elastica · High confidence");
+    getByText("Likely Ficus elastica · Pattern match");
     getByText("Use it as a starting point only.");
     getByText("Pattern match");
   });
