@@ -18,6 +18,14 @@ export interface BackupSummary {
   processingSync: number;
   completedSync: number;
   syncEnabled: boolean;
+  tableLastSyncedAt: {
+    plants: string | null;
+    careLogs: string | null;
+    photos: string | null;
+    careReminders: string | null;
+    graveyardPlants: string | null;
+    userPreferences: string | null;
+  };
 }
 
 function sumCounts(
@@ -57,6 +65,12 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     processingSync,
     completedSync,
     userPreferences,
+    plantsLastSynced,
+    careLogsLastSynced,
+    photosLastSynced,
+    remindersLastSynced,
+    graveyardPlantsLastSynced,
+    userPreferencesLastSynced,
   ] = await Promise.all([
     database.getFirstAsync<{ count: number }>(
       "SELECT COUNT(*) AS count FROM plants WHERE user_id = ? AND status = 'active';",
@@ -180,6 +194,30 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
       "SELECT auto_sync_enabled FROM user_preferences WHERE user_id = ? LIMIT 1;",
       userId,
     ),
+    database.getFirstAsync<{ last_synced_at: string | null }>(
+      "SELECT MAX(synced_at) as last_synced_at FROM plants WHERE user_id = ? AND synced_at IS NOT NULL",
+      userId,
+    ),
+    database.getFirstAsync<{ last_synced_at: string | null }>(
+      "SELECT MAX(synced_at) as last_synced_at FROM care_logs WHERE user_id = ? AND synced_at IS NOT NULL",
+      userId,
+    ),
+    database.getFirstAsync<{ last_synced_at: string | null }>(
+      "SELECT MAX(synced_at) as last_synced_at FROM photos WHERE user_id = ? AND synced_at IS NOT NULL",
+      userId,
+    ),
+    database.getFirstAsync<{ last_synced_at: string | null }>(
+      "SELECT MAX(synced_at) as last_synced_at FROM care_reminders WHERE user_id = ? AND synced_at IS NOT NULL",
+      userId,
+    ),
+    database.getFirstAsync<{ last_synced_at: string | null }>(
+      "SELECT MAX(synced_at) as last_synced_at FROM graveyard_plants WHERE user_id = ? AND synced_at IS NOT NULL",
+      userId,
+    ),
+    database.getFirstAsync<{ last_synced_at: string | null }>(
+      "SELECT MAX(synced_at) as last_synced_at FROM user_preferences WHERE user_id = ? AND synced_at IS NOT NULL",
+      userId,
+    ),
   ]);
 
   return {
@@ -212,6 +250,14 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     processingSync: processingSync?.count ?? 0,
     completedSync: completedSync?.count ?? 0,
     syncEnabled: (userPreferences?.auto_sync_enabled ?? 1) !== 0,
+    tableLastSyncedAt: {
+      plants: plantsLastSynced?.last_synced_at ?? null,
+      careLogs: careLogsLastSynced?.last_synced_at ?? null,
+      photos: photosLastSynced?.last_synced_at ?? null,
+      careReminders: remindersLastSynced?.last_synced_at ?? null,
+      graveyardPlants: graveyardPlantsLastSynced?.last_synced_at ?? null,
+      userPreferences: userPreferencesLastSynced?.last_synced_at ?? null,
+    },
   };
 }
 
