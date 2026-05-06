@@ -85,7 +85,22 @@ export default function BackupDetailsScreen() {
         ) : null}
       </View>
 
-        {summary ? (
+        {summary && !summary.syncEnabled ? (
+        <View
+          style={[
+            styles.syncDisabledNotice,
+            { backgroundColor: colors.surfaceContainerLow },
+          ]}
+        >
+          <Text
+            style={[styles.syncDisabledText, { color: colors.onSurfaceVariant }]}
+          >
+            Cloud sync is disabled. Enable it in Settings to back up your data.
+          </Text>
+        </View>
+      ) : null}
+
+      {summary ? (
         <View style={styles.metricsSection}>
           <Text style={[styles.metricsNote, { color: colors.onSurfaceVariant }]}>
             Some counts below reflect work this device is still preparing to send,
@@ -195,5 +210,14 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_600SemiBold",
     fontSize: 12,
     lineHeight: 18,
+  },
+  syncDisabledNotice: {
+    borderRadius: 16,
+    padding: 16,
+  },
+  syncDisabledText: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 14,
+    lineHeight: 22,
   },
 });

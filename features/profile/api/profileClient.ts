@@ -17,6 +17,7 @@ export interface BackupSummary {
   failedSyncQueueDevice: number;
   processingSync: number;
   completedSync: number;
+  syncEnabled: boolean;
 }
 
 function sumCounts(
@@ -55,6 +56,7 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     failedSyncQueueDevice,
     processingSync,
     completedSync,
+    userPreferences,
   ] = await Promise.all([
     database.getFirstAsync<{ count: number }>(
       "SELECT COUNT(*) AS count FROM plants WHERE user_id = ? AND status = 'active';",
@@ -174,6 +176,10 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     database.getFirstAsync<{ count: number }>(
       "SELECT COUNT(*) AS count FROM sync_queue WHERE status = 'completed';",
     ),
+    database.getFirstAsync<{ auto_sync_enabled: number | null }>(
+      "SELECT auto_sync_enabled FROM user_preferences WHERE user_id = ? LIMIT 1;",
+      userId,
+    ),
   ]);
 
   return {
@@ -205,6 +211,7 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     failedSyncQueueDevice: failedSyncQueueDevice?.count ?? 0,
     processingSync: processingSync?.count ?? 0,
     completedSync: completedSync?.count ?? 0,
+    syncEnabled: (userPreferences?.auto_sync_enabled ?? 1) !== 0,
   };
 }
 

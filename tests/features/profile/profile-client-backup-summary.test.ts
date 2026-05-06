@@ -12,12 +12,12 @@ describe("profileClient.getBackupSummary", () => {
   });
 
   it("separates account-scoped pending/error counts from device queue totals", async () => {
-    // 24 calls in Promise.all order: activePlants, archivedPlants, photos, careLogs,
+    // 25 calls in Promise.all order: activePlants, archivedPlants, photos, careLogs,
     // reminders, lastSuccessfulSyncAt, pendingPlants, pendingPhotos, pendingCareLogs,
     // pendingReminders, pendingMemorials, pendingPreferences, failedPlants, failedPhotos,
     // failedCareLogs, failedReminders, failedMemorials, failedPreferences,
     // pendingSyncQueueAccount, failedSyncQueueAccount, pendingSyncQueueDevice,
-    // failedSyncQueueDevice, processingSync, completedSync
+    // failedSyncQueueDevice, processingSync, completedSync, userPreferences
     const getFirstAsync = jest
       .fn()
       .mockResolvedValueOnce({ count: 2 })   // activePlants
@@ -43,7 +43,8 @@ describe("profileClient.getBackupSummary", () => {
       .mockResolvedValueOnce({ count: 7 })   // pendingSyncQueueDevice
       .mockResolvedValueOnce({ count: 2 })   // failedSyncQueueDevice
       .mockResolvedValueOnce({ count: 1 })   // processingSync
-      .mockResolvedValueOnce({ count: 9 });  // completedSync
+      .mockResolvedValueOnce({ count: 9 })   // completedSync
+      .mockResolvedValueOnce({ auto_sync_enabled: 1 }); // userPreferences
 
     mockGetDatabase.mockResolvedValue({ getFirstAsync });
 
@@ -55,5 +56,6 @@ describe("profileClient.getBackupSummary", () => {
     expect(summary.failedSyncQueueAccount).toBe(1);
     expect(summary.pendingSyncQueueDevice).toBe(7);
     expect(summary.failedSyncQueueDevice).toBe(2);
+    expect(summary.syncEnabled).toBe(true);
   });
 });
