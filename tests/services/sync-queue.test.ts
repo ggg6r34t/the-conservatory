@@ -310,3 +310,134 @@ describe("sync queue replay", () => {
     expect(storage.getAll()[0]?.status).toBe("processing");
   });
 });
+
+describe("sync queue abandoned path", () => {
+  it("marks an item abandoned (not failed) when attempt count reaches 10", async () => {
+    const storage = new InMemorySyncQueueStorage();
+    const service = createSyncQueueService(storage);
+
+    // Seed an item that has already failed 9 times — one more failure tips it over
+    storage.seed({
+      id: "sync-near-abandon-1",
+      entity: "care_logs",
+      entityId: "log-near-abandon-1",
+      operation: "insert",
+      payload: null,
+      status: "failed",
+      attemptCount: 9,
+      lastError: "previous failure",
+      nextRetryAt: "2026-03-21T09:00:00.000Z",
+      queuedAt: "2026-03-21T08:00:00.000Z",
+      updatedAt: "2026-03-21T09:00:00.000Z",
+    });
+
+    const report = await service.syncPendingChanges({
+      nowIso: "2026-03-21T10:00:00.000Z",
+      processOperation: async () => {
+        throw new Error("persistent failure");
+      },
+    });
+
+    expect(report.processed).toBe(1);
+    expect(report.failed).toBe(1);
+
+    const item = storage.findByEntity("care_logs");
+    expect(item?.status).toBe("abandoned");
+    expect(item?.nextRetryAt).toBeNull();
+    expect(item?.lastError).toBe("persistent failure");
+  });
+
+  it("marks an item abandoned when attempt count is already at 10 at processing time", async () => {
+    const storage = new InMemorySyncQueueStorage();
+    const service = createSyncQueueService(storage);
+
+    // item.attemptCount = 10 already (edge case: reclaimed from a stale processing state)
+    storage.seed({
+      id: "sync-abandon-exact-1",
+      entity: "plants",
+      entityId: "plant-abandon-exact-1",
+      operation: "update",
+      payload: null,
+      status: "failed",
+      attemptCount: 10,
+      lastError: "previous failure",
+      nextRetryAt: "2026-03-21T09:00:00.000Z",
+      queuedAt: "2026-03-21T08:00:00.000Z",
+      updatedAt: "2026-03-21T09:00:00.000Z",
+    });
+
+    await service.syncPendingChanges({
+      nowIso: "2026-03-21T10:00:00.000Z",
+      processOperation: async () => {
+        throw new Error("still failing");
+      },
+    });
+
+    const item = storage.getAll().find((i) => i.entityId === "plant-abandon-exact-1");
+    expect(item?.status).toBe("abandoned");
+    expect(item?.nextRetryAt).toBeNull();
+  });
+
+  it("does NOT abandon an item that fails for the 9th time (still within retry threshold)", async () => {
+    const storage = new InMemorySyncQueueStorage();
+    const service = createSyncQueueService(storage);
+
+    // 8 prior failures — 9th failure should remain "failed" with a nextRetryAt
+    storage.seed({
+      id: "sync-not-yet-abandon-1",
+      entity: "plants",
+      entityId: "plant-not-yet-abandon-1",
+      operation: "insert",
+      payload: null,
+      status: "failed",
+      attemptCount: 8,
+      lastError: "previous failure",
+      nextRetryAt: "2026-03-21T09:00:00.000Z",
+      queuedAt: "2026-03-21T08:00:00.000Z",
+      updatedAt: "2026-03-21T09:00:00.000Z",
+    });
+
+    await service.syncPendingChanges({
+      nowIso: "2026-03-21T10:00:00.000Z",
+      processOperation: async () => {
+        throw new Error("still failing");
+      },
+    });
+
+    const item = storage.getAll().find((i) => i.entityId === "plant-not-yet-abandon-1");
+    expect(item?.status).toBe("failed");
+    expect(item?.nextRetryAt).not.toBeNull();
+    expect(item?.attemptCount).toBe(9);
+  });
+
+  it("markAbandoned sets status to abandoned and clears next_retry_at", async () => {
+    const storage = new InMemorySyncQueueStorage();
+
+    storage.seed({
+      id: "sync-direct-abandon-1",
+      entity: "plants",
+      entityId: "plant-direct-abandon-1",
+      operation: "insert",
+      payload: null,
+      status: "failed",
+      attemptCount: 9,
+      lastError: "old error",
+      nextRetryAt: "2026-03-21T11:00:00.000Z",
+      queuedAt: "2026-03-21T08:00:00.000Z",
+      updatedAt: "2026-03-21T09:00:00.000Z",
+    });
+
+    await storage.markAbandoned(
+      "sync-direct-abandon-1",
+      "terminal failure",
+      "2026-03-21T10:00:00.000Z",
+    );
+
+    const item = storage.getAll().find((i) => i.id === "sync-direct-abandon-1");
+    expect(item?.status).toBe("abandoned");
+    expect(item?.nextRetryAt).toBeNull();
+    expect(item?.lastError).toBe("terminal failure");
+    // attemptCount is incremented by markAbandoned
+    expect(item?.attemptCount).toBe(10);
+  });
+});
