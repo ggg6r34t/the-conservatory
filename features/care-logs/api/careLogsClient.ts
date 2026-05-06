@@ -171,6 +171,10 @@ export async function createCareLog(input: {
         },
       ];
 
+      // loggedAt is the timestamp of when the care event occurred,
+      // sourced from the care log's own logged_at field.
+      const loggedAt = transactionNowIso;
+
       let reminderInput: {
         frequencyDays: number;
         nextDueAt: string;
@@ -180,7 +184,7 @@ export async function createCareLog(input: {
         const plant = await getPlantById(input.userId, input.plantId);
         if (plant) {
           const nextWaterDueAt = computeNextWaterDueAt(
-            transactionNowIso,
+            loggedAt,
             plant.plant.wateringIntervalDays,
           );
           const preferences = await getUserPreferences(input.userId);
@@ -189,7 +193,7 @@ export async function createCareLog(input: {
             speciesName: plant.plant.speciesName,
             wateringIntervalDays: plant.plant.wateringIntervalDays,
             nextDueAt: nextWaterDueAt,
-            lastWateredAt: transactionNowIso,
+            lastWateredAt: loggedAt,
             reminderEnabled: true,
             lastTriggeredAt: plant.reminders[0]?.lastTriggeredAt ?? null,
             defaultWateringHour: preferences.defaultWateringHour,
@@ -197,7 +201,7 @@ export async function createCareLog(input: {
 
           await database.runAsync(
             "UPDATE plants SET last_watered_at = ?, next_water_due_at = ?, updated_at = ?, updated_by = ?, pending = 1 WHERE id = ?;",
-            transactionNowIso,
+            loggedAt,
             optimized.nextDueAt,
             transactionNowIso,
             input.userId,
@@ -210,7 +214,7 @@ export async function createCareLog(input: {
             operation: "update",
             payload: {
               userId: input.userId,
-              lastWateredAt: transactionNowIso,
+              lastWateredAt: loggedAt,
               nextWaterDueAt: optimized.nextDueAt,
             },
           });
