@@ -1,5 +1,4 @@
 import * as ImagePicker from "expo-image-picker";
-import * as Location from "expo-location";
 
 import {
   ensureNotificationPermissions,
@@ -17,7 +16,7 @@ export interface OnboardingPermissionSnapshot {
 }
 
 function mapExpoPermissionStatus(
-  status: ImagePicker.PermissionStatus | Location.PermissionStatus,
+  status: ImagePicker.PermissionStatus,
   canAskAgain: boolean | null | undefined,
 ): PermissionState {
   if (status === "granted") {
@@ -75,30 +74,6 @@ export async function requestMediaPermissions(): Promise<PermissionState> {
     ]);
   } catch (error) {
     logger.warn("onboarding.permissions.media_request_failed", {
-      message: error instanceof Error ? error.message : "unknown",
-    });
-    return "unavailable";
-  }
-}
-
-export async function getLocationPermissionState(): Promise<PermissionState> {
-  try {
-    const current = await Location.getForegroundPermissionsAsync();
-    return mapExpoPermissionStatus(current.status, current.canAskAgain);
-  } catch (error) {
-    logger.warn("onboarding.permissions.location_status_failed", {
-      message: error instanceof Error ? error.message : "unknown",
-    });
-    return "unavailable";
-  }
-}
-
-export async function requestLocationPermission(): Promise<PermissionState> {
-  try {
-    const next = await Location.requestForegroundPermissionsAsync();
-    return mapExpoPermissionStatus(next.status, next.canAskAgain);
-  } catch (error) {
-    logger.warn("onboarding.permissions.location_request_failed", {
       message: error instanceof Error ? error.message : "unknown",
     });
     return "unavailable";
