@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { getInsightSourceLabel } from "@/features/ai/services/insightSourcePresentation";
 import type { DashboardInsight } from "@/features/ai/types/ai";
 
 export function DashboardInsightCard({
@@ -29,6 +30,9 @@ export function DashboardInsightCard({
       <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
         {insight.body}
       </Text>
+      <Text style={[styles.source, { color: colors.onSurfaceVariant }]}>
+        {getInsightSourceLabel(insight.source)}
+      </Text>
     </View>
   );
 }
@@ -55,5 +59,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     maxWidth: 320,
+  },
+  source: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
   },
 });

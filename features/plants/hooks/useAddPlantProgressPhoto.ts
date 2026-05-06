@@ -10,7 +10,7 @@ export function useAddPlantProgressPhoto(plantId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (photo: PlantImageAsset) =>
+    mutationFn: (photo: PlantImageAsset & { caption?: string | null }) =>
       addPlantProgressPhoto({
         userId: user!.id,
         plantId,
@@ -19,6 +19,7 @@ export function useAddPlantProgressPhoto(plantId: string) {
         mimeType: photo.mimeType ?? null,
         width: photo.width ?? null,
         height: photo.height ?? null,
+        caption: photo.caption ?? null,
       }),
     onSuccess: (data) => {
       queryClient

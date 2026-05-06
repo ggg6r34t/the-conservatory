@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import {
   Image,
@@ -197,8 +198,12 @@ export default function ProfileScreen() {
     return computeCareStreak(allLoggedAt);
   }, [careLogsQuery.data]);
 
-  const displayName = user?.displayName ?? "Elowen Thorne";
-  const email = user?.email ?? "elowen.garden@botany.io";
+  const displayName = user?.displayName?.trim() || "Signed-in curator";
+  const email = user?.email?.trim() || "Account email unavailable";
+  const appVersion =
+    Constants.expoConfig?.version ??
+    Constants.manifest2?.extra?.expoClient?.version ??
+    "Unknown";
   const initials = getInitials(displayName);
   const avatarSource = useMemo(
     () =>
@@ -453,7 +458,7 @@ export default function ProfileScreen() {
             <ProfileRow
               icon="shield-check-outline"
               label="Privacy Policy"
-              onPress={() => router.push("/privavcy")}
+              onPress={() => router.push("/privacy")}
             />
           </View>
         </View>
@@ -516,7 +521,7 @@ export default function ProfileScreen() {
             <Text
               style={[styles.footerMeta, { color: colors.onSurfaceVariant }]}
             >
-              VERSION 2.4.0
+              VERSION {appVersion}
             </Text>
             <Icon
               name="circle-small"

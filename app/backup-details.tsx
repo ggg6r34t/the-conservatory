@@ -1,6 +1,8 @@
+import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useBackupStatus } from "@/features/profile/hooks/useBackupStatus";
@@ -35,9 +37,11 @@ function BackupMetric({
 
 export default function BackupDetailsScreen() {
   const { colors } = useTheme();
+  const router = useRouter();
   const alert = useAlert();
   const snackbar = useSnackbar();
-  const { canSync, remoteAvailability, summary, syncMutation } = useBackupStatus();
+  const { canSync, remoteAvailability, summary, syncMutation } =
+    useBackupStatus();
 
   const handleSync = () => {
     syncMutation.mutate(undefined, {
@@ -85,7 +89,7 @@ export default function BackupDetailsScreen() {
         ) : null}
       </View>
 
-        {summary && !summary.syncEnabled ? (
+      {summary && !summary.syncEnabled ? (
         <View
           style={[
             styles.syncDisabledNotice,
@@ -93,7 +97,10 @@ export default function BackupDetailsScreen() {
           ]}
         >
           <Text
-            style={[styles.syncDisabledText, { color: colors.onSurfaceVariant }]}
+            style={[
+              styles.syncDisabledText,
+              { color: colors.onSurfaceVariant },
+            ]}
           >
             Cloud sync is disabled. Enable it in Settings to back up your data.
           </Text>
@@ -102,9 +109,12 @@ export default function BackupDetailsScreen() {
 
       {summary ? (
         <View style={styles.metricsSection}>
-          <Text style={[styles.metricsNote, { color: colors.onSurfaceVariant }]}>
-            Some counts below reflect work this device is still preparing to send,
-            so they may extend beyond your account&apos;s saved record totals.
+          <Text
+            style={[styles.metricsNote, { color: colors.onSurfaceVariant }]}
+          >
+            Some counts below reflect work this device is still preparing to
+            send, so they may extend beyond your account&apos;s saved record
+            totals.
           </Text>
           <View style={styles.metricGrid}>
             <BackupMetric label="Active plants" value={summary.activePlants} />
@@ -155,6 +165,10 @@ export default function BackupDetailsScreen() {
         disabled={syncMutation.isPending || !canSync}
         loading={syncMutation.isPending}
         onPress={handleSync}
+      />
+      <SecondaryButton
+        label="Open Backup Repair"
+        onPress={() => router.push("/sync-repair")}
       />
     </ProfileScreenScaffold>
   );

@@ -55,11 +55,14 @@ export default function GrowthTimelineScreen() {
 
   const plant = plantQuery.data?.plant ?? null;
 
-  const applyPhotoUpdate = async (photo: PlantImageAsset) => {
+  const applyPhotoUpdate = async (
+    photo: PlantImageAsset,
+    caption: string | null,
+  ) => {
     setIsUploadingPhoto(true);
 
     try {
-      await addPlantProgressPhoto.mutateAsync(photo);
+      await addPlantProgressPhoto.mutateAsync({ ...photo, caption });
       snackbar.success("Progress photo saved successfully.");
     } catch (error) {
       void alert.show({
@@ -73,7 +76,7 @@ export default function GrowthTimelineScreen() {
     }
   };
 
-  const handleCapturePhoto = async () => {
+  const handleCapturePhoto = async (caption: string | null) => {
     setMediaSheetVisible(false);
 
     try {
@@ -81,7 +84,7 @@ export default function GrowthTimelineScreen() {
       if (!asset) {
         return;
       }
-      await applyPhotoUpdate(asset);
+      await applyPhotoUpdate(asset, caption);
     } catch (error) {
       void alert.show({
         variant: "error",
@@ -92,7 +95,7 @@ export default function GrowthTimelineScreen() {
     }
   };
 
-  const handlePickPhoto = async () => {
+  const handlePickPhoto = async (caption: string | null) => {
     setMediaSheetVisible(false);
 
     try {
@@ -100,7 +103,7 @@ export default function GrowthTimelineScreen() {
       if (!asset) {
         return;
       }
-      await applyPhotoUpdate(asset);
+      await applyPhotoUpdate(asset, caption);
     } catch (error) {
       void alert.show({
         variant: "error",

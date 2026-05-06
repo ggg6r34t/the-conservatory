@@ -12,9 +12,24 @@ module.exports = {
     ios: {
       bundleIdentifier: "com.northfold.theconservatory",
       supportsTablet: true,
+      infoPlist: {
+        NSCameraUsageDescription:
+          "The Conservatory uses the camera so you can capture plant and growth progress photos.",
+        NSPhotoLibraryUsageDescription:
+          "The Conservatory uses your photo library so you can add existing plant photos to your local archive.",
+        NSPhotoLibraryAddUsageDescription:
+          "The Conservatory can save exported plant archive images when you choose to share or preserve them.",
+        UIBackgroundModes: ["remote-notification"],
+      },
     },
     android: {
       package: "com.northfold.theconservatory",
+      permissions: [
+        "android.permission.CAMERA",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+      ],
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -30,7 +45,22 @@ module.exports = {
     },
     plugins: [
       "expo-router",
-      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          photosPermission:
+            "The Conservatory uses your photo library so you can add existing plant photos to your archive.",
+          cameraPermission:
+            "The Conservatory uses the camera so you can capture plant and growth progress photos.",
+        },
+      ],
+      [
+        "expo-notifications",
+        {
+          color: "#315c45",
+          defaultChannel: "care-reminders",
+        },
+      ],
       [
         "expo-splash-screen",
         {

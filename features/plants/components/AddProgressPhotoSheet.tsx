@@ -1,5 +1,5 @@
 import { BlurView } from "expo-blur";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -7,6 +7,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,8 +20,8 @@ import { shadowScale, shadowWithColor } from "@/styles/shadows";
 interface AddProgressPhotoSheetProps {
   visible: boolean;
   onClose: () => void;
-  onCapture: () => void;
-  onPickFromLibrary: () => void;
+  onCapture: (caption: string | null) => void;
+  onPickFromLibrary: (caption: string | null) => void;
 }
 
 export function AddProgressPhotoSheet({
@@ -31,6 +32,7 @@ export function AddProgressPhotoSheet({
 }: AddProgressPhotoSheetProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const [caption, setCaption] = useState("");
   const sheetOpacity = useRef(new Animated.Value(0)).current;
   const sheetTranslateY = useRef(new Animated.Value(24)).current;
 
@@ -38,6 +40,7 @@ export function AddProgressPhotoSheet({
     if (!visible) {
       sheetOpacity.setValue(0);
       sheetTranslateY.setValue(24);
+      setCaption("");
       return;
     }
 
@@ -71,10 +74,7 @@ export function AddProgressPhotoSheet({
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <BlurView intensity={42} tint="dark" style={StyleSheet.absoluteFill}>
           <View
-            style={[
-              styles.overlayTint,
-              { backgroundColor: colors.backdrop },
-            ]}
+            style={[styles.overlayTint, { backgroundColor: colors.backdrop }]}
           />
         </BlurView>
         <Animated.View
@@ -106,10 +106,26 @@ export function AddProgressPhotoSheet({
             </Text>
           </View>
 
+          <TextInput
+            multiline
+            value={caption}
+            onChangeText={setCaption}
+            placeholder="Add a short caption for this growth moment"
+            placeholderTextColor={colors.onSurfaceVariant}
+            textAlignVertical="top"
+            style={[
+              styles.captionInput,
+              {
+                backgroundColor: colors.surfaceContainerLow,
+                color: colors.onSurface,
+              },
+            ]}
+          />
+
           <View style={styles.actions}>
             <Pressable
               accessibilityRole="button"
-              onPress={onCapture}
+              onPress={() => onCapture(caption.trim() || null)}
               style={({ pressed }) => [
                 styles.actionCard,
                 {
@@ -136,14 +152,16 @@ export function AddProgressPhotoSheet({
               <Text style={[styles.actionTitle, { color: colors.onSurface }]}>
                 Take Photo
               </Text>
-              <Text style={[styles.actionBody, { color: colors.onSurfaceVariant }]}>
+              <Text
+                style={[styles.actionBody, { color: colors.onSurfaceVariant }]}
+              >
                 Open the camera and capture today&apos;s growth.
               </Text>
             </Pressable>
 
             <Pressable
               accessibilityRole="button"
-              onPress={onPickFromLibrary}
+              onPress={() => onPickFromLibrary(caption.trim() || null)}
               style={({ pressed }) => [
                 styles.actionCard,
                 {
@@ -170,7 +188,9 @@ export function AddProgressPhotoSheet({
               <Text style={[styles.actionTitle, { color: colors.onSurface }]}>
                 Photo Library
               </Text>
-              <Text style={[styles.actionBody, { color: colors.onSurfaceVariant }]}>
+              <Text
+                style={[styles.actionBody, { color: colors.onSurfaceVariant }]}
+              >
                 Choose an existing image from your camera roll.
               </Text>
             </Pressable>
@@ -226,6 +246,15 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: 12,
+  },
+  captionInput: {
+    minHeight: 86,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontFamily: "Manrope_500Medium",
+    fontSize: 14,
+    lineHeight: 20,
   },
   actionCard: {
     borderRadius: 24,

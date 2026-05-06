@@ -54,5 +54,10 @@ export const env = {
     safeEnv.expoPublicSupabaseUrl && safeEnv.expoPublicSupabaseAnonKey,
   ),
   enableAnalytics: Boolean(safeEnv.expoPublicEnableAnalytics),
-  enableSyncTrials: Boolean(safeEnv.expoPublicEnableSyncTrials),
+  enableSyncTrials: Boolean(
+    safeEnv.expoPublicEnableSyncTrials ||
+    (!isDevelopmentBuild &&
+      safeEnv.expoPublicSupabaseUrl &&
+      safeEnv.expoPublicSupabaseAnonKey),
+  ),
 };

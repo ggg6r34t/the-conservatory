@@ -174,26 +174,22 @@ function RootNavigator({
       <Stack.Screen name="archive-gallery" options={drillInScreenOptions} />
       <Stack.Screen name="specimen-tags" options={drillInScreenOptions} />
       <Stack.Screen name="backup-details" options={drillInScreenOptions} />
+      <Stack.Screen name="sync-repair" options={drillInScreenOptions} />
       <Stack.Screen
         name="export-collection-data"
         options={drillInScreenOptions}
       />
       <Stack.Screen name="privacy-security" options={drillInScreenOptions} />
       <Stack.Screen name="terms" options={drillInScreenOptions} />
+      <Stack.Screen name="privacy" options={drillInScreenOptions} />
       <Stack.Screen name="privavcy" options={drillInScreenOptions} />
       <Stack.Screen name="data-backup" options={drillInScreenOptions} />
       <Stack.Screen name="interface-theme" options={drillInScreenOptions} />
       <Stack.Screen name="plant/add" options={drillInScreenOptions} />
       <Stack.Screen name="plant/[id]" options={drillInScreenOptions} />
       <Stack.Screen name="plant/[id]/edit" options={drillInScreenOptions} />
-      <Stack.Screen
-        name="plant/[id]/timeline"
-        options={drillInScreenOptions}
-      />
-      <Stack.Screen
-        name="plant/[id]/activity"
-        options={drillInScreenOptions}
-      />
+      <Stack.Screen name="plant/[id]/timeline" options={drillInScreenOptions} />
+      <Stack.Screen name="plant/[id]/activity" options={drillInScreenOptions} />
       <Stack.Screen name="memorial/[id]" options={drillInScreenOptions} />
       <Stack.Screen
         name="care-log/[id]"

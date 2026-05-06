@@ -6,7 +6,6 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { deleteAccount } from "@/features/auth/api/authClient";
-import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
@@ -16,7 +15,6 @@ export default function PrivacySecurityScreen() {
   const alert = useAlert();
   const snackbar = useSnackbar();
   const router = useRouter();
-  const { user } = useAuth();
   const [deleting, setDeleting] = useState(false);
 
   const handleDeleteAccount = async () => {

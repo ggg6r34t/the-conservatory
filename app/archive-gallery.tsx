@@ -4,9 +4,10 @@ import { Image } from "expo-image";
 
 import { useTheme } from "@/components/design-system/useTheme";
 import { useArchiveCuration } from "@/features/ai/hooks/useArchiveCuration";
+import { getInsightSourceLabel } from "@/features/ai/services/insightSourcePresentation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
+import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 
 function formatArchiveDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -50,9 +51,20 @@ export default function ArchiveGalleryScreen() {
                   {pair.plantName}
                 </Text>
                 <Text
-                  style={[styles.curatedCaption, { color: colors.onSurfaceVariant }]}
+                  style={[
+                    styles.curatedCaption,
+                    { color: colors.onSurfaceVariant },
+                  ]}
                 >
                   {pair.caption}
+                </Text>
+                <Text
+                  style={[
+                    styles.curatedSource,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  {getInsightSourceLabel(pair.source).toUpperCase()}
                 </Text>
               </View>
 
@@ -159,6 +171,12 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 13,
     lineHeight: 20,
+  },
+  curatedSource: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.4,
   },
   curatedImageRow: {
     flexDirection: "row",

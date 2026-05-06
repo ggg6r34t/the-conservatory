@@ -23,6 +23,7 @@ import type { PlantLibraryFilter, PlantSortOption } from "@/types/ui";
 import { createId } from "@/utils/id";
 import { logger } from "@/utils/logger";
 
+import { persistPhotoAsset } from "../services/photoStorageService";
 import { derivePlantStatus } from "../services/plantStatusService";
 
 async function queueSyncDeleteInTransaction(
@@ -250,18 +251,6 @@ function computeNextWaterDueAt(lastWateredAt: string, intervalDays: number) {
   const due = new Date(lastWateredAt);
   due.setDate(due.getDate() + intervalDays);
   return due.toISOString();
-}
-
-function buildPhotoStoragePath(
-  userId: string,
-  plantId: string,
-  photoId: string,
-  localUri: string,
-) {
-  const normalizedUri = localUri.split("?")[0] ?? localUri;
-  const extension =
-    normalizedUri.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() ?? "jpg";
-  return `${userId}/${plantId}/${photoId}.${extension}`;
 }
 
 export interface GraveyardPlantListItem extends GraveyardPlant {
@@ -694,6 +683,21 @@ export async function createPlant(input: {
   const now = new Date().toISOString();
   const plantId = createId("plant");
   const preferences = await getUserPreferences(input.userId);
+  const primaryPhotoId = input.photoUri ? createId("photo") : null;
+  const primaryPhoto =
+    input.photoUri && primaryPhotoId
+      ? {
+          id: primaryPhotoId,
+          ...(await persistPhotoAsset({
+            sourceUri: input.photoUri,
+            userId: input.userId,
+            plantId,
+            photoId: primaryPhotoId,
+            role: "primary",
+            mimeType: input.photoMimeType ?? "image/jpeg",
+          })),
+        }
+      : null;
   const nextWaterDueAt = optimizeReminderTiming({
     plantName: input.name,
     speciesName: input.speciesName,
@@ -750,25 +754,18 @@ export async function createPlant(input: {
         },
       ];
 
-      if (input.photoUri) {
-        const photoId = createId("photo");
-        const storagePath = buildPhotoStoragePath(
-          input.userId,
-          plantId,
-          photoId,
-          input.photoUri,
-        );
+      if (primaryPhoto) {
         await database.runAsync(
           `INSERT INTO photos (
             id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
             photo_role, captured_at, taken_at, caption, is_primary, created_at, updated_at, pending, synced_at, sync_error
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-          photoId,
+          primaryPhoto.id,
           input.userId,
           plantId,
-          input.photoUri,
+          primaryPhoto.localUri,
           null,
-          storagePath,
+          primaryPhoto.storagePath,
           input.photoMimeType ?? "image/jpeg",
           input.photoWidth ?? null,
           input.photoHeight ?? null,
@@ -786,7 +783,7 @@ export async function createPlant(input: {
 
         operations.push({
           entity: "photos",
-          entityId: photoId,
+          entityId: primaryPhoto.id,
           operation: "insert",
           payload: {
             userId: input.userId,
@@ -848,6 +845,7 @@ export async function addPlantProgressPhoto(input: {
   mimeType?: string | null;
   width?: number | null;
   height?: number | null;
+  caption?: string | null;
 }) {
   const database = await getDatabase();
   const current = await getPlantById(input.userId, input.plantId);
@@ -857,12 +855,14 @@ export async function addPlantProgressPhoto(input: {
 
   const now = new Date().toISOString();
   const photoId = createId("photo");
-  const storagePath = buildPhotoStoragePath(
-    input.userId,
-    input.plantId,
+  const persistedPhoto = await persistPhotoAsset({
+    sourceUri: input.photoUri,
+    userId: input.userId,
+    plantId: input.plantId,
     photoId,
-    input.photoUri,
-  );
+    role: "progress",
+    mimeType: input.mimeType ?? "image/jpeg",
+  });
 
   await runAtomicMutationWithSyncOutbox(database, {
     nowIso: now,
@@ -875,16 +875,16 @@ export async function addPlantProgressPhoto(input: {
         photoId,
         input.userId,
         input.plantId,
-        input.photoUri,
+        persistedPhoto.localUri,
         null,
-        storagePath,
+        persistedPhoto.storagePath,
         input.mimeType ?? "image/jpeg",
         input.width ?? null,
         input.height ?? null,
         "progress",
         input.capturedAt ?? transactionNowIso,
         transactionNowIso,
-        null,
+        input.caption?.trim() || null,
         0,
         transactionNowIso,
         transactionNowIso,
@@ -993,19 +993,19 @@ export async function updatePlant(input: {
           (photo) => photo.isPrimary === 1,
         );
         if (existingPhoto) {
-          const storagePath =
-            existingPhoto.storagePath ??
-            buildPhotoStoragePath(
-              input.userId,
-              input.plantId,
-              existingPhoto.id,
-              input.patch.photoUri,
-            );
+          const persistedPhoto = await persistPhotoAsset({
+            sourceUri: input.patch.photoUri,
+            userId: input.userId,
+            plantId: input.plantId,
+            photoId: existingPhoto.id,
+            role: "primary",
+            mimeType: input.patch.photoMimeType ?? "image/jpeg",
+          });
           await database.runAsync(
             "UPDATE photos SET local_uri = ?, remote_url = ?, storage_path = ?, mime_type = ?, width = ?, height = ?, photo_role = ?, captured_at = COALESCE(?, captured_at), updated_at = ?, pending = 1 WHERE id = ?;",
-            input.patch.photoUri,
+            persistedPhoto.localUri,
             null,
-            storagePath,
+            persistedPhoto.storagePath,
             input.patch.photoMimeType ?? "image/jpeg",
             input.patch.photoWidth ?? null,
             input.patch.photoHeight ?? null,
@@ -1026,12 +1026,14 @@ export async function updatePlant(input: {
           });
         } else {
           const photoId = createId("photo");
-          const storagePath = buildPhotoStoragePath(
-            input.userId,
-            input.plantId,
+          const persistedPhoto = await persistPhotoAsset({
+            sourceUri: input.patch.photoUri,
+            userId: input.userId,
+            plantId: input.plantId,
             photoId,
-            input.patch.photoUri,
-          );
+            role: "primary",
+            mimeType: input.patch.photoMimeType ?? "image/jpeg",
+          });
           await database.runAsync(
             `INSERT INTO photos (
               id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type, width, height,
@@ -1040,9 +1042,9 @@ export async function updatePlant(input: {
             photoId,
             input.userId,
             input.plantId,
-            input.patch.photoUri,
+            persistedPhoto.localUri,
             null,
-            storagePath,
+            persistedPhoto.storagePath,
             input.patch.photoMimeType ?? "image/jpeg",
             input.patch.photoWidth ?? null,
             input.patch.photoHeight ?? null,

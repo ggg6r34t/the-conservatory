@@ -19,9 +19,18 @@ import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import type { CareReminder } from "@/types/models";
 
-function formatReminderCopy(reminder?: CareReminder, fallbackDays = 7) {
+function formatReminderCopy(input: {
+  reminder?: CareReminder;
+  fallbackDays?: number;
+  remindersEnabled: boolean;
+}) {
+  const { reminder, remindersEnabled, fallbackDays = 7 } = input;
   const frequencyDays = reminder?.frequencyDays ?? fallbackDays;
   const reminderType = reminder?.reminderType ?? "water";
+
+  if (!remindersEnabled) {
+    return "Notifications paused globally";
+  }
 
   if (!reminder?.enabled) {
     return "Notifications paused";
@@ -42,11 +51,16 @@ function formatReminderCopy(reminder?: CareReminder, fallbackDays = 7) {
   return `Water every ${frequencyDays} days`;
 }
 
-function getReminderIcon(reminder?: CareReminder, fallbackDays = 7) {
+function getReminderIcon(input: {
+  reminder?: CareReminder;
+  fallbackDays?: number;
+  remindersEnabled: boolean;
+}) {
+  const { reminder, remindersEnabled, fallbackDays = 7 } = input;
   const frequencyDays = reminder?.frequencyDays ?? fallbackDays;
   const reminderType = reminder?.reminderType ?? "water";
 
-  if (!reminder?.enabled) {
+  if (!remindersEnabled || !reminder?.enabled) {
     return {
       family: "MaterialCommunityIcons" as const,
       name: "water-off-outline",
@@ -200,10 +214,11 @@ export default function CareRemindersScreen() {
 
         <View style={styles.reminderList}>
           {reminderRows.map(({ plant, reminder }, index) => {
-            const reminderIcon = getReminderIcon(
+            const reminderIcon = getReminderIcon({
               reminder,
-              plant.wateringIntervalDays,
-            );
+              fallbackDays: plant.wateringIntervalDays,
+              remindersEnabled,
+            });
             const optimizedReminder = optimizeReminderTiming({
               plantName: plant.name,
               speciesName: plant.speciesName,
@@ -271,10 +286,11 @@ export default function CareRemindersScreen() {
                           { color: colors.onSurfaceVariant },
                         ]}
                       >
-                        {formatReminderCopy(
+                        {formatReminderCopy({
                           reminder,
-                          plant.wateringIntervalDays,
-                        )}
+                          fallbackDays: plant.wateringIntervalDays,
+                          remindersEnabled,
+                        })}
                       </Text>
                     </View>
                     {optimizedReminder.explanation ? (
