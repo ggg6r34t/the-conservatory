@@ -17,9 +17,9 @@ jest.mock("@/features/ai/services/aiCache", () => {
     ),
     setCachedValue: jest.fn(async (key: string, value: unknown) => {
       store.set(key, value);
-  
-} from "@/features/ai/services/streakNudgeService";
-import type { CareLog, Plant } from "@/types/models";
+    }),
+  };
+});
 
 function createPlant(overrides?: Partial<Plant>): Plant {
   return {
