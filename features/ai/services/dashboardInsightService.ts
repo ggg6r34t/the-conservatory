@@ -158,6 +158,18 @@ export function buildLocalInsight(input: {
   };
 }
 
+function isFallbackEquivalent(
+  cloud: Omit<DashboardInsight, "source"> | null,
+  fallback: Omit<DashboardInsight, "source">,
+) {
+  return (
+    Boolean(cloud) &&
+    cloud!.title === fallback.title &&
+    cloud!.body === fallback.body &&
+    (cloud!.plantId ?? null) === (fallback.plantId ?? null)
+  );
+}
+
 export async function getDashboardInsight(input: {
   userId: string;
   plants: Plant[];
@@ -194,9 +206,10 @@ export async function getDashboardInsight(input: {
     fallback,
   });
   const parsedCloud = parseDashboardInsightResponse(cloud);
-  const insight = parsedCloud
-    ? withInsightSource(parsedCloud, "cloud")
-    : withInsightSource(fallback, "local");
+  const insight =
+    parsedCloud && !isFallbackEquivalent(parsedCloud, fallback)
+      ? withInsightSource(parsedCloud, "cloud")
+      : withInsightSource(fallback, "local");
 
   await setCachedValue(cacheKey, insight, DAY_CACHE_TTL_MS);
   return insight;

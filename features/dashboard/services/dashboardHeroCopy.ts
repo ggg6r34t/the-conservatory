@@ -8,6 +8,7 @@ interface DashboardHeroCopyInput {
 
 export interface DashboardHeroCopy {
   eyebrow: string;
+  titleLines: [string, string];
   body: string;
 }
 
@@ -65,11 +66,16 @@ export function buildDashboardHeroCopy(
   if (input.totalPlants === 0) {
     return {
       eyebrow: "YOUR LIVING GALLERY",
+      titleLines: ["Garden is", "starting."],
       body: `${editorialOpener} Your conservatory is ready for its first specimen. Add one plant to begin a calm care rhythm.`,
     };
   }
 
   const eyebrow = "YOUR LIVING GALLERY";
+  const titleLines: [string, string] =
+    input.overdue > 0 || input.dueToday > 0
+      ? ["Care is", "needed."]
+      : ["Garden is", "steady."];
 
   let stateClause = "";
 
@@ -99,5 +105,5 @@ export function buildDashboardHeroCopy(
     body = `${body} Reminder schedules are currently paused.`;
   }
 
-  return { eyebrow, body };
+  return { eyebrow, titleLines, body };
 }

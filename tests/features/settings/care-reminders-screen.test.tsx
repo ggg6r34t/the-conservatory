@@ -45,6 +45,7 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
 
 jest.mock("@/features/plants/hooks/usePlants", () => ({
   usePlants: () => ({ data: [] }),
+  useAllActivePlants: () => ({ data: [] }),
 }));
 
 jest.mock("@/features/notifications/hooks/useReminders", () => ({

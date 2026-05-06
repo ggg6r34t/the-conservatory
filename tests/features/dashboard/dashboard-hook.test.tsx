@@ -8,6 +8,15 @@ jest.mock('@/features/plants/hooks/usePlants', () => ({
   usePlants: () => ({
     data: [
       {
+        id: 'plant-filtered-out',
+        nextWaterDueAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+      },
+    ],
+    isLoading: false,
+  }),
+  useAllActivePlants: () => ({
+    data: [
+      {
         id: 'plant-1',
         nextWaterDueAt: new Date(Date.now() + 3600 * 1000).toISOString(),
       },

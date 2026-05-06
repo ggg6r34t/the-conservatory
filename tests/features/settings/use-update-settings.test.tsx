@@ -4,6 +4,7 @@ const mockUpdateUserPreferences = jest.fn();
 const mockRunUserDataSync = jest.fn();
 const mockInvalidateBackupQueries = jest.fn();
 const mockInvalidateQueries = jest.fn();
+const mockApplyReminderPreferenceSideEffects = jest.fn();
 const mockWarn = jest.fn();
 
 let mockOffline = false;
@@ -56,6 +57,11 @@ jest.mock("@/services/database/userDataSync", () => ({
   runUserDataSync: (...args: unknown[]) => mockRunUserDataSync(...args),
 }));
 
+jest.mock("@/features/notifications/services/remindersScheduler", () => ({
+  applyReminderPreferenceSideEffects: (...args: unknown[]) =>
+    mockApplyReminderPreferenceSideEffects(...args),
+}));
+
 jest.mock("@/features/profile/utils/invalidateBackupQueries", () => ({
   invalidateBackupQueries: (...args: unknown[]) =>
     mockInvalidateBackupQueries(...args),
@@ -78,6 +84,7 @@ describe("useUpdateSettings", () => {
     mockInvalidateQueries.mockResolvedValue(undefined);
     mockRunUserDataSync.mockResolvedValue(undefined);
     mockInvalidateBackupQueries.mockResolvedValue(undefined);
+    mockApplyReminderPreferenceSideEffects.mockResolvedValue(undefined);
   });
 
   it("triggers an immediate sync when auto sync is enabled mid-session", async () => {
@@ -108,5 +115,19 @@ describe("useUpdateSettings", () => {
     await result.current.mutateAsync({ autoSyncEnabled: true });
 
     expect(mockRunUserDataSync).not.toHaveBeenCalled();
+  });
+
+  it("applies local notification side effects when watering alerts are disabled", async () => {
+    const {
+      useUpdateSettings,
+    } = require("@/features/settings/hooks/useUpdateSettings");
+    const { result } = renderHook(() => useUpdateSettings());
+
+    await result.current.mutateAsync({ remindersEnabled: false });
+
+    expect(mockApplyReminderPreferenceSideEffects).toHaveBeenCalledWith({
+      userId: "user-1",
+      remindersEnabled: false,
+    });
   });
 });

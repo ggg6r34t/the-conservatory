@@ -23,3 +23,19 @@ export function usePlants() {
       }),
   });
 }
+
+export function useAllActivePlants() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: [...queryKeys.plants, "active", "all"],
+    enabled: Boolean(user?.id),
+    queryFn: () =>
+      listPlants({
+        userId: user!.id,
+        filter: "all",
+        sort: "recent",
+        query: "",
+      }),
+  });
+}

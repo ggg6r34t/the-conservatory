@@ -11,6 +11,7 @@ describe("dashboardHeroCopy", () => {
     });
 
     expect(copy.eyebrow).toBe("YOUR LIVING GALLERY");
+    expect(copy.titleLines).toEqual(["Garden is", "starting."]);
     expect(copy.body).toContain(
       "Welcome back. Your indoor sanctuary is looking lush today.",
     );
@@ -27,6 +28,7 @@ describe("dashboardHeroCopy", () => {
     });
 
     expect(copy.eyebrow).toBe("YOUR LIVING GALLERY");
+    expect(copy.titleLines).toEqual(["Care is", "needed."]);
     expect(copy.body).toContain(
       "Welcome back. Your indoor sanctuary is looking lush today.",
     );
@@ -45,6 +47,7 @@ describe("dashboardHeroCopy", () => {
     });
 
     expect(copy.body).toContain("Reminder schedules are currently paused.");
+    expect(copy.titleLines).toEqual(["Garden is", "steady."]);
   });
 
   it("uses digits when counts are above twenty", () => {

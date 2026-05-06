@@ -90,7 +90,9 @@ export default function CareLogRoute() {
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: Math.max(spacing.xl, insets.bottom + 24) }}
+          contentContainerStyle={{
+            paddingBottom: Math.max(spacing.xl, insets.bottom + 24),
+          }}
         >
           <View style={styles.dragRegion} {...panResponder.panHandlers}>
             <View
@@ -141,10 +143,6 @@ export default function CareLogRoute() {
                     {(plant.location ?? "Unplaced").toUpperCase()}
                   </Text>
                 </View>
-
-                <Text style={[styles.changeText, { color: colors.primary }]}>
-                  change
-                </Text>
               </View>
             ) : (
               <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
@@ -225,13 +223,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     letterSpacing: 1.6,
-  },
-  changeText: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 1.5,
-    textDecorationLine: "underline",
-    textDecorationColor: "#c5ebd4",
   },
 });

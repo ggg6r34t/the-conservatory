@@ -26,6 +26,19 @@ export function buildHealthInsightRevision(data: PlantWithRelations) {
   ].join(":");
 }
 
+function isFallbackEquivalent(
+  cloud: Omit<HealthInsight, "source"> | null,
+  fallback: Omit<HealthInsight, "source">,
+) {
+  return (
+    Boolean(cloud) &&
+    cloud!.title === fallback.title &&
+    cloud!.body === fallback.body &&
+    cloud!.confidence === fallback.confidence &&
+    (cloud!.classification ?? null) === (fallback.classification ?? null)
+  );
+}
+
 export async function getHealthInsight(input: {
   plantId: string;
   data: PlantWithRelations;
@@ -97,7 +110,9 @@ export async function getHealthInsight(input: {
 
   const insight = withHealthInsightSource(
     chosen,
-    safeCloud ? "cloud" : "local",
+    safeCloud && safeFallback && !isFallbackEquivalent(safeCloud, safeFallback)
+      ? "cloud"
+      : "local",
   );
 
   await setCachedValue(cacheKey, insight, HEALTH_CACHE_TTL_MS);

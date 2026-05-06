@@ -3,7 +3,7 @@ create extension if not exists citext;
 
 create type public.user_role as enum ('user', 'admin');
 create type public.plant_status as enum ('active', 'graveyard');
-create type public.care_log_type as enum ('water', 'mist', 'feed', 'prune', 'pest', 'note');
+create type public.care_log_type as enum ('water', 'mist', 'feed', 'repot', 'prune', 'inspect', 'pest', 'note');
 create type public.reminder_type as enum ('water', 'mist', 'feed');
 
 create or replace function public.set_updated_at()
@@ -43,6 +43,7 @@ create table if not exists public.users (
 create table if not exists public.user_preferences (
   user_id uuid primary key references public.users(id) on delete cascade,
   reminders_enabled boolean not null default true,
+  auto_sync_enabled boolean not null default true,
   preferred_theme text not null default 'linen-light',
   timezone text not null default 'UTC',
   default_watering_hour smallint not null default 9,
@@ -72,10 +73,14 @@ create table if not exists public.photos (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,
   plant_id uuid not null references public.plants(id) on delete cascade,
+  remote_url text,
   storage_path text not null unique,
   mime_type text not null,
   width integer,
   height integer,
+  photo_role text not null default 'progress',
+  captured_at timestamptz,
+  caption text,
   taken_at timestamptz,
   is_primary boolean not null default false,
   created_at timestamptz not null default timezone('utc', now()),

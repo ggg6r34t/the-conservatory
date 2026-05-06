@@ -42,7 +42,7 @@ const logTypes: {
   { key: "prune", label: "PRUNE", icon: "content-cut" },
   { key: "inspect", label: "INSPECT", icon: "magnify" },
   { key: "pest", label: "PESTS", icon: "bug-outline" },
-  { key: "note", label: "PHOTO", icon: "camera-outline" },
+  { key: "note", label: "NOTE", icon: "note-edit-outline" },
 ];
 
 const conditionOptions: CareLogCondition[] = [

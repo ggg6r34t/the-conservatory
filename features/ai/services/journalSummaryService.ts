@@ -116,6 +116,17 @@ export function buildLocalMonthlySummary(input: {
   };
 }
 
+function isFallbackEquivalent(
+  cloud: Omit<JournalMonthlySummary, "monthKey" | "source"> | null,
+  fallback: Omit<JournalMonthlySummary, "monthKey" | "source">,
+) {
+  return (
+    Boolean(cloud) &&
+    cloud!.title === fallback.title &&
+    cloud!.body === fallback.body
+  );
+}
+
 export async function getJournalMonthlySummary(input: {
   userId: string;
   logs: CareLog[];
@@ -173,9 +184,10 @@ export async function getJournalMonthlySummary(input: {
     fallback,
   });
   const parsedCloud = parseJournalSummaryResponse(cloud);
-  const summary = parsedCloud
-    ? withSummarySource(parsedCloud, monthKey, "cloud")
-    : withSummarySource(fallback, monthKey, "local");
+  const summary =
+    parsedCloud && !isFallbackEquivalent(parsedCloud, fallback)
+      ? withSummarySource(parsedCloud, monthKey, "cloud")
+      : withSummarySource(fallback, monthKey, "local");
 
   await setCachedValue(cacheKey, summary, MONTH_CACHE_TTL_MS);
   return summary;

@@ -1,5 +1,5 @@
-import { hydrateRemoteUserData } from "@/services/database/remoteHydration";
 import { repairLocalPhotoRecords } from "@/services/database/photoRepair";
+import { hydrateRemoteUserData } from "@/services/database/remoteHydration";
 import { syncPendingChanges } from "@/services/database/sync";
 import { probeRemoteBackendAvailability } from "@/services/supabase/backendReadiness";
 import { logger } from "@/utils/logger";
@@ -31,13 +31,13 @@ export interface UserDataSyncResult {
 
 type Listener = (snapshot: UserDataSyncSnapshot) => void;
 
+const MAX_SYNC_BATCHES_PER_RUN = 20;
+
 let inFlight: Promise<UserDataSyncResult> | null = null;
-let pendingReplay:
-  | {
-      userId: string;
-      trigger: UserDataSyncTrigger;
-    }
-  | null = null;
+let pendingReplay: {
+  userId: string;
+  trigger: UserDataSyncTrigger;
+} | null = null;
 
 let snapshot: UserDataSyncSnapshot = {
   isRunning: false,
@@ -67,7 +67,42 @@ async function executeUserDataSync(
   }
 
   await repairLocalPhotoRecords(userId);
-  const report = await syncPendingChanges();
+  let report: UserDataSyncResult = {
+    processed: 0,
+    successful: 0,
+    failed: 0,
+    remaining: 0,
+  };
+
+  for (let batch = 0; batch < MAX_SYNC_BATCHES_PER_RUN; batch += 1) {
+    const nextReport = await syncPendingChanges();
+    report = {
+      processed: report.processed + nextReport.processed,
+      successful: report.successful + nextReport.successful,
+      failed: report.failed + nextReport.failed,
+      remaining: nextReport.remaining,
+    };
+
+    if (
+      nextReport.failed > 0 ||
+      nextReport.remaining === 0 ||
+      nextReport.processed === 0
+    ) {
+      break;
+    }
+  }
+
+  if (report.failed > 0 || report.remaining > 0) {
+    const failedLabel =
+      report.failed === 1 ? "1 failed item" : `${report.failed} failed items`;
+    const remainingLabel =
+      report.remaining === 1
+        ? "1 item remaining"
+        : `${report.remaining} items remaining`;
+    throw new Error(
+      `Sync completed with ${failedLabel} and ${remainingLabel}.`,
+    );
+  }
   await hydrateRemoteUserData(userId);
   await repairLocalPhotoRecords(userId);
 

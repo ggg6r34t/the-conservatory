@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 
-import { usePlants } from "@/features/plants/hooks/usePlants";
+import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
 import { useNetworkState } from "@/hooks/useNetworkState";
 
 export function useDashboard() {
-  const plantsQuery = usePlants();
+  const plantsQuery = useAllActivePlants();
   const network = useNetworkState();
 
   return useMemo(() => {

@@ -128,6 +128,7 @@ jest.mock("@/features/ai/services/dashboardPresentationService", () => ({
 jest.mock("@/features/dashboard/services/dashboardHeroCopy", () => ({
   buildDashboardHeroCopy: () => ({
     eyebrow: "eyebrow",
+    titleLines: ["Garden is", "steady."],
     body: "body",
   }),
 }));

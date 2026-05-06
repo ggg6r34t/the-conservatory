@@ -99,4 +99,16 @@ describe("dashboardInsightService", () => {
 
     expect(requestDashboardInsight).toHaveBeenCalledTimes(2);
   });
+
+  it("keeps fallback-equivalent remote dashboard insight labeled as local", async () => {
+    const insight = await getDashboardInsight({
+      userId: "user-1",
+      plants: [createPlant({ nextWaterDueAt: "2026-03-24T09:00:00.000Z" })],
+      reminders: [],
+      currentStreakDays: 0,
+      now: new Date("2026-03-24T10:00:00.000Z"),
+    });
+
+    expect(insight.source).toBe("local");
+  });
 });

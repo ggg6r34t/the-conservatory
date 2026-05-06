@@ -1,17 +1,21 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
-import { usePlants } from "@/features/plants/hooks/usePlants";
 
 function buildSpecimenCode(name: string, id: string) {
-  const stem = name.replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase() || "SPC";
+  const stem =
+    name
+      .replace(/[^a-zA-Z]/g, "")
+      .slice(0, 3)
+      .toUpperCase() || "SPC";
   return `${stem}-${id.slice(-4).toUpperCase()}`;
 }
 
 export default function SpecimenTagsScreen() {
   const { colors } = useTheme();
-  const plantsQuery = usePlants();
+  const plantsQuery = useAllActivePlants();
   const plants = plantsQuery.data ?? [];
 
   return (

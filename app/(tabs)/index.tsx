@@ -135,7 +135,7 @@ export default function HomeScreen() {
             </Text>
             <View style={styles.titleBlock}>
               <Text style={[styles.title, { color: colors.primary }]}>
-                Nature is
+                {heroCopy.titleLines[0]}
               </Text>
               <Text
                 style={[
@@ -143,7 +143,7 @@ export default function HomeScreen() {
                   { color: colors.primary, lineHeight: 72 },
                 ]}
               >
-                thriving.
+                {heroCopy.titleLines[1]}
               </Text>
             </View>
             <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>

@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 
-import { usePlants } from "@/features/plants/hooks/usePlants";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
+import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
 
 export function useStreaks() {
-  const plantsQuery = usePlants();
+  const plantsQuery = useAllActivePlants();
   const remindersQuery = useReminders();
 
   return useMemo(

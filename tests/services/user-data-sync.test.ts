@@ -107,4 +107,64 @@ describe("userDataSync", () => {
     expect(mockSyncPendingChanges).not.toHaveBeenCalled();
     expect(getUserDataSyncSnapshot().lastError).toBe("Backend unreachable");
   });
+
+  it("treats partial queue failures as a failed sync run", async () => {
+    mockSyncPendingChanges.mockResolvedValueOnce({
+      processed: 3,
+      successful: 2,
+      failed: 1,
+      remaining: 1,
+    });
+
+    const {
+      getUserDataSyncSnapshot,
+      runUserDataSync,
+    } = require("@/services/database/userDataSync");
+
+    await expect(
+      runUserDataSync({
+        userId: "user-1",
+        trigger: "manual",
+      }),
+    ).rejects.toThrow("Sync completed with 1 failed item and 1 item remaining.");
+
+    expect(mockHydrateRemoteUserData).not.toHaveBeenCalled();
+    expect(getUserDataSyncSnapshot().lastSuccessfulAt).toBeNull();
+    expect(getUserDataSyncSnapshot().lastError).toBe(
+      "Sync completed with 1 failed item and 1 item remaining.",
+    );
+  });
+
+  it("continues clean queue batches until no sync work remains", async () => {
+    mockSyncPendingChanges
+      .mockResolvedValueOnce({
+        processed: 25,
+        successful: 25,
+        failed: 0,
+        remaining: 2,
+      })
+      .mockResolvedValueOnce({
+        processed: 2,
+        successful: 2,
+        failed: 0,
+        remaining: 0,
+      });
+
+    const { runUserDataSync } = require("@/services/database/userDataSync");
+
+    await expect(
+      runUserDataSync({
+        userId: "user-1",
+        trigger: "manual",
+      }),
+    ).resolves.toEqual({
+      processed: 27,
+      successful: 27,
+      failed: 0,
+      remaining: 0,
+    });
+
+    expect(mockSyncPendingChanges).toHaveBeenCalledTimes(2);
+    expect(mockHydrateRemoteUserData).toHaveBeenCalledWith("user-1");
+  });
 });

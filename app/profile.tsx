@@ -19,7 +19,7 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
-import { usePlants } from "@/features/plants/hooks/usePlants";
+import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 
@@ -174,7 +174,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [showDeveloperMenu, setShowDeveloperMenu] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
-  const plantsQuery = usePlants();
+  const plantsQuery = useAllActivePlants();
   const graveyardQuery = useGraveyard();
   const settingsQuery = useSettings();
   const updateSettings = useUpdateSettings();

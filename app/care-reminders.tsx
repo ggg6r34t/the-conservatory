@@ -11,7 +11,7 @@ import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizat
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import { useSetReminder } from "@/features/notifications/hooks/useSetReminder";
-import { usePlants } from "@/features/plants/hooks/usePlants";
+import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
@@ -93,7 +93,7 @@ export default function CareRemindersScreen() {
   const alert = useAlert();
   const snackbar = useSnackbar();
   const { user } = useAuth();
-  const plantsQuery = usePlants();
+  const plantsQuery = useAllActivePlants();
   const remindersQuery = useReminders();
   const settingsQuery = useSettings();
   const updateSettings = useUpdateSettings();
