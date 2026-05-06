@@ -76,7 +76,7 @@ export default function PrivacySecurityScreen() {
         <Pressable
           accessibilityRole="button"
           onPress={() => {
-            snackbar.success("Personal data requests will be available soon.");
+            void Linking.openURL("https://theconservatory.app/privacy");
           }}
           style={styles.archiveLinkWrap}
         >
@@ -88,10 +88,10 @@ export default function PrivacySecurityScreen() {
           />
           <View style={styles.archiveLinkRow}>
             <Text style={[styles.archiveLink, { color: colors.primary }]}>
-              Request Personal Data
+              Privacy & Data Rights
             </Text>
             <Icon
-              name="download"
+              name="open-in-new"
               family="MaterialIcons"
               size={18}
               color={colors.primary}

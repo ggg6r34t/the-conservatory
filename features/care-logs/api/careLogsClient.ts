@@ -71,13 +71,14 @@ export async function listCareLogs(
     "SELECT * FROM care_logs WHERE plant_id = ? ORDER BY logged_at DESC";
   const params: (string | number)[] = [plantId];
 
-  if (options?.limit !== undefined) {
-    sql += " LIMIT ?";
-    params.push(options.limit);
-    if (options?.offset !== undefined) {
-      sql += " OFFSET ?";
-      params.push(options.offset);
-    }
+  // Default to 50 rows. Pass limit: 0 explicitly to skip the LIMIT clause
+  // and retrieve all rows (use sparingly — unbounded reads can be expensive).
+  const limit = options?.limit ?? 50;
+  const offset = options?.offset ?? 0;
+
+  if (limit !== 0) {
+    sql += " LIMIT ? OFFSET ?";
+    params.push(limit, offset);
   }
 
   sql += ";";
