@@ -821,12 +821,28 @@ async function clearAllLocalUserData() {
   `);
 }
 
-export async function deleteAccount(userId: string): Promise<void> {
-  // Provider integration point
-  await supabase?.functions.invoke("delete-account", {
-    body: { userId },
-  });
+export async function deleteAccount(): Promise<void> {
+  if (!supabase) {
+    // Local-only build: clear local data and session without remote call
+    await clearAllLocalUserData();
+    await clearSession();
+    return;
+  }
+
+  // Invoke the Edge Function — current session JWT is sent automatically
+  const { error } = await supabase.functions.invoke("delete-account", {});
+  if (error) {
+    throw new Error(error.message ?? "Failed to delete account. Please try again.");
+  }
+
+  // Clear local data first, then sign out (account is deleted so signOut may fail — that is OK)
   await clearAllLocalUserData();
+  try {
+    await supabase.auth.signOut({ scope: "local" });
+  } catch {
+    // Best-effort: remote account is already deleted
+  }
+  await clearSession();
 }
 
 export { AuthClientError };

@@ -35,7 +35,7 @@ export default function PrivacySecurityScreen() {
 
     try {
       setDeleting(true);
-      await deleteAccount(user?.id ?? "");
+      await deleteAccount();
       router.replace("/(auth)/login");
     } catch (error) {
       const message =
