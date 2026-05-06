@@ -21,6 +21,7 @@ import type {
 } from "@/types/models";
 import type { PlantLibraryFilter, PlantSortOption } from "@/types/ui";
 import { createId } from "@/utils/id";
+import { logger } from "@/utils/logger";
 
 import { derivePlantStatus } from "../services/plantStatusService";
 
@@ -827,7 +828,12 @@ export async function createPlant(input: {
   if (created) {
     const reminder = created.reminders[0];
     if (reminder) {
-      void reschedulePlantReminder(reminder, created.plant.name).catch(() => undefined);
+      void reschedulePlantReminder(reminder, created.plant.name).catch((error) => {
+        logger.warn("plants.reminder_schedule_failed", {
+          plantId,
+          error: error instanceof Error ? error.message : "unknown",
+        });
+      });
     }
   }
   return created!;
@@ -1109,7 +1115,12 @@ export async function updatePlant(input: {
   if (updated) {
     const reminder = updated.reminders[0];
     if (reminder) {
-      void reschedulePlantReminder(reminder, updated.plant.name).catch(() => undefined);
+      void reschedulePlantReminder(reminder, updated.plant.name).catch((error) => {
+        logger.warn("plants.reminder_schedule_failed", {
+          plantId: input.plantId,
+          error: error instanceof Error ? error.message : "unknown",
+        });
+      });
     }
   }
   return updated!;
