@@ -139,6 +139,7 @@ export async function createCareLog(input: {
   logType: CareLogType;
   currentCondition?: CareLogCondition;
   notes?: string;
+  loggedAt?: string;
 }): Promise<RecordCareEventResult> {
   const database = await getDatabase();
   const now = new Date().toISOString();
@@ -153,6 +154,10 @@ export async function createCareLog(input: {
   const execution = (await runAtomicMutationWithSyncOutbox(database, {
     nowIso: now,
     perform: async (transactionNowIso) => {
+      // loggedAt is the timestamp of when the care event occurred,
+      // sourced from the caller's input or the DB transaction timestamp.
+      const loggedAt = input.loggedAt ?? transactionNowIso;
+
       await database.runAsync(
         `INSERT INTO care_logs (
           id, user_id, plant_id, log_type, current_condition, notes, tags, logged_at, created_at, updated_at, updated_by,
@@ -165,7 +170,7 @@ export async function createCareLog(input: {
         input.currentCondition ?? null,
         cleanNotes || null,
         tagsJson,
-        transactionNowIso,
+        loggedAt,
         transactionNowIso,
         transactionNowIso,
         input.userId,
@@ -187,10 +192,6 @@ export async function createCareLog(input: {
           },
         },
       ];
-
-      // loggedAt is the timestamp of when the care event occurred,
-      // sourced from the care log's own logged_at field.
-      const loggedAt = transactionNowIso;
 
       let reminderInput: {
         frequencyDays: number;
