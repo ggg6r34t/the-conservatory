@@ -27,7 +27,10 @@ export function SpeciesSuggestionBanner({
   onDismiss,
 }: SpeciesSuggestionBannerProps) {
   const { colors } = useTheme();
-  const qualifier = confidenceQualifier(suggestion.confidence);
+  const qualifier =
+    suggestion.source === "local"
+      ? "Pattern match"
+      : confidenceQualifier(suggestion.confidence);
   const confidenceText =
     suggestion.source === "local"
       ? "Pattern match"
