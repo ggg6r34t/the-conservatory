@@ -61,8 +61,26 @@ function computeNextWaterDueAt(loggedAt: string, intervalDays: number) {
   return date.toISOString();
 }
 
-export async function listCareLogs(plantId: string) {
+export async function listCareLogs(
+  plantId: string,
+  options?: { limit?: number; offset?: number },
+) {
   const database = await getDatabase();
+
+  let sql = "SELECT * FROM care_logs WHERE plant_id = ? ORDER BY logged_at DESC";
+  const params: (string | number)[] = [plantId];
+
+  if (options?.limit !== undefined) {
+    sql += " LIMIT ?";
+    params.push(options.limit);
+    if (options?.offset !== undefined) {
+      sql += " OFFSET ?";
+      params.push(options.offset);
+    }
+  }
+
+  sql += ";";
+
   const rows = await database.getAllAsync<{
     id: string;
     user_id: string;
@@ -78,10 +96,7 @@ export async function listCareLogs(plantId: string) {
     pending: number;
     synced_at: string | null;
     sync_error: string | null;
-  }>(
-    "SELECT * FROM care_logs WHERE plant_id = ? ORDER BY logged_at DESC;",
-    plantId,
-  );
+  }>(sql, ...params);
 
   return rows.map(mapCareLog);
 }
