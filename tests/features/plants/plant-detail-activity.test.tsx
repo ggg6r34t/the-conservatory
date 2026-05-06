@@ -1,6 +1,5 @@
-import { screen, waitFor } from "@testing-library/react-native";
+import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import React from "react";
-import { fireEvent } from "@testing-library/react-native";
 
 import { PlantDetail } from "@/features/plants/components/PlantDetail";
 import { renderWithProviders } from "@/tests/utils/renderWithProviders";
@@ -160,14 +159,22 @@ describe("PlantDetail recent activity", () => {
   });
 
   it("maps thriving plants to the canonical THRIVING label", () => {
+    const now = new Date();
+    const lastWateredAt = new Date(
+      now.getTime() - 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const nextWaterDueAt = new Date(
+      now.getTime() + 4 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
     renderWithProviders(
       <PlantDetail
         data={{
           ...baseFixture,
           plant: {
             ...baseFixture.plant,
-            lastWateredAt: "2026-03-27T10:00:00.000Z",
-            nextWaterDueAt: "2026-04-02T10:00:00.000Z",
+            lastWateredAt,
+            nextWaterDueAt,
           },
           reminders: [
             {
@@ -177,9 +184,9 @@ describe("PlantDetail recent activity", () => {
               reminderType: "water",
               frequencyDays: 7,
               enabled: 1,
-              nextDueAt: "2026-04-02T10:00:00.000Z",
+              nextDueAt: nextWaterDueAt,
               createdAt: "2026-03-01T10:00:00.000Z",
-              updatedAt: "2026-03-27T10:00:00.000Z",
+              updatedAt: lastWateredAt,
               pending: 0,
             },
           ],
@@ -190,9 +197,9 @@ describe("PlantDetail recent activity", () => {
               plantId: "plant-1",
               logType: "water",
               notes: "Watered on schedule.",
-              loggedAt: "2026-03-27T10:00:00.000Z",
-              createdAt: "2026-03-27T10:00:00.000Z",
-              updatedAt: "2026-03-27T10:00:00.000Z",
+              loggedAt: lastWateredAt,
+              createdAt: lastWateredAt,
+              updatedAt: lastWateredAt,
               pending: 0,
             },
           ],
@@ -403,7 +410,9 @@ describe("PlantDetail recent activity", () => {
 
     expect(screen.getByText("No progress photos yet")).toBeTruthy();
     expect(
-      screen.getByText("Add a progress photo to start this plant's visual record."),
+      screen.getByText(
+        "Add a progress photo to start this plant's visual record.",
+      ),
     ).toBeTruthy();
   });
 });

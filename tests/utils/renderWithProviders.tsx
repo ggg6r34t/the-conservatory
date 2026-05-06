@@ -9,6 +9,8 @@ import { AlertProvider } from "@/providers/AlertProvider";
 import { SnackbarProvider } from "@/providers/SnackbarProvider";
 import { tokens } from "@/styles/tokens";
 
+const createdClients: QueryClient[] = [];
+
 export function renderWithProviders(ui: ReactElement) {
   const client = new QueryClient({
     defaultOptions: {
@@ -21,6 +23,7 @@ export function renderWithProviders(ui: ReactElement) {
       },
     },
   });
+  createdClients.push(client);
 
   function TestProviders({ children }: PropsWithChildren) {
     return (
@@ -29,7 +32,9 @@ export function renderWithProviders(ui: ReactElement) {
       >
         <AlertProvider>
           <SnackbarProvider>
-            <QueryClientProvider client={client}>{children}</QueryClientProvider>
+            <QueryClientProvider client={client}>
+              {children}
+            </QueryClientProvider>
           </SnackbarProvider>
         </AlertProvider>
       </BotanicalThemeContext.Provider>
@@ -46,4 +51,8 @@ export function renderWithProviders(ui: ReactElement) {
 
 afterEach(() => {
   cleanup();
+
+  while (createdClients.length > 0) {
+    createdClients.pop()?.clear();
+  }
 });

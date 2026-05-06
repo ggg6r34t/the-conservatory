@@ -11,9 +11,9 @@ import {
 import { getStorageAssetUrl } from "@/services/supabase/storage";
 import type {
   CareLog,
-  CareReminder,
   CareLogCondition,
   CareLogType,
+  CareReminder,
   GraveyardPlant,
   Photo,
   Plant,
@@ -335,7 +335,8 @@ export async function listGraveyardPlants(userId: string) {
       mime_type: photo.mimeType ?? null,
       width: photo.width ?? null,
       height: photo.height ?? null,
-      photo_role: photo.photoRole ?? (photo.isPrimary === 1 ? "primary" : "progress"),
+      photo_role:
+        photo.photoRole ?? (photo.isPrimary === 1 ? "primary" : "progress"),
       captured_at: photo.capturedAt ?? null,
       taken_at: photo.takenAt ?? null,
       caption: photo.caption ?? null,
@@ -451,7 +452,8 @@ export async function listPlants(input: {
       mime_type: photo.mimeType ?? null,
       width: photo.width ?? null,
       height: photo.height ?? null,
-      photo_role: photo.photoRole ?? (photo.isPrimary === 1 ? "primary" : "progress"),
+      photo_role:
+        photo.photoRole ?? (photo.isPrimary === 1 ? "primary" : "progress"),
       captured_at: photo.capturedAt ?? null,
       taken_at: photo.takenAt ?? null,
       caption: photo.caption ?? null,
@@ -531,10 +533,10 @@ export async function listPlants(input: {
 
   return filtered
     .sort((left, right) => {
-    if (input.sort === "name") {
+      if (input.sort === "name") {
         return left.plant.name.localeCompare(right.plant.name);
-    }
-    if (input.sort === "water-due") {
+      }
+      if (input.sort === "water-due") {
         const leftDue = left.status.effectiveNextWateringDate ?? "";
         const rightDue = right.status.effectiveNextWateringDate ?? "";
 
@@ -543,7 +545,7 @@ export async function listPlants(input: {
         }
 
         return left.plant.name.localeCompare(right.plant.name);
-    }
+      }
       return right.plant.updatedAt.localeCompare(left.plant.updatedAt);
     })
     .map((item) => item.plant);
@@ -793,17 +795,14 @@ export async function createPlant(input: {
         });
       }
 
-      const { reminderId, operation: reminderOp } = await upsertReminderInTransaction(
-        database,
-        transactionNowIso,
-        {
+      const { reminderId, operation: reminderOp } =
+        await upsertReminderInTransaction(database, transactionNowIso, {
           userId: input.userId,
           plantId,
           frequencyDays: input.wateringIntervalDays,
           nextDueAt: nextWaterDueAt,
-          enabled: true,
-        },
-      );
+          enabled: preferences.remindersEnabled,
+        });
 
       operations.push({
         entity: "care_reminders",
@@ -813,7 +812,7 @@ export async function createPlant(input: {
           userId: input.userId,
           plantId,
           frequencyDays: input.wateringIntervalDays,
-          enabled: true,
+          enabled: preferences.remindersEnabled,
         },
       });
 
@@ -827,13 +826,15 @@ export async function createPlant(input: {
   const created = await getPlantById(input.userId, plantId);
   if (created) {
     const reminder = created.reminders[0];
-    if (reminder) {
-      void reschedulePlantReminder(reminder, created.plant.name).catch((error) => {
-        logger.warn("plants.reminder_schedule_failed", {
-          plantId,
-          error: error instanceof Error ? error.message : "unknown",
-        });
-      });
+    if (reminder?.enabled) {
+      void reschedulePlantReminder(reminder, created.plant.name).catch(
+        (error) => {
+          logger.warn("plants.reminder_schedule_failed", {
+            plantId,
+            error: error instanceof Error ? error.message : "unknown",
+          });
+        },
+      );
     }
   }
   return created!;
@@ -929,7 +930,10 @@ export async function updatePlant(input: {
     photoHeight?: number | null;
   };
 }) {
-  if (input.patch.wateringIntervalDays < 1 || input.patch.wateringIntervalDays > 60) {
+  if (
+    input.patch.wateringIntervalDays < 1 ||
+    input.patch.wateringIntervalDays > 60
+  ) {
     throw new Error("Watering interval must be between 1 and 60 days.");
   }
   const database = await getDatabase();
@@ -1080,17 +1084,14 @@ export async function updatePlant(input: {
         },
       });
 
-      const { reminderId, operation: reminderOp } = await upsertReminderInTransaction(
-        database,
-        transactionNowIso,
-        {
+      const { reminderId, operation: reminderOp } =
+        await upsertReminderInTransaction(database, transactionNowIso, {
           userId: input.userId,
           plantId: input.plantId,
           frequencyDays: input.patch.wateringIntervalDays,
           nextDueAt: nextWaterDueAt ?? null,
-          enabled: true,
-        },
-      );
+          enabled: preferences.remindersEnabled,
+        });
 
       operations.push({
         entity: "care_reminders",
@@ -1100,7 +1101,7 @@ export async function updatePlant(input: {
           userId: input.userId,
           plantId: input.plantId,
           frequencyDays: input.patch.wateringIntervalDays,
-          enabled: true,
+          enabled: preferences.remindersEnabled,
         },
       });
 
@@ -1114,13 +1115,15 @@ export async function updatePlant(input: {
   const updated = await getPlantById(input.userId, input.plantId);
   if (updated) {
     const reminder = updated.reminders[0];
-    if (reminder) {
-      void reschedulePlantReminder(reminder, updated.plant.name).catch((error) => {
-        logger.warn("plants.reminder_schedule_failed", {
-          plantId: input.plantId,
-          error: error instanceof Error ? error.message : "unknown",
-        });
-      });
+    if (reminder?.enabled) {
+      void reschedulePlantReminder(reminder, updated.plant.name).catch(
+        (error) => {
+          logger.warn("plants.reminder_schedule_failed", {
+            plantId: input.plantId,
+            error: error instanceof Error ? error.message : "unknown",
+          });
+        },
+      );
     }
   }
   return updated!;

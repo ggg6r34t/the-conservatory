@@ -1,5 +1,8 @@
-import type { HealthInsight, HealthSignalSummary } from "@/features/ai/types/ai";
 import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
+import type {
+  HealthInsight,
+  HealthSignalSummary,
+} from "@/features/ai/types/ai";
 import type { Photo, PlantWithRelations } from "@/types/models";
 
 export const HEALTH_INSIGHT_SHOW_THRESHOLD = 0.68;
@@ -21,14 +24,16 @@ function daysBetween(later: string, earlier: string) {
   );
 }
 
-function daysSince(value?: string | null) {
+function daysSince(value?: string | null, now = new Date()) {
   if (!value) {
     return null;
   }
 
   return Math.max(
     0,
-    Math.round((Date.now() - new Date(value).getTime()) / (24 * 60 * 60 * 1000)),
+    Math.round(
+      (now.getTime() - new Date(value).getTime()) / (24 * 60 * 60 * 1000),
+    ),
   );
 }
 
@@ -72,7 +77,7 @@ function clampScore(score: number) {
   return Math.max(0, Math.min(0.99, Number(score.toFixed(2))));
 }
 
-function buildSignalSummary(data: PlantWithRelations) {
+function buildSignalSummary(data: PlantWithRelations, now = new Date()) {
   const photos = getRenderablePhotos(data);
   const notes = data.logs
     .slice(0, 6)
@@ -80,19 +85,28 @@ function buildSignalSummary(data: PlantWithRelations) {
     .filter((value): value is string => Boolean(value))
     .map((value) => value.toLowerCase());
   const recentLogs = data.logs.filter(
-    (log) => daysSince(log.loggedAt) !== null && (daysSince(log.loggedAt) ?? 99) <= 21,
+    (log) =>
+      daysSince(log.loggedAt, now) !== null &&
+      (daysSince(log.loggedAt, now) ?? 99) <= 21,
   );
   const latestPhoto = photos[0];
   const previousPhoto = photos[1];
   const daysBetweenLatestPhotos =
     latestPhoto && previousPhoto
-      ? daysBetween(getPhotoTimestamp(latestPhoto), getPhotoTimestamp(previousPhoto))
+      ? daysBetween(
+          getPhotoTimestamp(latestPhoto),
+          getPhotoTimestamp(previousPhoto),
+        )
       : null;
-  const daysSinceLatestPhoto = latestPhoto ? daysSince(getPhotoTimestamp(latestPhoto)) : null;
+  const daysSinceLatestPhoto = latestPhoto
+    ? daysSince(getPhotoTimestamp(latestPhoto), now)
+    : null;
   const recentWaterLog = data.logs.find((log) => log.logType === "water");
-  const daysSinceLastWater = recentWaterLog ? daysSince(recentWaterLog.loggedAt) : null;
+  const daysSinceLastWater = recentWaterLog
+    ? daysSince(recentWaterLog.loggedAt, now)
+    : null;
   const overdueByDays = data.plant.nextWaterDueAt
-    ? Math.max(0, daysSince(data.plant.nextWaterDueAt) ?? 0)
+    ? Math.max(0, daysSince(data.plant.nextWaterDueAt, now) ?? 0)
     : null;
   const growthCount = detectNoteSignal(
     notes,
@@ -106,8 +120,7 @@ function buildSignalSummary(data: PlantWithRelations) {
     notes,
     /\bstable|steady|holding|unchanged|consistent\b/i,
   );
-  const contradictionCount =
-    growthCount > 0 && drynessCount > 0 ? 1 : 0;
+  const contradictionCount = growthCount > 0 && drynessCount > 0 ? 1 : 0;
 
   let dominantSignal: HealthSignalSummary["dominantSignal"] = "unclear";
   if (growthCount > drynessCount && growthCount > 0) {
@@ -144,9 +157,12 @@ function buildSignalSummary(data: PlantWithRelations) {
   };
 }
 
-export function buildHealthSignalAnalysis(data: PlantWithRelations): HealthSignalAnalysis {
+export function buildHealthSignalAnalysis(
+  data: PlantWithRelations,
+  now = new Date(),
+): HealthSignalAnalysis {
   const { summary, overdueByDays, growthCount, drynessCount, stableCount } =
-    buildSignalSummary(data);
+    buildSignalSummary(data, now);
 
   let confidence = 0;
   if (summary.photoHistoryCount >= 2) {

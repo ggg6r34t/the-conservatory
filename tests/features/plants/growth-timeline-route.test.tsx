@@ -137,7 +137,9 @@ describe("GrowthTimelineScreen", () => {
     renderWithProviders(<GrowthTimelineScreen />);
 
     expect(screen.queryByText("file:///primary.jpg")).toBeNull();
-    expect(screen.getAllByText("file:///progress.jpg").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("file:///progress.jpg").length).toBeGreaterThan(
+      0,
+    );
     expect(screen.getByText("Water log")).toBeTruthy();
     expect(screen.getByText("Watered thoroughly.")).toBeTruthy();
     expect(screen.queryByText("Arrival from the nursery")).toBeNull();
@@ -149,7 +151,9 @@ describe("GrowthTimelineScreen", () => {
 
     expect(screen.getByText("No timeline moments yet")).toBeTruthy();
     expect(
-      screen.getByText("Add your first progress photo to begin this timeline."),
+      screen.getByText(
+        "Add your first progress photo to begin this plant's story.",
+      ),
     ).toBeTruthy();
   });
 });

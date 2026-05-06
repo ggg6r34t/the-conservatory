@@ -45,7 +45,7 @@ function buildStreakNudgeCacheKey(
   return `ai:streak-nudge:${userId}:${dayKey}:${signature}`;
 }
 
-export function calculateCurrentStreakDays(logs: CareLog[]) {
+export function calculateCurrentStreakDays(logs: CareLog[], now = new Date()) {
   const dayKeys = Array.from(
     new Set(logs.map((log) => log.loggedAt.slice(0, 10))),
   ).sort((left, right) => right.localeCompare(left));
@@ -54,8 +54,9 @@ export function calculateCurrentStreakDays(logs: CareLog[]) {
     return 0;
   }
 
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const yesterdayKey = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const nowMs = now.getTime();
+  const todayKey = now.toISOString().slice(0, 10);
+  const yesterdayKey = new Date(nowMs - 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
 
@@ -65,7 +66,7 @@ export function calculateCurrentStreakDays(logs: CareLog[]) {
 
   let streak = 1;
   let expectedDate = new Date(
-    (dayKeys[0] === todayKey ? Date.now() : Date.now() - 24 * 60 * 60 * 1000) -
+    (dayKeys[0] === todayKey ? nowMs : nowMs - 24 * 60 * 60 * 1000) -
       24 * 60 * 60 * 1000,
   );
 
@@ -82,13 +83,13 @@ export function calculateCurrentStreakDays(logs: CareLog[]) {
   return streak;
 }
 
-function daysSince(value?: string | null) {
+function daysSince(value?: string | null, now = new Date()) {
   if (!value) {
     return null;
   }
 
   return Math.floor(
-    (Date.now() - new Date(value).getTime()) / (24 * 60 * 60 * 1000),
+    (now.getTime() - new Date(value).getTime()) / (24 * 60 * 60 * 1000),
   );
 }
 
@@ -96,22 +97,25 @@ export function buildLocalStreakNudge(input: {
   currentStreakDays: number;
   plants: Plant[];
   logs: CareLog[];
+  now?: Date;
 }): Omit<StreakRecoveryNudge, "source"> | null {
+  const now = input.now ?? new Date();
   const overdueCount = input.plants.filter((plant) =>
     plant.nextWaterDueAt
-      ? new Date(plant.nextWaterDueAt).getTime() <= Date.now()
+      ? new Date(plant.nextWaterDueAt).getTime() <= now.getTime()
       : false,
   ).length;
   const dueSoonCount = input.plants.filter((plant) =>
     plant.nextWaterDueAt
       ? new Date(plant.nextWaterDueAt).getTime() <=
-        Date.now() + 24 * 60 * 60 * 1000
+        now.getTime() + 24 * 60 * 60 * 1000
       : false,
   ).length;
   const daysSinceLastLog = daysSince(
     [...input.logs].sort((left, right) =>
       right.loggedAt.localeCompare(left.loggedAt),
     )[0]?.loggedAt,
+    now,
   );
 
   if (daysSinceLastLog === null || daysSinceLastLog <= 0) {
@@ -163,6 +167,7 @@ export async function getStreakRecoveryNudge(input: {
   logs: CareLog[];
   now?: Date;
 }) {
+  const now = input.now ?? new Date();
   const dayKey = buildDayKey(input.now);
   const signature = buildStreakNudgeStateSignature(input);
   const cacheKey = buildStreakNudgeCacheKey(input.userId, dayKey, signature);
@@ -171,11 +176,12 @@ export async function getStreakRecoveryNudge(input: {
     return cached;
   }
 
-  const currentStreakDays = calculateCurrentStreakDays(input.logs);
+  const currentStreakDays = calculateCurrentStreakDays(input.logs, now);
   const fallback = buildLocalStreakNudge({
     currentStreakDays,
     plants: input.plants,
     logs: input.logs,
+    now,
   });
 
   if (!fallback) {
@@ -184,13 +190,13 @@ export async function getStreakRecoveryNudge(input: {
 
   const overdueCount = input.plants.filter((plant) =>
     plant.nextWaterDueAt
-      ? new Date(plant.nextWaterDueAt).getTime() <= Date.now()
+      ? new Date(plant.nextWaterDueAt).getTime() <= now.getTime()
       : false,
   ).length;
   const dueSoonCount = input.plants.filter((plant) =>
     plant.nextWaterDueAt
       ? new Date(plant.nextWaterDueAt).getTime() <=
-        Date.now() + 24 * 60 * 60 * 1000
+        now.getTime() + 24 * 60 * 60 * 1000
       : false,
   ).length;
   const latestLog = [...input.logs].sort((left, right) =>
@@ -202,7 +208,7 @@ export async function getStreakRecoveryNudge(input: {
       currentStreakDays,
       overdueCount,
       dueSoonCount,
-      daysSinceLastLog: daysSince(latestLog?.loggedAt),
+      daysSinceLastLog: daysSince(latestLog?.loggedAt, now),
     },
     fallback,
   });

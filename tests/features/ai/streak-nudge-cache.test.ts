@@ -1,3 +1,10 @@
+import { requestStreakNudge } from "@/features/ai/api/aiClient";
+import {
+  buildStreakNudgeStateSignature,
+  getStreakRecoveryNudge,
+} from "@/features/ai/services/streakNudgeService";
+import type { CareLog, Plant } from "@/types/models";
+
 jest.mock("@/features/ai/api/aiClient", () => ({
   requestStreakNudge: jest.fn(async ({ fallback }) => ({ nudge: fallback })),
 }));
@@ -5,17 +12,12 @@ jest.mock("@/features/ai/api/aiClient", () => ({
 jest.mock("@/features/ai/services/aiCache", () => {
   const store = new Map<string, unknown>();
   return {
-    getCachedValue: jest.fn(async (key: string) => (store.has(key) ? store.get(key) : null)),
+    getCachedValue: jest.fn(async (key: string) =>
+      store.has(key) ? store.get(key) : null,
+    ),
     setCachedValue: jest.fn(async (key: string, value: unknown) => {
       store.set(key, value);
-    }),
-  };
-});
-
-import { requestStreakNudge } from "@/features/ai/api/aiClient";
-import {
-  buildStreakNudgeStateSignature,
-  getStreakRecoveryNudge,
+  
 } from "@/features/ai/services/streakNudgeService";
 import type { CareLog, Plant } from "@/types/models";
 
@@ -59,7 +61,12 @@ describe("streakNudgeService cache invalidation", () => {
       logs: [createLog("2026-03-21T09:00:00.000Z")],
     });
     const second = buildStreakNudgeStateSignature({
-      plants: [createPlant({ lastWateredAt: "2026-03-24T08:00:00.000Z", updatedAt: "2026-03-24T08:00:00.000Z" })],
+      plants: [
+        createPlant({
+          lastWateredAt: "2026-03-24T08:00:00.000Z",
+          updatedAt: "2026-03-24T08:00:00.000Z",
+        }),
+      ],
       logs: [createLog("2026-03-24T08:00:00.000Z")],
     });
 
@@ -76,13 +83,19 @@ describe("streakNudgeService cache invalidation", () => {
       now,
     });
 
-    await getStreakRecoveryNudge({
+    const second = await getStreakRecoveryNudge({
       userId: "user-1",
-      plants: [createPlant({ lastWateredAt: "2026-03-24T08:00:00.000Z", updatedAt: "2026-03-24T08:00:00.000Z" })],
+      plants: [
+        createPlant({
+          lastWateredAt: "2026-03-24T08:00:00.000Z",
+          updatedAt: "2026-03-24T08:00:00.000Z",
+        }),
+      ],
       logs: [createLog("2026-03-24T08:00:00.000Z")],
       now,
     });
 
+    expect(second).toBeNull();
     expect(requestStreakNudge).toHaveBeenCalledTimes(1);
   });
 });

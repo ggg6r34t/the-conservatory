@@ -90,6 +90,7 @@ interface RemoteCareLogRow extends MergeableRemoteRow {
     | "note";
   current_condition: CareLogCondition | null;
   notes: string | null;
+  tags: string | null;
   logged_at: string;
   created_at: string;
   updated_by: string | null;
@@ -180,7 +181,9 @@ async function fetchRemoteUserRowSafe(userId: string) {
 
     const { data, error } = await supabase
       .from("users")
-      .select("id, email, display_name, avatar_url, role, created_at, updated_at, updated_by")
+      .select(
+        "id, email, display_name, avatar_url, role, created_at, updated_at, updated_by",
+      )
       .eq("id", userId);
 
     if (error) {
@@ -432,6 +435,7 @@ export async function hydrateRemoteUserData(userId: string) {
         "log_type",
         "current_condition",
         "notes",
+        "tags",
         "logged_at",
         "created_at",
         "updated_at",
@@ -522,7 +526,10 @@ export async function hydrateRemoteUserData(userId: string) {
   const syncedAt = new Date().toISOString();
 
   await database.withTransactionAsync(async () => {
-    if (remoteUser && (await shouldReplaceLocalUser(database, userId, remoteUser.updated_at))) {
+    if (
+      remoteUser &&
+      (await shouldReplaceLocalUser(database, userId, remoteUser.updated_at))
+    ) {
       await database.runAsync(
         `INSERT OR REPLACE INTO users (
           id, email, display_name, avatar_url, role, created_at, updated_at, updated_by
@@ -633,15 +640,16 @@ export async function hydrateRemoteUserData(userId: string) {
 
       await database.runAsync(
         `INSERT OR REPLACE INTO care_logs (
-          id, user_id, plant_id, log_type, current_condition, notes, logged_at, created_at,
+          id, user_id, plant_id, log_type, current_condition, notes, tags, logged_at, created_at,
           updated_at, updated_by, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         row.id,
         row.user_id,
         row.plant_id,
         row.log_type,
         row.current_condition,
         row.notes,
+        row.tags,
         row.logged_at,
         row.created_at,
         row.updated_at,

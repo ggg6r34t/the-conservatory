@@ -1,15 +1,26 @@
 import { QueryClient } from "@tanstack/react-query";
 
+const createdClients: QueryClient[] = [];
+
 export function createTestQueryClient() {
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: {
       queries: {
         retry: false,
-        gcTime: Infinity,
+        gcTime: 0,
       },
       mutations: {
         retry: false,
       },
     },
   });
+
+  createdClients.push(client);
+  return client;
 }
+
+afterEach(() => {
+  while (createdClients.length > 0) {
+    createdClients.pop()?.clear();
+  }
+});

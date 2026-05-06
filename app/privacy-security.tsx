@@ -1,16 +1,15 @@
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { deleteAccount } from "@/features/auth/api/authClient";
-import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
-import { tokens } from "@/styles/tokens";
 
 export default function PrivacySecurityScreen() {
   const { colors } = useTheme();
@@ -110,7 +109,9 @@ export default function PrivacySecurityScreen() {
       >
         <Pressable
           accessibilityRole="button"
-          onPress={() => void Linking.openURL("https://conservatory.app/privacy")}
+          onPress={() =>
+            void Linking.openURL("https://theconservatory.app/privacy")
+          }
           style={styles.policyRow}
         >
           <Text style={[styles.policyLabel, { color: colors.primary }]}>

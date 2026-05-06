@@ -1,9 +1,9 @@
+import { buildHealthSignalAnalysis } from "@/features/ai/services/healthSignalAnalysisService";
+import type { PlantWithRelations } from "@/types/models";
+
 jest.mock("@react-native-async-storage/async-storage", () =>
   require("@react-native-async-storage/async-storage/jest/async-storage-mock"),
 );
-
-import { buildHealthSignalAnalysis } from "@/features/ai/services/healthSignalAnalysisService";
-import type { PlantWithRelations } from "@/types/models";
 
 function createFixture(
   overrides?: Partial<PlantWithRelations>,
@@ -75,7 +75,10 @@ function createFixture(
 
 describe("healthSignalAnalysisService", () => {
   it("detects steady growth with multi-signal support", () => {
-    const result = buildHealthSignalAnalysis(createFixture());
+    const result = buildHealthSignalAnalysis(
+      createFixture(),
+      new Date("2026-03-24T10:00:00.000Z"),
+    );
 
     expect(result.classification).toBe("growth");
     expect(result.confidence).toBeGreaterThanOrEqual(0.68);
@@ -110,6 +113,7 @@ describe("healthSignalAnalysisService", () => {
           },
         ],
       }),
+      new Date("2026-03-24T10:00:00.000Z"),
     );
 
     expect(result.classification).toBe("dryness");
@@ -133,6 +137,7 @@ describe("healthSignalAnalysisService", () => {
           },
         ],
       }),
+      new Date("2026-03-24T10:00:00.000Z"),
     );
 
     expect(result.signalSummary.contradictionCount).toBe(1);

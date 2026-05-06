@@ -147,6 +147,7 @@ async function loadCareLogRecord(entityId: string) {
       | "note";
     current_condition: CareLogCondition | null;
     notes: string | null;
+    tags: string | null;
     logged_at: string;
     created_at: string;
     updated_at: string;
@@ -164,6 +165,7 @@ async function loadCareLogRecord(entityId: string) {
     log_type: row.log_type,
     current_condition: row.current_condition,
     notes: row.notes,
+    tags: row.tags,
     logged_at: row.logged_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -249,7 +251,8 @@ async function loadPhotoRecord(entityId: string) {
     mime_type: row.mime_type,
     width: row.width,
     height: row.height,
-    photo_role: row.photo_role ?? (row.is_primary === 1 ? "primary" : "progress"),
+    photo_role:
+      row.photo_role ?? (row.is_primary === 1 ? "primary" : "progress"),
     captured_at: row.captured_at ?? row.taken_at ?? row.created_at,
     taken_at: row.taken_at,
     caption: row.caption,

@@ -37,6 +37,11 @@ jest.mock("@/services/supabase/storage", () => ({
 describe("plants client", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    const settingsClient = require("@/features/settings/api/settingsClient");
+    settingsClient.getUserPreferences.mockResolvedValue({
+      remindersEnabled: true,
+      defaultWateringHour: 9,
+    });
   });
 
   it("updates memorial content and queues a graveyard sync update", async () => {
@@ -243,6 +248,132 @@ describe("plants client", () => {
       "DELETE FROM plants WHERE id = ? AND user_id = ?;",
       "plant-1",
       "user-1",
+    );
+  });
+
+  it("keeps reminder rows disabled when creating a plant while reminders are paused", async () => {
+    const settingsClient = require("@/features/settings/api/settingsClient");
+    settingsClient.getUserPreferences.mockResolvedValue({
+      remindersEnabled: false,
+      defaultWateringHour: 9,
+    });
+
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
+    const getFirstAsync = jest.fn().mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM plants WHERE id")) {
+        return {
+          id: "plant-1",
+          user_id: "user-1",
+          name: "Aster",
+          species_name: "Monstera deliciosa",
+          nickname: null,
+          status: "active",
+          location: null,
+          watering_interval_days: 7,
+          last_watered_at: "2026-03-24T10:00:00.000Z",
+          next_water_due_at: "2026-03-31T09:00:00.000Z",
+          notes: null,
+          created_at: "2026-03-24T10:00:00.000Z",
+          updated_at: "2026-03-24T10:00:00.000Z",
+          updated_by: "user-1",
+          pending: 1,
+          synced_at: null,
+          sync_error: null,
+        };
+      }
+
+      return null;
+    });
+    const getAllAsync = jest.fn().mockResolvedValue([]);
+
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync,
+      getAllAsync,
+      runAsync,
+      withTransactionAsync,
+    });
+
+    const { createPlant } = require("@/features/plants/api/plantsClient");
+
+    await createPlant({
+      userId: "user-1",
+      name: "Aster",
+      speciesName: "Monstera deliciosa",
+      wateringIntervalDays: 7,
+    });
+
+    expect(mockUpsertReminderInTransaction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      expect.objectContaining({
+        enabled: false,
+        frequencyDays: 7,
+      }),
+    );
+  });
+
+  it("keeps reminder rows disabled when updating a plant while reminders are paused", async () => {
+    const settingsClient = require("@/features/settings/api/settingsClient");
+    settingsClient.getUserPreferences.mockResolvedValue({
+      remindersEnabled: false,
+      defaultWateringHour: 9,
+    });
+
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
+    const getFirstAsync = jest.fn().mockResolvedValue({
+      id: "plant-1",
+      user_id: "user-1",
+      name: "Aster",
+      species_name: "Monstera deliciosa",
+      nickname: null,
+      status: "active",
+      location: null,
+      watering_interval_days: 7,
+      last_watered_at: "2026-03-20T10:00:00.000Z",
+      next_water_due_at: "2026-03-27T09:00:00.000Z",
+      notes: null,
+      created_at: "2026-03-01T10:00:00.000Z",
+      updated_at: "2026-03-24T10:00:00.000Z",
+      updated_by: "user-1",
+      pending: 0,
+      synced_at: "2026-03-24T10:05:00.000Z",
+      sync_error: null,
+    });
+    const getAllAsync = jest.fn().mockResolvedValue([]);
+
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync,
+      getAllAsync,
+      runAsync,
+      withTransactionAsync,
+    });
+
+    const { updatePlant } = require("@/features/plants/api/plantsClient");
+
+    await updatePlant({
+      userId: "user-1",
+      plantId: "plant-1",
+      patch: {
+        name: "Aster",
+        speciesName: "Monstera deliciosa",
+        wateringIntervalDays: 10,
+      },
+    });
+
+    expect(mockUpsertReminderInTransaction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      expect.objectContaining({
+        plantId: "plant-1",
+        enabled: false,
+        frequencyDays: 10,
+      }),
     );
   });
 });

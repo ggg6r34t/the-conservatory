@@ -79,6 +79,7 @@ interface CareLogRow {
   log_type: CareLogType;
   current_condition: CareLogCondition | null;
   notes: string | null;
+  tags: string | null;
   logged_at: string;
   created_at: string;
   updated_at: string;
@@ -180,6 +181,21 @@ function mapPlant(row: PlantRow): Plant {
   };
 }
 
+function parseCareLogTags(tags: string | null) {
+  if (!tags) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(tags) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((value): value is string => typeof value === "string")
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function mapCareLog(row: CareLogRow): CareLog {
   return {
     id: row.id,
@@ -188,6 +204,7 @@ function mapCareLog(row: CareLogRow): CareLog {
     logType: row.log_type,
     currentCondition: row.current_condition,
     notes: row.notes,
+    tags: parseCareLogTags(row.tags),
     loggedAt: row.logged_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -209,7 +226,8 @@ function mapPhoto(row: PhotoRow): Photo {
     mimeType: row.mime_type,
     width: row.width,
     height: row.height,
-    photoRole: row.photo_role ?? (row.is_primary === 1 ? "primary" : "progress"),
+    photoRole:
+      row.photo_role ?? (row.is_primary === 1 ? "primary" : "progress"),
     capturedAt: row.captured_at,
     takenAt: row.taken_at,
     caption: row.caption,
@@ -297,18 +315,55 @@ async function countQuery(
   return row?.total ?? 0;
 }
 
-export async function getExportCollectionSummary(userId: string): Promise<ExportSummary> {
+export async function getExportCollectionSummary(
+  userId: string,
+): Promise<ExportSummary> {
   const database = await getDatabase();
-  const [plants, careLogs, photos, reminders, memorialEntries, plantNotes, logNotes] =
-    await Promise.all([
-      countQuery(database, "SELECT COUNT(*) AS total FROM plants WHERE user_id = ?;", userId),
-      countQuery(database, "SELECT COUNT(*) AS total FROM care_logs WHERE user_id = ?;", userId),
-      countQuery(database, "SELECT COUNT(*) AS total FROM photos WHERE user_id = ?;", userId),
-      countQuery(database, "SELECT COUNT(*) AS total FROM care_reminders WHERE user_id = ?;", userId),
-      countQuery(database, "SELECT COUNT(*) AS total FROM graveyard_plants WHERE user_id = ?;", userId),
-      countQuery(database, "SELECT COUNT(*) AS total FROM plants WHERE user_id = ? AND notes IS NOT NULL AND TRIM(notes) != '';", userId),
-      countQuery(database, "SELECT COUNT(*) AS total FROM care_logs WHERE user_id = ? AND notes IS NOT NULL AND TRIM(notes) != '';", userId),
-    ]);
+  const [
+    plants,
+    careLogs,
+    photos,
+    reminders,
+    memorialEntries,
+    plantNotes,
+    logNotes,
+  ] = await Promise.all([
+    countQuery(
+      database,
+      "SELECT COUNT(*) AS total FROM plants WHERE user_id = ?;",
+      userId,
+    ),
+    countQuery(
+      database,
+      "SELECT COUNT(*) AS total FROM care_logs WHERE user_id = ?;",
+      userId,
+    ),
+    countQuery(
+      database,
+      "SELECT COUNT(*) AS total FROM photos WHERE user_id = ?;",
+      userId,
+    ),
+    countQuery(
+      database,
+      "SELECT COUNT(*) AS total FROM care_reminders WHERE user_id = ?;",
+      userId,
+    ),
+    countQuery(
+      database,
+      "SELECT COUNT(*) AS total FROM graveyard_plants WHERE user_id = ?;",
+      userId,
+    ),
+    countQuery(
+      database,
+      "SELECT COUNT(*) AS total FROM plants WHERE user_id = ? AND notes IS NOT NULL AND TRIM(notes) != '';",
+      userId,
+    ),
+    countQuery(
+      database,
+      "SELECT COUNT(*) AS total FROM care_logs WHERE user_id = ? AND notes IS NOT NULL AND TRIM(notes) != '';",
+      userId,
+    ),
+  ]);
 
   return {
     plants,
@@ -324,34 +379,41 @@ async function buildExportPayload(
   user: AppUser,
 ): Promise<{ payload: ExportPayload; summary: ExportSummary }> {
   const database = await getDatabase();
-  const [summary, preferencesRow, plantRows, careLogRows, photoRows, reminderRows, graveyardRows] =
-    await Promise.all([
-      getExportCollectionSummary(user.id),
-      database.getFirstAsync<PreferencesRow>(
-        "SELECT * FROM user_preferences WHERE user_id = ? LIMIT 1;",
-        user.id,
-      ),
-      database.getAllAsync<PlantRow>(
-        "SELECT * FROM plants WHERE user_id = ? ORDER BY updated_at DESC;",
-        user.id,
-      ),
-      database.getAllAsync<CareLogRow>(
-        "SELECT * FROM care_logs WHERE user_id = ? ORDER BY logged_at DESC;",
-        user.id,
-      ),
-      database.getAllAsync<PhotoRow>(
-        "SELECT * FROM photos WHERE user_id = ? ORDER BY updated_at DESC, created_at DESC;",
-        user.id,
-      ),
-      database.getAllAsync<ReminderRow>(
-        "SELECT * FROM care_reminders WHERE user_id = ? ORDER BY next_due_at ASC, created_at DESC;",
-        user.id,
-      ),
-      database.getAllAsync<GraveyardRow>(
-        "SELECT * FROM graveyard_plants WHERE user_id = ? ORDER BY archived_at DESC;",
-        user.id,
-      ),
-    ]);
+  const [
+    summary,
+    preferencesRow,
+    plantRows,
+    careLogRows,
+    photoRows,
+    reminderRows,
+    graveyardRows,
+  ] = await Promise.all([
+    getExportCollectionSummary(user.id),
+    database.getFirstAsync<PreferencesRow>(
+      "SELECT * FROM user_preferences WHERE user_id = ? LIMIT 1;",
+      user.id,
+    ),
+    database.getAllAsync<PlantRow>(
+      "SELECT * FROM plants WHERE user_id = ? ORDER BY updated_at DESC;",
+      user.id,
+    ),
+    database.getAllAsync<CareLogRow>(
+      "SELECT * FROM care_logs WHERE user_id = ? ORDER BY logged_at DESC;",
+      user.id,
+    ),
+    database.getAllAsync<PhotoRow>(
+      "SELECT * FROM photos WHERE user_id = ? ORDER BY updated_at DESC, created_at DESC;",
+      user.id,
+    ),
+    database.getAllAsync<ReminderRow>(
+      "SELECT * FROM care_reminders WHERE user_id = ? ORDER BY next_due_at ASC, created_at DESC;",
+      user.id,
+    ),
+    database.getAllAsync<GraveyardRow>(
+      "SELECT * FROM graveyard_plants WHERE user_id = ? ORDER BY archived_at DESC;",
+      user.id,
+    ),
+  ]);
 
   return {
     summary,
@@ -395,7 +457,9 @@ export async function shareExportFile(fileUri: string) {
   return true;
 }
 
-export async function exportCollectionData(user: AppUser): Promise<ExportResult> {
+export async function exportCollectionData(
+  user: AppUser,
+): Promise<ExportResult> {
   const { payload, summary } = await buildExportPayload(user);
   const totalRecords =
     summary.plants +

@@ -67,7 +67,8 @@ export async function listCareLogs(
 ) {
   const database = await getDatabase();
 
-  let sql = "SELECT * FROM care_logs WHERE plant_id = ? ORDER BY logged_at DESC";
+  let sql =
+    "SELECT * FROM care_logs WHERE plant_id = ? ORDER BY logged_at DESC";
   const params: (string | number)[] = [plantId];
 
   if (options?.limit !== undefined) {
@@ -146,7 +147,8 @@ export async function createCareLog(input: {
     ? extractEmbeddedTags(input.notes)
     : { cleanNotes: null, tags: [] };
 
-  const tagsJson = extractedTags.length > 0 ? JSON.stringify(extractedTags) : null;
+  const tagsJson =
+    extractedTags.length > 0 ? JSON.stringify(extractedTags) : null;
 
   const execution = (await runAtomicMutationWithSyncOutbox(database, {
     nowIso: now,
@@ -234,29 +236,27 @@ export async function createCareLog(input: {
             },
           });
 
-          if (optimized.nextDueAt) {
-            const { reminderId, operation: reminderOp } = await upsertReminderInTransaction(
-              database,
-              transactionNowIso,
-              {
-                userId: input.userId,
-                plantId: input.plantId,
-                frequencyDays: plant.plant.wateringIntervalDays,
-                nextDueAt: optimized.nextDueAt,
-                enabled: true,
-              },
-            );
-            operations.push({
-              entity: "care_reminders",
-              entityId: reminderId,
-              operation: reminderOp,
-              payload: {
-                userId: input.userId,
-                plantId: input.plantId,
-                frequencyDays: plant.plant.wateringIntervalDays,
-                enabled: true,
-              },
+          const reminderEnabled = preferences.remindersEnabled;
+          const { reminderId, operation: reminderOp } =
+            await upsertReminderInTransaction(database, transactionNowIso, {
+              userId: input.userId,
+              plantId: input.plantId,
+              frequencyDays: plant.plant.wateringIntervalDays,
+              nextDueAt: optimized.nextDueAt,
+              enabled: reminderEnabled,
             });
+          operations.push({
+            entity: "care_reminders",
+            entityId: reminderId,
+            operation: reminderOp,
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+              frequencyDays: plant.plant.wateringIntervalDays,
+              enabled: reminderEnabled,
+            },
+          });
+          if (reminderEnabled && optimized.nextDueAt) {
             reminderInput = {
               frequencyDays: plant.plant.wateringIntervalDays,
               nextDueAt: optimized.nextDueAt,
@@ -304,7 +304,10 @@ export async function createCareLog(input: {
       const plantData = await getPlantById(input.userId, input.plantId);
       const reminder = plantData?.reminders[0];
       if (reminder) {
-        await reschedulePlantReminder(reminder, plantData?.plant.name ?? "plant");
+        await reschedulePlantReminder(
+          reminder,
+          plantData?.plant.name ?? "plant",
+        );
       }
     } catch {
       warningMessage =
@@ -332,8 +335,10 @@ export async function updateCareLogNote(input: {
     throw new Error("Add a note before saving.");
   }
 
-  const { cleanNotes: finalNotes, tags: extractedTags } = extractEmbeddedTags(trimmedNotes);
-  const tagsJson = extractedTags.length > 0 ? JSON.stringify(extractedTags) : null;
+  const { cleanNotes: finalNotes, tags: extractedTags } =
+    extractEmbeddedTags(trimmedNotes);
+  const tagsJson =
+    extractedTags.length > 0 ? JSON.stringify(extractedTags) : null;
 
   const careLog = await runAtomicMutationWithSyncOutbox(database, {
     nowIso: now,

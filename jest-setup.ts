@@ -1,6 +1,69 @@
+import { Animated } from "react-native";
+
+jest.mock("@/components/common/Icon/Icon", () => ({
+  Icon: () => null,
+}));
+
 const originalConsoleLog = console.log;
 
+type AnimationCallback = ((result: { finished: boolean }) => void) | undefined;
+
+function completeAnimation(
+  value: {
+    setValue?: ((next: any) => void) | undefined;
+  },
+  toValue: unknown,
+  callback: AnimationCallback,
+) {
+  if (typeof toValue === "number" && value.setValue) {
+    value.setValue(toValue);
+  }
+
+  if (
+    toValue &&
+    typeof toValue === "object" &&
+    "x" in toValue &&
+    "y" in toValue &&
+    value.setValue
+  ) {
+    value.setValue(toValue);
+  }
+
+  callback?.({ finished: true });
+}
+
 beforeAll(() => {
+  jest.spyOn(Animated, "timing").mockImplementation((value, config) => {
+    return {
+      start: (callback?: AnimationCallback) => {
+        completeAnimation(value, config?.toValue, callback);
+      },
+      stop: jest.fn(),
+      reset: jest.fn(),
+    } as never;
+  });
+
+  jest.spyOn(Animated, "spring").mockImplementation((value, config) => {
+    return {
+      start: (callback?: AnimationCallback) => {
+        completeAnimation(value, config?.toValue, callback);
+      },
+      stop: jest.fn(),
+      reset: jest.fn(),
+    } as never;
+  });
+
+  jest.spyOn(Animated, "parallel").mockImplementation((animations) => {
+    return {
+      start: (callback?: AnimationCallback) => {
+        animations.forEach((animation) => animation.start?.());
+        callback?.({ finished: true });
+      },
+      stop: jest.fn(),
+      reset: jest.fn(),
+    } as never;
+  });
+
   jest.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
     const [firstArg] = args;
 
@@ -20,6 +83,11 @@ beforeAll(() => {
 
     originalConsoleLog(...args);
   });
+});
+
+afterEach(() => {
+  jest.clearAllTimers();
+  jest.useRealTimers();
 });
 
 afterAll(() => {

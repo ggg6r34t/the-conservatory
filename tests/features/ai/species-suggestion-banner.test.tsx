@@ -22,7 +22,7 @@ describe("SpeciesSuggestionBanner", () => {
 
     getByText("Likely Monstera deliciosa · Moderate confidence");
     getByText("Bright indirect light keeps growth even.");
-    getByText("Confidence: 72%");
+    getByText("Pattern match");
 
     fireEvent.press(getByText("USE SUGGESTION"));
     fireEvent.press(getByText("NOT NOW"));
@@ -47,6 +47,6 @@ describe("SpeciesSuggestionBanner", () => {
 
     getByText("Likely Ficus elastica · High confidence");
     getByText("Use it as a starting point only.");
-    getByText("Confidence: 84%");
+    getByText("Pattern match");
   });
 });

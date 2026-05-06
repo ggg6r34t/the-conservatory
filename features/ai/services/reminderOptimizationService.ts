@@ -23,7 +23,7 @@ export function optimizeReminderTiming(
     };
   }
 
-  const now = new Date();
+  const now = input.now ?? new Date();
   const seedDate = input.nextDueAt
     ? new Date(input.nextDueAt)
     : input.lastWateredAt
@@ -63,7 +63,10 @@ export function optimizeReminderTiming(
 
   if (optimizedDate.getTime() <= now.getTime()) {
     optimizedDate = alignToHour(
-      new Date(now.getTime() + (now.getHours() >= input.defaultWateringHour ? DAY_MS : 0)),
+      new Date(
+        now.getTime() +
+          (now.getHours() >= input.defaultWateringHour ? DAY_MS : 0),
+      ),
       input.defaultWateringHour,
     );
     explanation = explanation ?? "Moved to the next calm reminder window.";

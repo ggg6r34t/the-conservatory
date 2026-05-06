@@ -164,7 +164,7 @@ describe("remoteHydration users table", () => {
                       updated_by: "user-1",
                     },
                   ]
-              : [],
+                : [],
           error: null,
         }),
       }),
@@ -192,7 +192,9 @@ describe("remoteHydration users table", () => {
       withTransactionAsync,
     });
 
-    const { hydrateRemoteUserData } = require("@/services/database/remoteHydration");
+    const {
+      hydrateRemoteUserData,
+    } = require("@/services/database/remoteHydration");
     await hydrateRemoteUserData("user-1");
 
     expect(runAsync).toHaveBeenCalledWith(
@@ -249,12 +251,105 @@ describe("remoteHydration users table", () => {
       withTransactionAsync,
     });
 
-    const { hydrateRemoteUserData } = require("@/services/database/remoteHydration");
+    const {
+      hydrateRemoteUserData,
+    } = require("@/services/database/remoteHydration");
     await hydrateRemoteUserData("user-1");
 
     const didWriteUsers = runAsync.mock.calls.some((call) =>
       String(call[0]).includes("INSERT OR REPLACE INTO users"),
     );
     expect(didWriteUsers).toBe(false);
+  });
+});
+
+describe("remoteHydration care logs", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("hydrates structured care log tags from remote rows", async () => {
+    mockFrom.mockImplementation((table: string) => ({
+      select: () => ({
+        eq: async () => ({
+          data:
+            table === "care_logs"
+              ? [
+                  {
+                    id: "log-1",
+                    user_id: "user-1",
+                    plant_id: "plant-1",
+                    log_type: "inspect",
+                    current_condition: "Healthy",
+                    notes: "Leaf edges look stronger.",
+                    tags: JSON.stringify(["stable condition", "new growth"]),
+                    logged_at: "2026-03-24T10:00:00.000Z",
+                    created_at: "2026-03-24T10:00:00.000Z",
+                    updated_at: "2026-03-24T10:00:00.000Z",
+                    updated_by: "user-1",
+                  },
+                ]
+              : table === "user_preferences"
+                ? [
+                    {
+                      user_id: "user-1",
+                      reminders_enabled: true,
+                      auto_sync_enabled: true,
+                      preferred_theme: "linen-light",
+                      timezone: "UTC",
+                      default_watering_hour: 9,
+                      created_at: "2026-01-01T00:00:00.000Z",
+                      updated_at: "2026-03-22T10:00:00.000Z",
+                      updated_by: "user-1",
+                    },
+                  ]
+                : [],
+          error: null,
+        }),
+      }),
+    }));
+
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    const getFirstAsync = jest.fn().mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM care_logs")) {
+        return null;
+      }
+      return {
+        pending: 0,
+        updated_at: "2026-01-01T00:00:00.000Z",
+      };
+    });
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
+
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync,
+      runAsync,
+      withTransactionAsync,
+    });
+
+    const {
+      hydrateRemoteUserData,
+    } = require("@/services/database/remoteHydration");
+    await hydrateRemoteUserData("user-1");
+
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT OR REPLACE INTO care_logs"),
+      "log-1",
+      "user-1",
+      "plant-1",
+      "inspect",
+      "Healthy",
+      "Leaf edges look stronger.",
+      JSON.stringify(["stable condition", "new growth"]),
+      "2026-03-24T10:00:00.000Z",
+      "2026-03-24T10:00:00.000Z",
+      "2026-03-24T10:00:00.000Z",
+      "user-1",
+      0,
+      expect.any(String),
+      null,
+    );
   });
 });

@@ -33,6 +33,7 @@ export interface ReminderOptimizationInput {
   lastTriggeredAt?: string | null;
   reminderEnabled: boolean;
   defaultWateringHour: number;
+  now?: Date;
 }
 
 export interface OptimizedReminderTiming {

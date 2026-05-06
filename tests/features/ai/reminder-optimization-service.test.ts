@@ -16,6 +16,7 @@ describe("reminderOptimizationService", () => {
   });
 
   it("adjusts based on recent care", () => {
+    const now = new Date("2026-03-24T10:00:00.000Z");
     const lastWateredAt = "2026-03-24T08:00:00.000Z";
     const result = optimizeReminderTiming({
       plantName: "Marlowe",
@@ -25,6 +26,7 @@ describe("reminderOptimizationService", () => {
       lastWateredAt,
       reminderEnabled: true,
       defaultWateringHour: 9,
+      now,
     });
 
     expect(result.nextDueAt).toContain("2026-03-31");
@@ -32,15 +34,19 @@ describe("reminderOptimizationService", () => {
   });
 
   it("holds briefly after a recent trigger", () => {
-    const lastTriggeredAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const now = new Date("2026-03-24T10:00:00.000Z");
+    const lastTriggeredAt = new Date(
+      now.getTime() + 60 * 60 * 1000,
+    ).toISOString();
     const result = optimizeReminderTiming({
       plantName: "Marlowe",
       speciesName: "Pothos",
       wateringIntervalDays: 7,
-      nextDueAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      nextDueAt: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
       lastTriggeredAt,
       reminderEnabled: true,
       defaultWateringHour: 9,
+      now,
     });
 
     expect(result.explanation).toContain("repeated reminders");

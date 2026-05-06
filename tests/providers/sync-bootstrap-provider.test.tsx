@@ -1,8 +1,8 @@
 import React from "react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Text } from "react-native";
 import { render, waitFor } from "@testing-library/react-native";
+import { Text } from "react-native";
 
 import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
 import { notifySyncQueueChanged } from "@/services/database/syncSignals";
@@ -52,7 +52,7 @@ describe("SyncBootstrapProvider", () => {
       },
     });
 
-    render(
+    const rendered = render(
       <QueryClientProvider client={queryClient}>
         <SyncBootstrapProvider>
           <Text>child</Text>
@@ -68,6 +68,9 @@ describe("SyncBootstrapProvider", () => {
         trigger: "auto-queue",
       });
     });
+
+    rendered.unmount();
+    queryClient.clear();
   });
 
   it("does not auto sync queued changes when the persisted preference is off", async () => {
@@ -78,7 +81,7 @@ describe("SyncBootstrapProvider", () => {
       },
     });
 
-    render(
+    const rendered = render(
       <QueryClientProvider client={queryClient}>
         <SyncBootstrapProvider>
           <Text>child</Text>
@@ -92,5 +95,8 @@ describe("SyncBootstrapProvider", () => {
     expect(mockRunUserDataSync).not.toHaveBeenCalledWith(
       expect.objectContaining({ trigger: "auto-queue" }),
     );
+
+    rendered.unmount();
+    queryClient.clear();
   });
 });

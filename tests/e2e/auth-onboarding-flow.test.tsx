@@ -71,6 +71,26 @@ jest.mock("@/components/common/Buttons/PrimaryButton", () => ({
   },
 }));
 
+jest.mock("@/components/common/Forms/TextInput", () => ({
+  TextInputField: ({
+    value,
+    onChangeText,
+    placeholder,
+  }: {
+    value?: string;
+    onChangeText?: (value: string) => void;
+    placeholder?: string;
+  }) => {
+    const React = require("react");
+    const { TextInput } = require("react-native");
+    return React.createElement(TextInput, {
+      value,
+      onChangeText,
+      placeholder,
+    });
+  },
+}));
+
 jest.mock("react-native-safe-area-context", () => {
   const React = require("react");
   const { View } = require("react-native");
@@ -105,6 +125,13 @@ jest.mock("@/features/onboarding/services/onboardingDebugStorage", () => ({
 
 jest.mock("@/services/analytics/analyticsService", () => ({
   trackEvent: (...args: unknown[]) => mockTrackEvent(...args),
+}));
+
+jest.mock("@/hooks/useAlert", () => ({
+  useAlert: () => ({
+    show: jest.fn().mockResolvedValue(undefined),
+    confirm: jest.fn().mockResolvedValue(true),
+  }),
 }));
 
 jest.mock("@/features/auth/api/authClient", () => ({

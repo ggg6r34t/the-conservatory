@@ -250,6 +250,7 @@ describe("supabase sync adapter", () => {
         log_type: "inspect",
         current_condition: "Declining",
         notes: "Leaves are softening.",
+        tags: JSON.stringify(["stable condition", "new growth"]),
         logged_at: "2026-03-21T10:00:00.000Z",
         created_at: "2026-03-21T10:00:00.000Z",
         updated_at: "2026-03-21T10:00:00.000Z",
@@ -278,7 +279,10 @@ describe("supabase sync adapter", () => {
 
     expect(from).toHaveBeenCalledWith("care_logs");
     expect(upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ current_condition: "Declining" }),
+      expect.objectContaining({
+        current_condition: "Declining",
+        tags: JSON.stringify(["stable condition", "new growth"]),
+      }),
       { onConflict: "id" },
     );
   });
