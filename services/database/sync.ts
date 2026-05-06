@@ -1,9 +1,15 @@
 import { env } from "@/config/env";
 import { getDatabase } from "@/services/database/sqlite";
 import { createId } from "@/utils/id";
+import { logger } from "@/utils/logger";
 
 export type SyncOperation = "insert" | "update" | "delete";
-export type SyncStatus = "pending" | "processing" | "failed" | "completed";
+export type SyncStatus =
+  | "pending"
+  | "processing"
+  | "failed"
+  | "completed"
+  | "abandoned";
 
 export interface SyncQueueItem {
   id: string;
@@ -34,6 +40,11 @@ export interface SyncQueueStorage {
     id: string,
     errorMessage: string,
     nextRetryAt: string,
+    updatedAt: string,
+  ): Promise<void>;
+  markAbandoned(
+    id: string,
+    errorMessage: string,
     updatedAt: string,
   ): Promise<void>;
 }
@@ -200,6 +211,22 @@ class SQLiteSyncQueueStorage implements SyncQueueStorage {
       id,
     );
   }
+
+  async markAbandoned(id: string, errorMessage: string, updatedAt: string) {
+    const database = await getDatabase();
+    await database.runAsync(
+      `UPDATE sync_queue
+       SET status = 'abandoned',
+           attempt_count = attempt_count + 1,
+           last_error = ?,
+           next_retry_at = NULL,
+           updated_at = ?
+       WHERE id = ?;`,
+      errorMessage,
+      updatedAt,
+      id,
+    );
+  }
 }
 
 function computeRetryAt(attemptCount: number, nowIso: string) {
@@ -289,13 +316,27 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "Unknown sync failure.";
-          const nextRetryAt = computeRetryAt(item.attemptCount + 1, nowIso);
-          await storage.markFailed(
-            item.id,
-            errorMessage,
-            nextRetryAt,
-            new Date().toISOString(),
-          );
+          const newAttemptCount = item.attemptCount + 1;
+          if (newAttemptCount >= 10) {
+            await storage.markAbandoned(
+              item.id,
+              errorMessage,
+              new Date().toISOString(),
+            );
+            logger.warn("sync.item_abandoned", {
+              entity: item.entity,
+              entityId: item.entityId,
+              attemptCount: newAttemptCount,
+            });
+          } else {
+            const nextRetryAt = computeRetryAt(newAttemptCount, nowIso);
+            await storage.markFailed(
+              item.id,
+              errorMessage,
+              nextRetryAt,
+              new Date().toISOString(),
+            );
+          }
           failed += 1;
         }
       }

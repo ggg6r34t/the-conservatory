@@ -103,6 +103,21 @@ class InMemorySyncQueueStorage implements SyncQueueStorage {
     );
   }
 
+  async markAbandoned(id: string, errorMessage: string, updatedAt: string) {
+    this.items = this.items.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            status: "abandoned",
+            attemptCount: item.attemptCount + 1,
+            lastError: errorMessage,
+            nextRetryAt: null,
+            updatedAt,
+          }
+        : item,
+    );
+  }
+
   findByEntity(entity: string) {
     return this.items.find((item) => item.entity === entity);
   }
