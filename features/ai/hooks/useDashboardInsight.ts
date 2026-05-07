@@ -9,6 +9,7 @@ export function useDashboardInsight(input: {
   reminders: CareReminder[];
   currentStreakDays: number;
   enabled?: boolean;
+  isPremium: boolean;
 }) {
   return useQuery({
     queryKey: [
@@ -22,6 +23,7 @@ export function useDashboardInsight(input: {
       input.plants
         .map((plant) => `${plant.id}:${plant.nextWaterDueAt ?? "none"}`)
         .join("|"),
+      input.isPremium,
     ],
     enabled: Boolean(input.userId) && (input.enabled ?? true),
     staleTime: 1000 * 60 * 15,
@@ -31,6 +33,7 @@ export function useDashboardInsight(input: {
         plants: input.plants,
         reminders: input.reminders,
         currentStreakDays: input.currentStreakDays,
+        cloudAllowed: input.isPremium,
       }),
   });
 }

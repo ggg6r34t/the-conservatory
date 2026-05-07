@@ -175,6 +175,7 @@ export async function getDashboardInsight(input: {
   plants: Plant[];
   reminders: CareReminder[];
   currentStreakDays: number;
+  cloudAllowed: boolean;
   now?: Date;
 }) {
   const dayKey = buildDayKey(input.now);
@@ -186,6 +187,11 @@ export async function getDashboardInsight(input: {
   }
 
   const fallback = buildLocalInsight(input);
+
+  if (!input.cloudAllowed) {
+    return withInsightSource(fallback, "local");
+  }
+
   const cloud = await requestDashboardInsight({
     summary: {
       activePlantCount: input.plants.length,

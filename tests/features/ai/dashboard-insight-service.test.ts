@@ -74,6 +74,7 @@ describe("dashboardInsightService", () => {
       plants: [createPlant({ nextWaterDueAt: "2026-03-24T09:00:00.000Z" })],
       reminders: [reminder],
       currentStreakDays: 0,
+      cloudAllowed: true,
       now,
     });
 
@@ -94,6 +95,7 @@ describe("dashboardInsightService", () => {
         },
       ],
       currentStreakDays: 0,
+      cloudAllowed: true,
       now,
     });
 
@@ -106,6 +108,7 @@ describe("dashboardInsightService", () => {
       plants: [createPlant({ nextWaterDueAt: "2026-03-24T09:00:00.000Z" })],
       reminders: [],
       currentStreakDays: 0,
+      cloudAllowed: true,
       now: new Date("2026-03-24T10:00:00.000Z"),
     });
 

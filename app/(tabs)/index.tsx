@@ -27,6 +27,7 @@ import { SpeciesCounter } from "@/features/dashboard/components/SpeciesCounter";
 import { UpcomingCare } from "@/features/dashboard/components/UpcomingCare";
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
 import { buildDashboardHeroCopy } from "@/features/dashboard/services/dashboardHeroCopy";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 
@@ -36,6 +37,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const dashboard = useDashboard();
   const { user } = useAuth();
+  const { isPremium } = useSubscription();
   const remindersQuery = useReminders();
   const { onRefresh, refreshing } = usePullToRefreshSync();
   const fabBottomOffset = getFloatingActionBottomOffset(insets.bottom);
@@ -101,6 +103,7 @@ export default function HomeScreen() {
     reminders: remindersQuery.data ?? [],
     currentStreakDays,
     enabled: hasCurrentWateringNeed,
+    isPremium,
   });
 
   return (
