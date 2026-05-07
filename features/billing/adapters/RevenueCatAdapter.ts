@@ -88,12 +88,15 @@ export class RevenueCatAdapter implements BillingAdapter {
       const expiresAt = entitlement?.expirationDate ?? null;
 
       // periodType is uppercase in 10.x: "NORMAL" | "INTRO" | "TRIAL" | "PREPAID"
-      const periodType = entitlement?.periodType ?? 'NORMAL';
-      const period: SubscriptionPeriod =
-        periodType === 'TRIAL' || periodType === 'NORMAL' ? 'monthly' : 'annual';
+      // RC's periodType does not directly indicate billing duration (monthly vs annual).
+      // Safe default to 'monthly' for all subscription types.
+      const period: SubscriptionPeriod = 'monthly';
 
       return { tier: 'premium', expiresAt, period };
-    } catch {
+    } catch (err: unknown) {
+      if (__DEV__) {
+        console.warn('[Billing] getSubscriptionState error:', err);
+      }
       return { tier: 'free', expiresAt: null, period: null };
     }
   }
