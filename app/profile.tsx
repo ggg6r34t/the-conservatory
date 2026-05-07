@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   Image,
@@ -20,6 +21,7 @@ import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
@@ -29,7 +31,6 @@ import {
   getProfileInitials,
   getProfileVersionLabel,
 } from "@/features/profile/services/profilePresentationService";
-import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 
@@ -324,36 +325,6 @@ export default function ProfileScreen() {
           <Text
             style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
           >
-            THE CONSERVATORY
-          </Text>
-          <View
-            style={[
-              styles.groupCard,
-              { backgroundColor: colors.surfaceContainerLowest },
-            ]}
-          >
-            {isPremium ? (
-              <ProfileRow
-                icon="star-circle-outline"
-                label="Premium"
-                value="Active"
-                onPress={() => router.push("/premium")}
-              />
-            ) : (
-              <ProfileRow
-                icon="star-outline"
-                label="Explore Premium"
-                value="Deepen your story"
-                onPress={() => router.push("/premium")}
-              />
-            )}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text
-            style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
-          >
             MY COLLECTION
           </Text>
           <View
@@ -373,6 +344,83 @@ export default function ProfileScreen() {
               onPress={() => router.push("/specimen-tags")}
             />
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text
+            style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
+          >
+            SUBSCRIPTION
+          </Text>
+          <LinearGradient
+            colors={[colors.primary, colors.primaryContainer]}
+            start={{ x: 0.08, y: 0.08 }}
+            end={{ x: 0.92, y: 0.92 }}
+            style={styles.subscriptionCard}
+          >
+            <View style={styles.subscriptionCardContent}>
+              <View style={styles.statBlock}>
+                <Text
+                  style={[
+                    styles.subscriptionCardTitle,
+                    { color: colors.onPrimary },
+                  ]}
+                >
+                  {isPremium ? "Premium Plan" : "Free Plan"}
+                </Text>
+                {isPremium ? (
+                  <View
+                    style={[
+                      styles.causeChip,
+                      { backgroundColor: colors.primaryFixed },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.causeChipLabel, { color: colors.primary }]}
+                    >
+                      Active
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text
+                style={[
+                  styles.subscriptionCardBody,
+                  { color: colors.primaryFixed },
+                ]}
+              >
+                {isPremium
+                  ? "Thank you for supporting The Conservatory. Your membership helps us continue building a calm, thoughtful home for plant care and collection keeping."
+                  : "Upgrade to Premium for deeper insights, full collection backup, and enhanced tools designed for dedicated plant collectors."}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push("/premium")}
+                style={[
+                  styles.subscriptionButton,
+                  { backgroundColor: colors.secondaryContainer },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.subscriptionButtonLabel,
+                    { color: colors.onSecondaryContainer },
+                  ]}
+                >
+                  Manage Plan
+                </Text>
+              </Pressable>
+            </View>
+
+            <Image
+              source={require("@/assets/images/potted-plant.png")}
+              resizeMode="contain"
+              style={[
+                styles.subscriptionCardGlyph,
+                { tintColor: colors.primaryFixed },
+              ]}
+            />
+          </LinearGradient>
         </View>
 
         <View style={styles.section}>
@@ -452,9 +500,9 @@ export default function ProfileScreen() {
               label="Manage Subscription"
               onPress={() => {
                 const url =
-                  Platform.OS === 'ios'
-                    ? 'https://apps.apple.com/account/subscriptions'
-                    : 'https://play.google.com/store/account/subscriptions';
+                  Platform.OS === "ios"
+                    ? "https://apps.apple.com/account/subscriptions"
+                    : "https://play.google.com/store/account/subscriptions";
                 void Linking.openURL(url);
               }}
             />
@@ -720,6 +768,68 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
     gap: 2,
+  },
+  subscriptionCard: {
+    minHeight: 208,
+    borderRadius: 30,
+    overflow: "hidden",
+    paddingHorizontal: 24,
+    paddingVertical: 26,
+    justifyContent: "space-between",
+  },
+  subscriptionCardContent: {
+    maxWidth: 236,
+    gap: 10,
+    zIndex: 1,
+  },
+  statBlock: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  subscriptionCardTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 31,
+    lineHeight: 37,
+  },
+  subscriptionCardBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 15,
+    lineHeight: 23,
+    opacity: 0.84,
+  },
+  subscriptionButton: {
+    alignSelf: "flex-start",
+    minHeight: 56,
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  subscriptionButtonLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  subscriptionCardGlyph: {
+    position: "absolute",
+    right: -10,
+    bottom: -18,
+    width: 156,
+    height: 156,
+    opacity: 0.14,
+    transform: [{ rotate: "12deg" }],
+  },
+  causeChip: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  causeChipLabel: {
+    fontFamily: "Manrope_600SemiBold",
+    fontSize: 12,
+    lineHeight: 16,
   },
   row: {
     minHeight: 68,

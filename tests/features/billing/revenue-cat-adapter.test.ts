@@ -84,10 +84,10 @@ describe("RevenueCatAdapter", () => {
     await expect(adapter.getSubscriptionState()).rejects.toThrow(
       /RevenueCat unavailable/i,
     );
-  });()[]
+  });
 
   it("maps customer-info update listener payloads to subscription state and cleans up", async () => {
-    const listeners: Array<(info: unknown) => void> = [];
+    const listeners: ((info: unknown) => void)[] = [];
     mockAddCustomerInfoUpdateListener.mockImplementation((callback) => {
       listeners.push(callback);
     });

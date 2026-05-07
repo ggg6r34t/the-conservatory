@@ -1,25 +1,41 @@
-import type { IdentifyPlantRequest, IdentifyPlantResponse } from "../../../features/ai/types/ai";
+import type {
+  IdentifyPlantRequest,
+  IdentifyPlantResponse,
+} from "../../../features/ai/types/ai";
 
-import { jsonResponse, readJson } from "../_shared/json";
+import { validateAiRequest, validateAiResponse } from "../_shared/aiSchemas";
+import {
+  assertAiUsageQuota,
+  createEdgeContext,
+  logEdgeEvent,
+  readJsonWithLimit,
+  safeErrorResponse,
+} from "../_shared/edge";
+import { jsonResponse } from "../_shared/json";
+
+const FUNCTION_NAME = "identify-plant";
 
 const CANDIDATES = [
   {
     keywords: ["monstera", "deliciosa"],
     species: "Monstera Deliciosa",
     confidence: 0.72,
-    careProfileHint: "A bright indirect position usually keeps its rhythm steady.",
+    careProfileHint:
+      "A bright indirect position usually keeps its rhythm steady.",
   },
   {
     keywords: ["pothos", "epipremnum"],
     species: "Pothos",
     confidence: 0.7,
-    careProfileHint: "A forgiving first rhythm with moderate drying between waterings.",
+    careProfileHint:
+      "A forgiving first rhythm with moderate drying between waterings.",
   },
   {
     keywords: ["ficus", "fiddle"],
     species: "Fiddle Leaf Fig",
     confidence: 0.68,
-    careProfileHint: "A steady window position and even watering tend to work best.",
+    careProfileHint:
+      "A steady window position and even watering tend to work best.",
   },
 ];
 
@@ -46,12 +62,22 @@ Deno.serve(async (request) => {
     return jsonResponse({}, 200);
   }
 
-  const body = await readJson<IdentifyPlantRequest>(request);
-  if (!body?.imageUri?.trim()) {
-    return jsonResponse({ error: "imageUri is required." }, 400);
-  }
+  let context;
+  try {
+    context = await createEdgeContext(request, FUNCTION_NAME);
+    const body = validateAiRequest<IdentifyPlantRequest>(
+      FUNCTION_NAME,
+      await readJsonWithLimit(request),
+    );
+    await assertAiUsageQuota(context, "ai_species_identification");
 
-  // Provider integration point:
-  // add real vision inference here when credentials are configured.
-  return jsonResponse(identifyLocally(body.imageUri));
+    const response = validateAiResponse<IdentifyPlantResponse>(
+      FUNCTION_NAME,
+      identifyLocally(body.imageUri),
+    );
+    logEdgeEvent(context, "request_success", { status: 200 });
+    return jsonResponse(response);
+  } catch (error) {
+    return safeErrorResponse(error, context);
+  }
 });

@@ -3,23 +3,51 @@ import type {
   CurateArchiveGalleryResponse,
 } from "../../../features/ai/types/ai";
 
-import { jsonResponse, readJson } from "../_shared/json";
+import { validateAiRequest, validateAiResponse } from "../_shared/aiSchemas";
+import {
+  assertAiUsageQuota,
+  assertPlantOwnership,
+  createEdgeContext,
+  logEdgeEvent,
+  readJsonWithLimit,
+  safeErrorResponse,
+} from "../_shared/edge";
+import { assertPremiumEntitlement } from "../_shared/entitlements";
+import { jsonResponse } from "../_shared/json";
+
+const FUNCTION_NAME = "curate-archive-gallery";
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return jsonResponse({}, 200);
   }
 
-  const body = await readJson<CurateArchiveGalleryRequest>(request);
-  if (!body?.items?.length) {
-    return jsonResponse({ error: "items are required." }, 400);
+  let context;
+  try {
+    context = await createEdgeContext(request, FUNCTION_NAME);
+    const entitlementError = await assertPremiumEntitlement(request);
+    if (entitlementError) {
+      return entitlementError;
+    }
+    const body = validateAiRequest<CurateArchiveGalleryRequest>(
+      FUNCTION_NAME,
+      await readJsonWithLimit(request),
+    );
+    await assertPlantOwnership(
+      context,
+      body.items.map((item) => item.plantId),
+    );
+    await assertAiUsageQuota(context, "ai_archive_curation", {
+      isPremium: true,
+    });
+
+    const response = validateAiResponse<CurateArchiveGalleryResponse>(
+      FUNCTION_NAME,
+      { pairs: body.items.length > 0 ? [] : [] },
+    );
+    logEdgeEvent(context, "request_success", { status: 200 });
+    return jsonResponse(response);
+  } catch (error) {
+    return safeErrorResponse(error, context);
   }
-
-  const response: CurateArchiveGalleryResponse = {
-    // Provider integration point:
-    // pair ranking can be refined later when a media provider is configured.
-    pairs: [],
-  };
-
-  return jsonResponse(response);
 });

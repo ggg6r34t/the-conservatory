@@ -3,8 +3,18 @@ import type {
   OptimizeRemindersResponse,
 } from "../../../features/ai/types/ai";
 
-import { jsonResponse, readJson } from "../_shared/json";
+import { validateAiRequest, validateAiResponse } from "../_shared/aiSchemas";
+import {
+  assertAiUsageQuota,
+  createEdgeContext,
+  logEdgeEvent,
+  readJsonWithLimit,
+  safeErrorResponse,
+} from "../_shared/edge";
+import { assertPremiumEntitlement } from "../_shared/entitlements";
+import { jsonResponse } from "../_shared/json";
 
+const FUNCTION_NAME = "optimize-reminders";
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
@@ -67,15 +77,28 @@ Deno.serve(async (request) => {
     return jsonResponse({}, 200);
   }
 
-  const body = await readJson<OptimizeRemindersRequest>(request);
-  if (!body?.plantName || !body?.speciesName) {
-    return jsonResponse(
-      { error: "plantName and speciesName are required." },
-      400,
+  let context;
+  try {
+    context = await createEdgeContext(request, FUNCTION_NAME);
+    const entitlementError = await assertPremiumEntitlement(request);
+    if (entitlementError) {
+      return entitlementError;
+    }
+    const body = validateAiRequest<OptimizeRemindersRequest>(
+      FUNCTION_NAME,
+      await readJsonWithLimit(request),
     );
-  }
+    await assertAiUsageQuota(context, "smart_reminder_optimization", {
+      isPremium: true,
+    });
 
-  // Provider integration point:
-  // remote optimization is optional; local-first logic stays authoritative in Phase 1.
-  return jsonResponse(optimizeLocally(body));
+    const response = validateAiResponse<OptimizeRemindersResponse>(
+      FUNCTION_NAME,
+      optimizeLocally(body),
+    );
+    logEdgeEvent(context, "request_success", { status: 200 });
+    return jsonResponse(response);
+  } catch (error) {
+    return safeErrorResponse(error, context);
+  }
 });

@@ -1,7 +1,5 @@
 import { env } from "@/config/env";
 import { supabase } from "@/config/supabase";
-import { FEATURE_REQUIRES_PREMIUM } from "@/features/billing/constants";
-import type { GatedFeature } from "@/features/billing/types";
 import type {
   CurateArchiveGalleryRequest,
   CurateArchiveGalleryResponse,
@@ -20,8 +18,27 @@ import type {
   RefineCareLogRequest,
   RefineCareLogResponse,
 } from "@/features/ai/types/ai";
-import { logger } from "@/utils/logger";
+import { FEATURE_REQUIRES_PREMIUM } from "@/features/billing/constants";
+import type { GatedFeature } from "@/features/billing/types";
 import { getEntitlementState } from "@/services/entitlementState";
+import { logger } from "@/utils/logger";
+
+export type EdgeFunctionErrorCode =
+  | "auth_required"
+  | "validation_error"
+  | "premium_required"
+  | "quota_exceeded"
+  | "rate_limit_exceeded"
+  | "payload_too_large"
+  | "server_error";
+
+type EdgeFunctionErrorPayload = {
+  error?: {
+    code?: EdgeFunctionErrorCode;
+    message?: string;
+    details?: Record<string, unknown>;
+  };
+};
 
 const AI_FUNCTION_FEATURES: Record<string, GatedFeature> = {
   "identify-plant": "ai_species_identification",
@@ -33,6 +50,33 @@ const AI_FUNCTION_FEATURES: Record<string, GatedFeature> = {
   "curate-archive-gallery": "ai_archive_curation",
   "generate-streak-nudge": "ai_health_insight",
 };
+
+function getEdgeErrorCode(data: unknown): EdgeFunctionErrorCode | null {
+  const payload = data as EdgeFunctionErrorPayload | null;
+  const code = payload?.error?.code;
+  if (
+    code === "auth_required" ||
+    code === "validation_error" ||
+    code === "premium_required" ||
+    code === "quota_exceeded" ||
+    code === "rate_limit_exceeded" ||
+    code === "payload_too_large" ||
+    code === "server_error"
+  ) {
+    return code;
+  }
+  return null;
+}
+
+function logEdgeFunctionDenial(
+  name: string,
+  code: EdgeFunctionErrorCode | null,
+) {
+  logger.warn("ai.function.invoke_denied", {
+    name,
+    code: code ?? "network_or_unknown",
+  });
+}
 
 async function invokeFunction<TRequest, TResponse>(
   name: string,
@@ -63,10 +107,13 @@ async function invokeFunction<TRequest, TResponse>(
     });
 
     if (error) {
-      logger.warn("ai.function.invoke_failed", {
-        name,
-        message: error.message,
-      });
+      logEdgeFunctionDenial(name, getEdgeErrorCode(data));
+      return null;
+    }
+
+    const edgeErrorCode = getEdgeErrorCode(data);
+    if (edgeErrorCode) {
+      logEdgeFunctionDenial(name, edgeErrorCode);
       return null;
     }
 
@@ -74,7 +121,7 @@ async function invokeFunction<TRequest, TResponse>(
   } catch (error) {
     logger.warn("ai.function.invoke_failed", {
       name,
-      message: error instanceof Error ? error.message : "unknown",
+      code: "network_or_unknown",
     });
     return null;
   }
@@ -87,7 +134,9 @@ export function requestPlantIdentification(input: IdentifyPlantRequest) {
   );
 }
 
-export function requestDashboardInsight(input: GenerateDashboardInsightRequest) {
+export function requestDashboardInsight(
+  input: GenerateDashboardInsightRequest,
+) {
   return invokeFunction<
     GenerateDashboardInsightRequest,
     GenerateDashboardInsightResponse
@@ -95,10 +144,10 @@ export function requestDashboardInsight(input: GenerateDashboardInsightRequest) 
 }
 
 export function requestHealthInsight(input: GenerateHealthInsightRequest) {
-  return invokeFunction<GenerateHealthInsightRequest, GenerateHealthInsightResponse>(
-    "generate-health-insight",
-    input,
-  );
+  return invokeFunction<
+    GenerateHealthInsightRequest,
+    GenerateHealthInsightResponse
+  >("generate-health-insight", input);
 }
 
 export function requestJournalSummary(input: GenerateJournalSummaryRequest) {
@@ -123,15 +172,15 @@ export function requestCareLogRefinement(input: RefineCareLogRequest) {
 }
 
 export function requestArchiveCuration(input: CurateArchiveGalleryRequest) {
-  return invokeFunction<CurateArchiveGalleryRequest, CurateArchiveGalleryResponse>(
-    "curate-archive-gallery",
-    input,
-  );
+  return invokeFunction<
+    CurateArchiveGalleryRequest,
+    CurateArchiveGalleryResponse
+  >("curate-archive-gallery", input);
 }
 
 export function requestStreakNudge(input: GenerateStreakNudgeRequest) {
-  return invokeFunction<GenerateStreakNudgeRequest, GenerateStreakNudgeResponse>(
-    "generate-streak-nudge",
-    input,
-  );
+  return invokeFunction<
+    GenerateStreakNudgeRequest,
+    GenerateStreakNudgeResponse
+  >("generate-streak-nudge", input);
 }
