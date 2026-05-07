@@ -3,12 +3,15 @@ import { type Href, useRouter } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { UpgradePrompt } from "@/features/billing/components/UpgradePrompt";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useSpecimenTags } from "@/features/plants/hooks/useSpecimenTags";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 
 export default function SpecimenTagsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { isPremium } = useSubscription();
   const { plants, tags } = useSpecimenTags();
   const tagsByPlantId = new Map(tags.map((tag) => [tag.plantId, tag]));
 
@@ -28,86 +31,93 @@ export default function SpecimenTagsScreen() {
         </Text>
       </Pressable>
 
-      {plants.length ? (
-        plants.map((plant) => {
-          const tag = tagsByPlantId.get(plant.id);
-          return (
-            <View
-              key={plant.id}
-              style={[
-                styles.card,
-                { backgroundColor: colors.surfaceContainerLowest },
-              ]}
-            >
-              <View style={styles.copy}>
-                <Text style={[styles.name, { color: colors.primary }]}>
-                  {plant.name}
-                </Text>
-                <Text style={[styles.meta, { color: colors.onSurfaceVariant }]}>
-                  {plant.speciesName}
-                  {plant.location ? ` - ${plant.location}` : ""}
-                </Text>
-              </View>
-
+      {isPremium ? (
+        plants.length ? (
+          plants.map((plant) => {
+            const tag = tagsByPlantId.get(plant.id);
+            return (
               <View
+                key={plant.id}
                 style={[
-                  styles.tagChip,
-                  { backgroundColor: colors.surfaceContainerLow },
+                  styles.card,
+                  { backgroundColor: colors.surfaceContainerLowest },
                 ]}
               >
-                <Text style={[styles.tagLabel, { color: colors.secondary }]}>
-                  {tag?.code ?? "Preparing"}
-                </Text>
-              </View>
-              {tag ? (
-                <View style={styles.tagActions}>
-                  <View style={styles.qrWrap}>
-                    <QRCode
-                      value={tag.payload}
-                      size={72}
-                      color={colors.primary}
-                      backgroundColor={colors.surfaceContainerLow}
-                      ecl="M"
-                    />
-                  </View>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => {
-                      void Share.share({
-                        title: `${plant.name} specimen tag`,
-                        message: tag.payload,
-                      });
-                    }}
-                    style={[
-                      styles.shareButton,
-                      { backgroundColor: colors.surfaceContainerLow },
-                    ]}
-                  >
-                    <Text
-                      style={[styles.shareLabel, { color: colors.primary }]}
-                    >
-                      Share
-                    </Text>
-                  </Pressable>
+                <View style={styles.copy}>
+                  <Text style={[styles.name, { color: colors.primary }]}>
+                    {plant.name}
+                  </Text>
+                  <Text style={[styles.meta, { color: colors.onSurfaceVariant }]}>
+                    {plant.speciesName}
+                    {plant.location ? ` - ${plant.location}` : ""}
+                  </Text>
                 </View>
-              ) : null}
-            </View>
-          );
-        })
+
+                <View
+                  style={[
+                    styles.tagChip,
+                    { backgroundColor: colors.surfaceContainerLow },
+                  ]}
+                >
+                  <Text style={[styles.tagLabel, { color: colors.secondary }]}>
+                    {tag?.code ?? "Preparing"}
+                  </Text>
+                </View>
+                {tag ? (
+                  <View style={styles.tagActions}>
+                    <View style={styles.qrWrap}>
+                      <QRCode
+                        value={tag.payload}
+                        size={72}
+                        color={colors.primary}
+                        backgroundColor={colors.surfaceContainerLow}
+                        ecl="M"
+                      />
+                    </View>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => {
+                        void Share.share({
+                          title: `${plant.name} specimen tag`,
+                          message: tag.payload,
+                        });
+                      }}
+                      style={[
+                        styles.shareButton,
+                        { backgroundColor: colors.surfaceContainerLow },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.shareLabel, { color: colors.primary }]}
+                      >
+                        Share
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </View>
+            );
+          })
+        ) : (
+          <View
+            style={[
+              styles.emptyCard,
+              { backgroundColor: colors.surfaceContainerLow },
+            ]}
+          >
+            <Text style={[styles.emptyTitle, { color: colors.primary }]}>
+              No active specimens
+            </Text>
+            <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
+              Add a plant to generate specimen identifiers for your collection.
+            </Text>
+          </View>
+        )
       ) : (
-        <View
-          style={[
-            styles.emptyCard,
-            { backgroundColor: colors.surfaceContainerLow },
-          ]}
-        >
-          <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-            No active specimens
-          </Text>
-          <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
-            Add a plant to generate specimen identifiers for your collection.
-          </Text>
-        </View>
+        <UpgradePrompt
+          message="Generate botanical QR labels for your collection and keep your plants consistently identified across care notes and archives."
+          cta="Explore Premium"
+        />
       )}
     </ProfileScreenScaffold>
   );
