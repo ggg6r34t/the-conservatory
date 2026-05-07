@@ -9,8 +9,15 @@ import {
   writeEntitlementCache,
 } from '@/features/billing/services/entitlementCache';
 import { useBillingStore } from '@/features/billing/stores/useBillingStore';
+import type { SubscriptionState } from '@/features/billing/types';
 import { initializeAnalytics, resetAnalyticsUser, trackMonetizationEvent } from '@/services/analytics/analyticsService';
+import { retryDeferredPremiumPhotoBackups } from '@/services/database/photoBackupRetry';
 import { setEntitlementState } from '@/services/entitlementState';
+
+type ResolvedSubscriptionState = Omit<
+  SubscriptionState,
+  'isLoading' | 'isRestoring' | 'error'
+>;
 
 export function BillingBootstrapProvider({ children }: PropsWithChildren) {
   const { user, isAuthenticated } = useAuth();
@@ -19,7 +26,14 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!isAuthenticated || !user?.id) {
-      setSubscriptionState({ tier: 'free', isLoading: false, expiresAt: null, period: null });
+      setSubscriptionState({
+        tier: 'free',
+        isLoading: false,
+        expiresAt: null,
+        period: null,
+        lastVerifiedAt: null,
+        entitlementUnavailable: false,
+      });
       setEntitlementState(false);
       resetAnalyticsUser();
       void clearEntitlementCache();
@@ -27,6 +41,31 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
     }
 
     let cancelled = false;
+    let cleanupSubscriptionListener: (() => void) | null = null;
+
+    async function applyResolvedSubscriptionState(
+      state: ResolvedSubscriptionState,
+      isLoading: boolean,
+    ) {
+      if (cancelled) return;
+      const lastVerifiedAt = new Date().toISOString();
+      setSubscriptionState({
+        ...state,
+        isLoading,
+        lastVerifiedAt,
+        entitlementUnavailable: false,
+      });
+      setEntitlementState(state.tier === 'premium');
+      if (state.tier === 'premium') {
+        void retryDeferredPremiumPhotoBackups(user!.id);
+      }
+      await writeEntitlementCache({
+        tier: state.tier,
+        expiresAt: state.expiresAt,
+        period: state.period,
+        lastVerifiedAt,
+      });
+    }
 
     async function bootstrap() {
       setSubscriptionState({ isLoading: true });
@@ -41,6 +80,8 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
           expiresAt: cached.expiresAt,
           period: cached.period,
           isLoading: true,
+          lastVerifiedAt: cached.lastVerifiedAt,
+          entitlementUnavailable: false,
         });
         setEntitlementState(effectiveTier === 'premium');
       }
@@ -49,25 +90,28 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
         await billingClient.initialize(user!.id);
         if (cancelled) return;
 
+        cleanupSubscriptionListener = billingClient.setSubscriptionStateListener?.(
+          (state) => {
+            void applyResolvedSubscriptionState(state, false);
+            trackMonetizationEvent('entitlement_refresh', {
+              source: 'revenuecat_customer_info',
+              tier: state.tier,
+            });
+          },
+        ) ?? null;
+
         const [state, offerings] = await Promise.all([
           billingClient.getSubscriptionState(),
           billingClient.getOfferings(),
         ]);
 
         if (cancelled) return;
-        setSubscriptionState({ ...state, isLoading: false });
         setOfferings(offerings);
-        setEntitlementState(state.tier === 'premium');
+        await applyResolvedSubscriptionState(state, false);
         initializeAnalytics(user!.id);
-        await writeEntitlementCache({
-          tier: state.tier,
-          expiresAt: state.expiresAt,
-          period: state.period,
-          lastVerifiedAt: new Date().toISOString(),
-        });
       } catch (err) {
         if (cancelled) return;
-        setSubscriptionState({ isLoading: false });
+        setSubscriptionState({ isLoading: false, entitlementUnavailable: true });
         trackMonetizationEvent('billing_initialization_failed', {
           reason: err instanceof Error ? err.message : 'unknown',
         });
@@ -78,6 +122,7 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
 
     return () => {
       cancelled = true;
+      cleanupSubscriptionListener?.();
     };
   }, [isAuthenticated, user?.id, setSubscriptionState, setOfferings]);
 

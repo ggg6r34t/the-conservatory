@@ -447,19 +447,22 @@ export default function ProfileScreen() {
               { backgroundColor: colors.surfaceContainerLowest },
             ]}
           >
-            {isPremium ? (
-              <ProfileRow
-                icon="credit-card-outline"
-                label="Manage Subscription"
-                onPress={() => {
-                  const url =
-                    Platform.OS === 'ios'
-                      ? 'https://apps.apple.com/account/subscriptions'
-                      : 'https://play.google.com/store/account/subscriptions';
-                  void Linking.openURL(url);
-                }}
-              />
-            ) : null}
+            <ProfileRow
+              icon="credit-card-outline"
+              label="Manage Subscription"
+              onPress={() => {
+                const url =
+                  Platform.OS === 'ios'
+                    ? 'https://apps.apple.com/account/subscriptions'
+                    : 'https://play.google.com/store/account/subscriptions';
+                void Linking.openURL(url);
+              }}
+            />
+            <ProfileRow
+              icon="information-outline"
+              label="After Premium"
+              onPress={() => router.push("/downgrade")}
+            />
             <ProfileRow
               icon="shield-account-outline"
               label="Privacy & Security"

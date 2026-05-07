@@ -10,6 +10,7 @@ const mockReplace = jest.fn();
 const mockBack = jest.fn();
 const mockRequestPermission = jest.fn();
 const mockResolveSpecimenTagScan = jest.fn();
+let mockIsPremium = true;
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({
@@ -52,8 +53,8 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
 
 jest.mock("@/features/billing/hooks/useSubscription", () => ({
   useSubscription: () => ({
-    isPremium: true,
-    tier: 'premium',
+    isPremium: mockIsPremium,
+    tier: mockIsPremium ? 'premium' : 'free',
     isLoading: false,
     isRestoring: false,
     expiresAt: null,
@@ -139,6 +140,7 @@ jest.mock("@/components/design-system/useTheme", () => ({
 describe("specimen native scanning", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsPremium = true;
   });
 
   it("exposes the native scanner workflow from specimen tags", () => {
@@ -148,6 +150,19 @@ describe("specimen native scanning", () => {
     fireEvent.press(screen.getByText("Scan Tag"));
 
     expect(mockPush).toHaveBeenCalledWith("/specimen-scan");
+  });
+
+  it("shows an upgrade prompt instead of printable tags for free users", () => {
+    mockIsPremium = false;
+
+    renderWithProviders(<SpecimenTagsScreen />);
+
+    expect(
+      screen.getByText(
+        "Generate botanical QR labels for your collection and keep your plants consistently identified across care notes and archives.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("QR value: scan-payload")).toBeNull();
   });
 
   it("opens a camera scanner and routes valid local specimen scans", async () => {

@@ -1,9 +1,11 @@
 import {
   buildSpecimenTagCode,
   buildSpecimenTagPayload,
+  ensureSpecimenTag,
   parseSpecimenTagPayload,
   resolveSpecimenTagScan,
 } from "@/features/plants/services/specimenTagsService";
+import { setEntitlementState } from "@/services/entitlementState";
 
 const mockGetDatabase = jest.fn();
 
@@ -14,6 +16,7 @@ jest.mock("@/services/database/sqlite", () => ({
 describe("specimenTagsService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    setEntitlementState(false);
   });
 
   it("builds deterministic specimen tag codes", () => {
@@ -133,5 +136,95 @@ describe("specimenTagsService", () => {
         speciesName: "Monstera deliciosa",
       },
     });
+  });
+
+  it("rejects persisted tag creation for free users before touching storage", async () => {
+    await expect(
+      ensureSpecimenTag({
+        userId: "user-1",
+        plant: {
+          id: "plant-1",
+          userId: "user-1",
+          name: "Monstera",
+          speciesName: "Monstera deliciosa",
+          status: "active",
+          location: null,
+          wateringIntervalDays: 7,
+          notes: null,
+          createdAt: "2026-05-07T00:00:00.000Z",
+          updatedAt: "2026-05-07T00:00:00.000Z",
+          pending: 0,
+        },
+      }),
+    ).rejects.toThrow(/premium/i);
+
+    expect(mockGetDatabase).not.toHaveBeenCalled();
+  });
+
+  it("creates and queues a specimen tag for premium users", async () => {
+    setEntitlementState(true);
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    const database = {
+      getFirstAsync: jest.fn().mockResolvedValue(null),
+      runAsync,
+      withTransactionAsync: async (callback: () => Promise<void>) =>
+        callback(),
+    };
+    mockGetDatabase.mockResolvedValue(database);
+
+    const tag = await ensureSpecimenTag({
+      userId: "user-1",
+        plant: {
+          id: "plant-1",
+          userId: "user-1",
+          name: "Monstera",
+          speciesName: "Monstera deliciosa",
+          status: "active",
+          location: "East window",
+          wateringIntervalDays: 7,
+          notes: null,
+          createdAt: "2026-05-07T00:00:00.000Z",
+          updatedAt: "2026-05-07T00:00:00.000Z",
+          pending: 0,
+        },
+      });
+
+    expect(tag).toEqual(
+      expect.objectContaining({
+        userId: "user-1",
+        plantId: "plant-1",
+        code: "MON-NT-1",
+        pending: 1,
+      }),
+    );
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO specimen_tags"),
+      expect.any(String),
+      "user-1",
+      "plant-1",
+      "MON-NT-1",
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      "user-1",
+      1,
+      null,
+      null,
+    );
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO sync_queue"),
+      expect.any(String),
+      "specimen_tags",
+      expect.any(String),
+      "insert",
+      expect.stringContaining('"plantId":"plant-1"'),
+      "pending",
+      0,
+      null,
+      null,
+      expect.any(String),
+      expect.any(String),
+    );
   });
 });

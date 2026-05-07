@@ -151,8 +151,9 @@ export function useBackupStatus() {
       Boolean(user?.id) && remoteAvailability.canSync && !isSyncRunning,
     canToggleAutoSync: Boolean(user?.id),
     cloudSyncTitle: "Auto-sync Conservatory",
-    cloudSyncDescription:
-      "Automatically back up plants, care history, reminders, and progress photos to cloud storage.",
+    cloudSyncDescription: isPremium
+      ? "Automatically back up plants, care history, reminders, and progress photos to cloud storage."
+      : "Automatically back up plants, care history, and reminders. Progress photo backup resumes with Premium.",
     backendMode: backendConfiguration.mode,
   };
 }

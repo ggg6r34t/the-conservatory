@@ -6,6 +6,7 @@ import Purchases, {
 import type {
   PurchasesPackage,
   CustomerInfo,
+  CustomerInfoUpdateListener,
 } from 'react-native-purchases';
 
 import { billingConfig, validateBillingConfig } from '../config';
@@ -42,8 +43,45 @@ function isPremiumFromCustomerInfo(info: CustomerInfo): boolean {
   return (info.entitlements.active[PREMIUM_ENTITLEMENT_ID] ?? null) !== null;
 }
 
+function inferPeriodFromProductIdentifier(
+  productIdentifier: string | null | undefined,
+): SubscriptionPeriod | null {
+  const normalized = productIdentifier?.toLowerCase() ?? '';
+  if (normalized.includes('annual') || normalized.includes('year')) {
+    return 'annual';
+  }
+  if (normalized.includes('month')) {
+    return 'monthly';
+  }
+  if (normalized.includes('lifetime')) {
+    return 'lifetime';
+  }
+  return null;
+}
+
+function mapCustomerInfoToSubscriptionState(
+  info: CustomerInfo,
+): Omit<SubscriptionState, 'isLoading' | 'isRestoring' | 'error'> {
+  const entitlement = info.entitlements.active[PREMIUM_ENTITLEMENT_ID];
+  if (!entitlement) {
+    return { tier: 'free', expiresAt: null, period: null };
+  }
+
+  const productIdentifier =
+    'productIdentifier' in entitlement
+      ? (entitlement.productIdentifier as string | null | undefined)
+      : null;
+
+  return {
+    tier: 'premium',
+    expiresAt: entitlement.expirationDate ?? null,
+    period: inferPeriodFromProductIdentifier(productIdentifier),
+  };
+}
+
 export class RevenueCatAdapter implements BillingAdapter {
   private initialized = false;
+  private customerInfoUpdateListener: CustomerInfoUpdateListener | null = null;
 
   async initialize(userId: string): Promise<void> {
     const { valid, missing } = validateBillingConfig();
@@ -77,27 +115,12 @@ export class RevenueCatAdapter implements BillingAdapter {
 
     try {
       const info = await Purchases.getCustomerInfo();
-      const isPremium = isPremiumFromCustomerInfo(info);
-
-      if (!isPremium) {
-        return { tier: 'free', expiresAt: null, period: null };
-      }
-
-      const entitlement = info.entitlements.active[PREMIUM_ENTITLEMENT_ID];
-      // expirationDate is already an ISO string in RC 10.x
-      const expiresAt = entitlement?.expirationDate ?? null;
-
-      // periodType is uppercase in 10.x: "NORMAL" | "INTRO" | "TRIAL" | "PREPAID"
-      // RC's periodType does not directly indicate billing duration (monthly vs annual).
-      // Safe default to 'monthly' for all subscription types.
-      const period: SubscriptionPeriod = 'monthly';
-
-      return { tier: 'premium', expiresAt, period };
+      return mapCustomerInfoToSubscriptionState(info);
     } catch (err: unknown) {
       if (__DEV__) {
         console.warn('[Billing] getSubscriptionState error:', err);
       }
-      return { tier: 'free', expiresAt: null, period: null };
+      throw err;
     }
   }
 
@@ -177,9 +200,39 @@ export class RevenueCatAdapter implements BillingAdapter {
     }
   }
 
+  setSubscriptionStateListener(
+    listener: (
+      state: Omit<SubscriptionState, 'isLoading' | 'isRestoring' | 'error'>,
+    ) => void,
+  ): () => void {
+    if (!this.initialized) return () => {};
+
+    if (this.customerInfoUpdateListener) {
+      Purchases.removeCustomerInfoUpdateListener(this.customerInfoUpdateListener);
+    }
+
+    const revenueCatListener: CustomerInfoUpdateListener = (info) => {
+      listener(mapCustomerInfoToSubscriptionState(info));
+    };
+
+    this.customerInfoUpdateListener = revenueCatListener;
+    Purchases.addCustomerInfoUpdateListener(revenueCatListener);
+
+    return () => {
+      Purchases.removeCustomerInfoUpdateListener(revenueCatListener);
+      if (this.customerInfoUpdateListener === revenueCatListener) {
+        this.customerInfoUpdateListener = null;
+      }
+    };
+  }
+
   async logOut(): Promise<void> {
     if (!this.initialized) return;
     try {
+      if (this.customerInfoUpdateListener) {
+        Purchases.removeCustomerInfoUpdateListener(this.customerInfoUpdateListener);
+        this.customerInfoUpdateListener = null;
+      }
       await Purchases.logOut();
     } catch {
       // ignore

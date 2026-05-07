@@ -1,13 +1,17 @@
 import { STORAGE_BUCKET } from "@/config/constants";
 import { supabase } from "@/config/supabase";
+import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { getDatabase } from "@/services/database/sqlite";
-import type { SyncQueueItem } from "@/services/database/sync";
+import type { SyncProcessResult, SyncQueueItem } from "@/services/database/sync";
 import { getEntitlementState } from "@/services/entitlementState";
 import {
   getStorageAssetUrl,
   normalizeStoragePath,
 } from "@/services/supabase/storage";
 import type { CareLogCondition } from "@/types/models";
+
+const PREMIUM_PHOTO_BACKUP_DEFERRED_REASON =
+  "Premium photo backup is deferred until subscription is active.";
 
 type SyncableEntity =
   | "user_preferences"
@@ -48,6 +52,38 @@ async function loadFeatureUsageRecord(entityId: string) {
     created_at: string;
     updated_at: string;
   }>("SELECT * FROM feature_usage WHERE id = ? LIMIT 1;", entityId);
+}
+
+async function mergeFeatureUsageRecordWithRemote(row: Awaited<ReturnType<typeof loadFeatureUsageRecord>>) {
+  if (!row) return null;
+
+  const remote = await supabase!
+    .from("feature_usage")
+    .select("count")
+    .eq("id", row.id)
+    .maybeSingle();
+
+  if (remote.error) {
+    throw new Error(remote.error.message);
+  }
+
+  const remoteCount =
+    typeof remote.data?.count === "number" ? remote.data.count : 0;
+  const mergedCount = Math.max(row.count, remoteCount);
+  if (mergedCount !== row.count) {
+    const database = await getDatabase();
+    await database.runAsync(
+      "UPDATE feature_usage SET count = ?, updated_at = ? WHERE id = ?;",
+      mergedCount,
+      new Date().toISOString(),
+      row.id,
+    );
+  }
+
+  return {
+    ...row,
+    count: mergedCount,
+  };
 }
 
 function getLocalSyncKeyColumn(entity: SyncableEntity) {
@@ -568,7 +604,13 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
 
   if (item.entity === "photos") {
     if (!getEntitlementState()) {
-      return;
+      trackMonetizationEvent("sync_photo_deferred", {
+        reason: "requires_premium",
+      });
+      return {
+        status: "deferred" as const,
+        reason: PREMIUM_PHOTO_BACKUP_DEFERRED_REASON,
+      };
     }
     const localRow = await loadPhotoRecord(item.entityId);
     const row = await uploadPhotoAsset(localRow);
@@ -616,7 +658,9 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
   }
 
   if (item.entity === "feature_usage") {
-    const row = await loadFeatureUsageRecord(item.entityId);
+    const row = await mergeFeatureUsageRecordWithRemote(
+      await loadFeatureUsageRecord(item.entityId),
+    );
     if (!row) return;
     const { error } = await supabase
       .from("feature_usage")
@@ -628,17 +672,26 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
   throw new Error(`Unsupported sync entity: ${item.entity}`);
 }
 
-export async function processSyncQueueItemWithSupabase(item: SyncQueueItem) {
+export async function processSyncQueueItemWithSupabase(
+  item: SyncQueueItem,
+): Promise<SyncProcessResult> {
   try {
+    let result: SyncProcessResult = undefined;
     if (item.operation === "delete") {
       await deleteRemoteRecord(item);
     } else {
-      await upsertRemoteRecord(item);
+      result = await upsertRemoteRecord(item);
+    }
+
+    if (result?.status === "deferred") {
+      return result;
     }
 
     if (canTrackLocalSync(item.entity) && item.operation !== "delete") {
       await markLocalSynced(item.entity, item.entityId);
     }
+
+    return undefined;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown sync failure.";

@@ -391,20 +391,21 @@ describe("supabase sync adapter", () => {
     expect(deleteFn).toHaveBeenCalled();
   });
 
-  it("skips photo blob upload and metadata sync for free users", async () => {
+  it("defers photo blob upload and metadata sync for free users without marking the row synced", async () => {
     (require("@/services/entitlementState").getEntitlementState as jest.Mock).mockReturnValue(false);
 
     const storageFrom = require("@/config/supabase").supabase.storage.from as jest.Mock;
     const from = require("@/config/supabase").supabase.from as jest.Mock;
+    const runAsync = jest.fn().mockResolvedValue(undefined);
 
     require("@/services/database/sqlite").getDatabase.mockResolvedValue({
       getFirstAsync: jest.fn(),
-      runAsync: jest.fn(),
+      runAsync,
     });
 
     const { processSyncQueueItemWithSupabase } = require("@/services/database/supabaseSyncAdapter");
 
-    await processSyncQueueItemWithSupabase({
+    const result = await processSyncQueueItemWithSupabase({
       id: "sync-photo-free",
       entity: "photos",
       entityId: "photo-1",
@@ -420,6 +421,78 @@ describe("supabase sync adapter", () => {
 
     expect(storageFrom).not.toHaveBeenCalled();
     expect(from).not.toHaveBeenCalledWith("photos");
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "deferred",
+        reason: expect.stringMatching(/premium photo backup/i),
+      }),
+    );
+    expect(runAsync).not.toHaveBeenCalledWith(
+      expect.stringContaining("SET pending = 0"),
+      expect.any(String),
+      "photo-1",
+    );
+  });
+
+  it("merges feature usage sync conflicts with max count", async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    const maybeSingle = jest.fn().mockResolvedValue({
+      data: { count: 5 },
+      error: null,
+    });
+    const eq = jest.fn().mockReturnValue({ maybeSingle });
+    const select = jest.fn().mockReturnValue({ eq });
+    const from = require("@/config/supabase").supabase.from as jest.Mock;
+    from.mockReturnValue({ select, upsert });
+
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    const getFirstAsync = jest.fn().mockResolvedValue({
+      id: "user-1:ai_health_insight:plant-1:2026-05",
+      user_id: "user-1",
+      feature: "ai_health_insight",
+      period: "2026-05",
+      count: 2,
+      created_at: "2026-05-01T00:00:00.000Z",
+      updated_at: "2026-05-07T00:00:00.000Z",
+    });
+    require("@/services/database/sqlite").getDatabase.mockResolvedValue({
+      getFirstAsync,
+      runAsync,
+    });
+
+    const {
+      processSyncQueueItemWithSupabase,
+    } = require("@/services/database/supabaseSyncAdapter");
+
+    await processSyncQueueItemWithSupabase({
+      id: "sync-usage",
+      entity: "feature_usage",
+      entityId: "user-1:ai_health_insight:plant-1:2026-05",
+      operation: "insert",
+      payload: null,
+      status: "pending",
+      attemptCount: 0,
+      lastError: null,
+      nextRetryAt: null,
+      queuedAt: "2026-05-07T00:00:00.000Z",
+      updatedAt: "2026-05-07T00:00:00.000Z",
+    });
+
+    expect(select).toHaveBeenCalledWith("count");
+    expect(eq).toHaveBeenCalledWith(
+      "id",
+      "user-1:ai_health_insight:plant-1:2026-05",
+    );
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE feature_usage SET count = ?"),
+      5,
+      expect.any(String),
+      "user-1:ai_health_insight:plant-1:2026-05",
+    );
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ count: 5 }),
+      { onConflict: "id" },
+    );
   });
 
   it("does not mark photo sync successful when required metadata is missing", async () => {

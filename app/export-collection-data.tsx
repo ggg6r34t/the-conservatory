@@ -150,8 +150,12 @@ export default function ExportCollectionDataScreen() {
             value={String(summary?.reminders ?? 0)}
           />
           <IncludedRow
-            label="Photo metadata"
-            detail="URIs, dimensions, timestamps, and primary-photo flags."
+            label={isPremium ? "Photo metadata" : "Photo count"}
+            detail={
+              isPremium
+                ? "URIs, dimensions, timestamps, and primary-photo flags."
+                : "Basic export includes the number of photos, not photo metadata or file references."
+            }
             value={String(summary?.photos ?? 0)}
           />
         </View>
@@ -240,7 +244,7 @@ export default function ExportCollectionDataScreen() {
       </Text>
 
       <PrimaryButton
-        label="Export Data"
+        label={isPremium ? "Export Enhanced Data" : "Export Basic Data"}
         onPress={handleExport}
         loading={exportMutation.isPending}
         disabled={exportMutation.isPending || summaryQuery.isLoading || isEmpty}

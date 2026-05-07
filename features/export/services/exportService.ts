@@ -1,6 +1,7 @@
 import { Directory, File, Paths } from "expo-file-system";
 
 import { getDatabase } from "@/services/database/sqlite";
+import { getEntitlementState } from "@/services/entitlementState";
 import type {
   AppUser,
   CareLog,
@@ -27,18 +28,23 @@ interface ExportResult {
   fileUri: string;
   summary: ExportSummary;
   shared: boolean;
+  mode: ExportMode;
 }
 
+type ExportMode = "basic" | "premium";
+
 interface ExportPayload {
-  exportVersion: number;
+  exportVersion: 2;
+  exportMode: ExportMode;
   exportedAt: string;
   format: "json";
   app: {
     name: string;
   };
   includes: {
-    photos: "metadata-and-uris";
+    photos: "count-only" | "metadata-and-uris";
     authenticationData: "excluded";
+    premiumSections: boolean;
   };
   preferences: UserPreferences | null;
   plants: Plant[];
@@ -380,6 +386,7 @@ export async function getExportCollectionSummary(
 
 async function buildExportPayload(
   user: AppUser,
+  mode: ExportMode,
 ): Promise<{ payload: ExportPayload; summary: ExportSummary }> {
   const database = await getDatabase();
   const [
@@ -433,28 +440,40 @@ async function buildExportPayload(
     ),
   ]);
 
+  const premium = mode === "premium";
+  const careLogs = careLogRows.map(mapCareLog).map((log) =>
+    premium
+      ? log
+      : {
+          ...log,
+          tags: null,
+        },
+  );
+
   return {
     summary,
     payload: {
-      exportVersion: 1,
+      exportVersion: 2,
+      exportMode: mode,
       exportedAt: new Date().toISOString(),
       format: "json",
       app: {
         name: "The Conservatory",
       },
       includes: {
-        photos: "metadata-and-uris",
+        photos: premium ? "metadata-and-uris" : "count-only",
         authenticationData: "excluded",
+        premiumSections: premium,
       },
       preferences: preferencesRow ? mapPreferences(preferencesRow) : null,
       plants: plantRows.map(mapPlant),
-      careLogs: careLogRows.map(mapCareLog),
-      photos: photoRows.map(mapPhoto),
+      careLogs,
+      photos: premium ? photoRows.map(mapPhoto) : [],
       reminders: reminderRows.map(mapReminder),
       memorialEntries: graveyardRows.map(mapGraveyard),
-      statusSnapshots: statusSnapshotRows,
-      specimenTags: specimenTagRows,
-      archiveCurationOverrides: archiveOverrideRows,
+      statusSnapshots: premium ? statusSnapshotRows : [],
+      specimenTags: premium ? specimenTagRows : [],
+      archiveCurationOverrides: premium ? archiveOverrideRows : [],
     },
   };
 }
@@ -480,8 +499,14 @@ export async function shareExportFile(fileUri: string) {
 
 export async function exportCollectionData(
   user: AppUser,
+  options: { mode?: ExportMode } = {},
 ): Promise<ExportResult> {
-  const { payload, summary } = await buildExportPayload(user);
+  const mode = options.mode ?? (getEntitlementState() ? "premium" : "basic");
+  if (mode === "premium" && !getEntitlementState()) {
+    throw new Error("Premium is required for enhanced collection export.");
+  }
+
+  const { payload, summary } = await buildExportPayload(user, mode);
   const totalRecords =
     summary.plants +
     summary.careLogs +
@@ -506,7 +531,8 @@ export async function exportCollectionData(
     fileUri: exportFile.uri,
     summary,
     shared: await shareExportFile(exportFile.uri),
+    mode,
   };
 }
 
-export type { ExportPayload, ExportResult, ExportSummary };
+export type { ExportMode, ExportPayload, ExportResult, ExportSummary };

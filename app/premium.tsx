@@ -31,7 +31,18 @@ const PREMIUM_FEATURES = [
 export default function PremiumScreen() {
   const { colors, spacing } = useTheme();
   const router = useRouter();
-  const { isPremium, isLoading, isRestoring, error, offerings, purchase, restore, refreshOfferings } =
+  const {
+    isPremium,
+    isLoading,
+    isRestoring,
+    error,
+    offerings,
+    lastVerifiedAt,
+    entitlementUnavailable,
+    purchase,
+    restore,
+    refreshOfferings,
+  } =
     useSubscription();
 
   const [selectedPackage, setSelectedPackage] = useState<BillingPackage | null>(null);
@@ -75,8 +86,10 @@ export default function PremiumScreen() {
 
   async function handleRestore() {
     trackMonetizationEvent('restore_started');
-    await restore();
-    trackMonetizationEvent('restore_completed');
+    const result = await restore();
+    if (result.success) {
+      trackMonetizationEvent('restore_completed');
+    }
   }
 
   const packages = offerings?.packages ?? [];
@@ -108,7 +121,7 @@ export default function PremiumScreen() {
           </Text>
           <Text style={[styles.heroTitle, { color: colors.primary }]}>Premium</Text>
           <Text style={[styles.heroSubtitle, { color: colors.onSurface }]}>
-            Deepen your collection's story.
+            Deepen your collection&apos;s story.
           </Text>
         </View>
 
@@ -221,7 +234,7 @@ export default function PremiumScreen() {
               Plans unavailable
             </Text>
             <Text style={[styles.offeringsEmptyBody, { color: colors.onSurface }]}>
-              We couldn't load subscription options right now. Check your connection and try again.
+              We couldn&apos;t load subscription options right now. Check your connection and try again.
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -236,6 +249,15 @@ export default function PremiumScreen() {
         {/* CTA */}
         {error ? (
           <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+        ) : null}
+
+        {entitlementUnavailable ? (
+          <Text style={[styles.statusText, { color: colors.onSurfaceVariant }]}>
+            Subscription status is temporarily unavailable.
+            {lastVerifiedAt
+              ? ` Last verified ${new Date(lastVerifiedAt).toLocaleDateString()}.`
+              : ' Try again when your connection is steady.'}
+          </Text>
         ) : null}
 
         <Pressable
@@ -262,13 +284,19 @@ export default function PremiumScreen() {
         </Pressable>
 
         {/* Legal */}
-        {selectedPackage?.introductoryPrice ? (
-          <Text style={[styles.trialDisclosure, { color: colors.onSurfaceVariant }]}>
-            {selectedPackage.introductoryPrice} free, then {selectedPackage.priceString}
-            {selectedPackage.packageType === 'annual' ? '/year' : '/month'}. Cancel anytime in{' '}
-            {Platform.OS === 'ios' ? 'App Store settings' : 'Google Play settings'}.
-          </Text>
-        ) : null}
+        <Text style={[styles.trialDisclosure, { color: colors.onSurfaceVariant }]}>
+          {selectedPackage?.introductoryPrice
+            ? `${selectedPackage.introductoryPrice} free, then `
+            : ''}
+          {selectedPackage
+            ? `${selectedPackage.priceString}${
+                selectedPackage.packageType === 'annual' ? '/year' : '/month'
+              }`
+            : 'Subscriptions'}
+          {' '}renew automatically until cancelled. Payment is charged to your{' '}
+          {Platform.OS === 'ios' ? 'App Store' : 'Google Play'} account. Cancel anytime in{' '}
+          {Platform.OS === 'ios' ? 'App Store settings' : 'Google Play settings'}.
+        </Text>
 
         {/* Restore + secondary links */}
         <View style={styles.footer}>
@@ -328,6 +356,7 @@ const styles = StyleSheet.create({
   planPerMonth: { fontFamily: 'Manrope_500Medium', fontSize: 13, lineHeight: 18 },
   planTrial: { fontFamily: 'Manrope_600SemiBold', fontSize: 13, lineHeight: 18 },
   errorText: { fontFamily: 'Manrope_500Medium', fontSize: 14, textAlign: 'center' },
+  statusText: { fontFamily: 'Manrope_500Medium', fontSize: 13, lineHeight: 19, textAlign: 'center' },
   ctaButton: { height: 58, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   ctaLabel: { fontFamily: 'Manrope_700Bold', fontSize: 16, letterSpacing: 0.6 },
   trialDisclosure: { fontFamily: 'Manrope_500Medium', fontSize: 12, lineHeight: 18, textAlign: 'center' },

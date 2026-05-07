@@ -11,7 +11,12 @@
       "Bash(Select-String -Pattern \"Test Suites:|Tests:|FAIL |PASS \" --LineBuffered)",
       "Bash(Get-Content \"C:\\\\Users\\\\ghyor\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ghyor-OneDrive-Desktop-Projects-the-conservatory\\\\cacc4f70-a567-45ab-9f9d-dcf16f184b15\\\\tasks\\\\bv0k7q4ps.output\")",
       "Bash(Select-String -Pattern \"Test Suites:|Tests:|FAIL |Suites\")",
-      "Bash(Select-Object -Last 10)"
+      "Bash(Select-Object -Last 10)",
+      "PowerShell(cd \"c:\\\\Users\\\\ghyor\\\\OneDrive\\\\Desktop\\\\Projects\\\\the-conservatory\"; Get-ChildItem -Recurse -Directory | Select-Object -First 50 | ForEach-Object { $_.FullName })",
+      "Bash(Find c:\\\\Users\\\\ghyor\\\\OneDrive\\\\Desktop\\\\Projects\\\\the-conservatory\\\\services\\\\database -type f -name \"*.ts\")",
+      "Bash(Find c:UsersghyorOneDriveDesktopProjectsthe-conservatoryconfig *)",
+      "Bash(npx tsc *)",
+      "Bash(git push *)"
     ]
   }
 }

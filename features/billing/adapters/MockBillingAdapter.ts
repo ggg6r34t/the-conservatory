@@ -60,6 +60,14 @@ export class MockBillingAdapter implements BillingAdapter {
     return { success: true, tier: this.tier };
   }
 
+  setSubscriptionStateListener(
+    _listener: (
+      state: Omit<SubscriptionState, 'isLoading' | 'isRestoring' | 'error'>,
+    ) => void,
+  ): () => void {
+    return () => {};
+  }
+
   async logOut(): Promise<void> {
     this.tier = 'free';
   }

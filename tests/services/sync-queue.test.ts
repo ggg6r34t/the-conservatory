@@ -89,6 +89,24 @@ class InMemorySyncQueueStorage implements SyncQueueStorage {
     );
   }
 
+  async markDeferred(
+    id: string,
+    reason: string,
+    updatedAt: string,
+  ) {
+    this.items = this.items.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            status: "pending",
+            lastError: reason,
+            nextRetryAt: null,
+            updatedAt,
+          }
+        : item,
+    );
+  }
+
   async markFailed(
     id: string,
     errorMessage: string,
@@ -261,6 +279,39 @@ describe("sync queue replay", () => {
     expect(
       storage.getAll().filter((item) => item.status === "completed").length,
     ).toBe(1);
+  });
+
+  it("leaves deferred premium-only photo backup retryable without counting it as failed", async () => {
+    const storage = new InMemorySyncQueueStorage();
+    const service = createSyncQueueService(storage);
+
+    await service.enqueueSyncOperation({
+      entity: "photos",
+      entityId: "photo-1",
+      operation: "insert",
+      payload: { userId: "user-1", plantId: "plant-1" },
+      nowIso: "2026-03-21T10:00:00.000Z",
+    });
+
+    const report = await service.syncPendingChanges({
+      nowIso: "2026-03-21T10:05:00.000Z",
+      processOperation: async () => ({
+        status: "deferred" as const,
+        reason: "Premium photo backup is deferred until subscription is active.",
+      }),
+    });
+
+    expect(report.processed).toBe(1);
+    expect(report.successful).toBe(0);
+    expect(report.failed).toBe(0);
+    expect(report.deferred).toBe(1);
+    expect(report.remaining).toBe(1);
+
+    const item = storage.findByEntity("photos");
+    expect(item?.status).toBe("pending");
+    expect(item?.attemptCount).toBe(0);
+    expect(item?.lastError).toMatch(/premium photo backup/i);
+    expect(item?.nextRetryAt).toBeNull();
   });
 
   it("reclaims stale processing items and replays them", async () => {

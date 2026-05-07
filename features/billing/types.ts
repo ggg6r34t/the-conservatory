@@ -8,6 +8,8 @@ export interface SubscriptionState {
   expiresAt: string | null;
   period: SubscriptionPeriod | null;
   error: string | null;
+  lastVerifiedAt?: string | null;
+  entitlementUnavailable?: boolean;
 }
 
 export interface BillingPackage {
@@ -40,6 +42,11 @@ export interface BillingAdapter {
   getOfferings(): Promise<BillingOffering | null>;
   purchasePackage(packageIdentifier: string): Promise<PurchaseResult>;
   restorePurchases(): Promise<PurchaseResult>;
+  setSubscriptionStateListener?(
+    listener: (
+      state: Omit<SubscriptionState, 'isLoading' | 'isRestoring' | 'error'>,
+    ) => void,
+  ): () => void;
   logOut(): Promise<void>;
 }
 

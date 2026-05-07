@@ -37,6 +37,11 @@ export interface SyncQueueStorage {
   ): Promise<number>;
   markProcessing(id: string, updatedAt: string): Promise<void>;
   markCompleted(id: string, updatedAt: string): Promise<void>;
+  markDeferred(
+    id: string,
+    reason: string,
+    updatedAt: string,
+  ): Promise<void>;
   markFailed(
     id: string,
     errorMessage: string,
@@ -49,6 +54,13 @@ export interface SyncQueueStorage {
     updatedAt: string,
   ): Promise<void>;
 }
+
+export type SyncProcessResult =
+  | void
+  | {
+      status: "deferred";
+      reason: string;
+    };
 
 const PROCESSING_STALE_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -191,6 +203,21 @@ class SQLiteSyncQueueStorage implements SyncQueueStorage {
     );
   }
 
+  async markDeferred(id: string, reason: string, updatedAt: string) {
+    const database = await getDatabase();
+    await database.runAsync(
+      `UPDATE sync_queue
+       SET status = 'pending',
+           last_error = ?,
+           next_retry_at = NULL,
+           updated_at = ?
+       WHERE id = ?;`,
+      reason,
+      updatedAt,
+      id,
+    );
+  }
+
   async markFailed(
     id: string,
     errorMessage: string,
@@ -265,7 +292,7 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
     },
 
     async syncPendingChanges(options?: {
-      processOperation?: (item: SyncQueueItem) => Promise<void>;
+      processOperation?: (item: SyncQueueItem) => Promise<SyncProcessResult>;
       limit?: number;
       nowIso?: string;
     }) {
@@ -299,15 +326,25 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
 
       let successful = 0;
       let failed = 0;
+      let deferred = 0;
 
       for (const item of queue) {
         const startedAt = new Date().toISOString();
         await storage.markProcessing(item.id, startedAt);
 
         try {
-          await processOperation(item);
-          await storage.markCompleted(item.id, new Date().toISOString());
-          successful += 1;
+          const result = await processOperation(item);
+          if (result?.status === "deferred") {
+            await storage.markDeferred(
+              item.id,
+              result.reason,
+              new Date().toISOString(),
+            );
+            deferred += 1;
+          } else {
+            await storage.markCompleted(item.id, new Date().toISOString());
+            successful += 1;
+          }
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "Unknown sync failure.";
@@ -342,6 +379,7 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
         processed: queue.length,
         successful,
         failed,
+        deferred,
         remaining,
       };
     },

@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import {
   exportCollectionData,
   getExportCollectionSummary,
@@ -9,6 +10,7 @@ import {
 
 export function useExportCollectionData() {
   const { user } = useAuth();
+  const { isPremium } = useSubscription();
 
   const summaryQuery = useQuery({
     queryKey: ["export-collection-summary", user?.id],
@@ -22,7 +24,7 @@ export function useExportCollectionData() {
         throw new Error("You need to be signed in to export your collection.");
       }
 
-      return exportCollectionData(user);
+      return exportCollectionData(user, { mode: isPremium ? "premium" : "basic" });
     },
   });
 

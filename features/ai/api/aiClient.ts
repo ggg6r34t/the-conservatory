@@ -1,5 +1,7 @@
 import { env } from "@/config/env";
 import { supabase } from "@/config/supabase";
+import { FEATURE_REQUIRES_PREMIUM } from "@/features/billing/constants";
+import type { GatedFeature } from "@/features/billing/types";
 import type {
   CurateArchiveGalleryRequest,
   CurateArchiveGalleryResponse,
@@ -19,6 +21,18 @@ import type {
   RefineCareLogResponse,
 } from "@/features/ai/types/ai";
 import { logger } from "@/utils/logger";
+import { getEntitlementState } from "@/services/entitlementState";
+
+const AI_FUNCTION_FEATURES: Record<string, GatedFeature> = {
+  "identify-plant": "ai_species_identification",
+  "generate-dashboard-insight": "ai_dashboard_editorial",
+  "generate-health-insight": "ai_health_insight",
+  "generate-journal-summary": "ai_journal_narrative",
+  "optimize-reminders": "smart_reminder_optimization",
+  "refine-care-log": "ai_health_insight",
+  "curate-archive-gallery": "ai_archive_curation",
+  "generate-streak-nudge": "ai_health_insight",
+};
 
 async function invokeFunction<TRequest, TResponse>(
   name: string,
@@ -28,9 +42,24 @@ async function invokeFunction<TRequest, TResponse>(
     return null;
   }
 
+  const feature = AI_FUNCTION_FEATURES[name];
+  const isPremium = getEntitlementState();
+  if (feature && FEATURE_REQUIRES_PREMIUM[feature] && !isPremium) {
+    logger.warn("ai.function.blocked_by_entitlement", { name, feature });
+    return null;
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke(name, {
-      body: payload as Record<string, unknown>,
+      body: {
+        ...(payload as Record<string, unknown>),
+        billingContext: feature
+          ? {
+              feature,
+              isPremium,
+            }
+          : undefined,
+      },
     });
 
     if (error) {

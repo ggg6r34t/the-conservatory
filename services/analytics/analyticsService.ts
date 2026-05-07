@@ -48,14 +48,19 @@ export function trackMonetizationEvent(
     | 'purchase_started'
     | 'purchase_completed'
     | 'purchase_cancelled'
+    | 'purchase_failed'
     | 'restore_started'
     | 'restore_completed'
+    | 'restore_failed'
     | 'upgrade_prompt_viewed'
     | 'upgrade_prompt_dismissed'
     | 'quota_reached'
     | 'ai_feature_used'
     | 'billing_initialization_failed'
-    | 'offerings_load_failed',
+    | 'offerings_load_failed'
+    | 'entitlement_refresh'
+    | 'sync_photo_deferred'
+    | 'premium_deferred_photo_retry',
   properties?: Record<string, string | number | boolean | null>,
 ): void {
   trackEvent(name, properties);
