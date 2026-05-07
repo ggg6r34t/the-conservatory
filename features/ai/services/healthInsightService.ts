@@ -39,9 +39,20 @@ function isFallbackEquivalent(
   );
 }
 
+export function buildLocalHealthInsight(
+  data: PlantWithRelations,
+): Omit<HealthInsight, "source"> | null {
+  const analysis = buildHealthSignalAnalysis(data);
+  return enforceHealthInsightSafety({
+    insight: analysis.localInsight,
+    analysis,
+  });
+}
+
 export async function getHealthInsight(input: {
   plantId: string;
   data: PlantWithRelations;
+  cloudAllowed: boolean;
 }) {
   const revision = buildHealthInsightRevision(input.data);
   const cacheKey = buildHealthInsightCacheKey(input.plantId, revision);
@@ -58,6 +69,10 @@ export async function getHealthInsight(input: {
 
   if (!fallback) {
     return null;
+  }
+
+  if (!input.cloudAllowed) {
+    return withHealthInsightSource(fallback, "local");
   }
 
   const cloud = await requestHealthInsight({
