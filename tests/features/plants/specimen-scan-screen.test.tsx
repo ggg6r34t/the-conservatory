@@ -50,6 +50,22 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({ user: { id: "user-1" } }),
 }));
 
+jest.mock("@/features/billing/hooks/useSubscription", () => ({
+  useSubscription: () => ({
+    isPremium: true,
+    tier: 'premium',
+    isLoading: false,
+    isRestoring: false,
+    expiresAt: null,
+    period: 'monthly',
+    error: null,
+    offerings: null,
+    purchase: jest.fn(),
+    restore: jest.fn(),
+    refreshOfferings: jest.fn(),
+  }),
+}));
+
 jest.mock("@/features/plants/services/specimenTagsService", () => ({
   resolveSpecimenTagScan: (...args: unknown[]) =>
     mockResolveSpecimenTagScan(...args),

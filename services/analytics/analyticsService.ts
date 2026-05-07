@@ -5,7 +5,7 @@ import { env } from '@/config/env';
 
 type AnalyticsMode = 'disabled' | 'debug-log' | 'production';
 
-function getAnalyticsMode(): AnalyticsMode {
+export function getAnalyticsMode(): AnalyticsMode {
   if (!env.posthogApiKey) return 'disabled';
   if (__DEV__) return 'debug-log';
   return 'production';

@@ -4,17 +4,13 @@ describe("analyticsService", () => {
     jest.clearAllMocks();
   });
 
-  it("does not emit events when analytics is disabled", () => {
-    const mockInfo = jest.fn();
+  it("does not emit events when posthogApiKey is absent", () => {
+    const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
 
     jest.doMock("@/config/env", () => ({
       env: {
-        enableAnalytics: false,
-      },
-    }));
-    jest.doMock("@/utils/logger", () => ({
-      logger: {
-        info: (...args: unknown[]) => mockInfo(...args),
+        posthogApiKey: null,
+        posthogHost: 'https://app.posthog.com',
       },
     }));
 
@@ -23,20 +19,18 @@ describe("analyticsService", () => {
     service.trackEvent("onboarding_started", { source: "welcome" });
 
     expect(service.getAnalyticsMode()).toBe("disabled");
-    expect(mockInfo).not.toHaveBeenCalled();
+    expect(mockConsoleLog).not.toHaveBeenCalled();
+
+    mockConsoleLog.mockRestore();
   });
 
-  it("logs events in explicit debug-log mode when enabled", () => {
-    const mockInfo = jest.fn();
+  it("logs events in debug-log mode when posthogApiKey is present in dev", () => {
+    const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
 
     jest.doMock("@/config/env", () => ({
       env: {
-        enableAnalytics: true,
-      },
-    }));
-    jest.doMock("@/utils/logger", () => ({
-      logger: {
-        info: (...args: unknown[]) => mockInfo(...args),
+        posthogApiKey: 'phc_test_key',
+        posthogHost: 'https://app.posthog.com',
       },
     }));
 
@@ -46,12 +40,12 @@ describe("analyticsService", () => {
 
     expect(service.getAnalyticsMode()).toBe("debug-log");
     expect(service.getAnalyticsStatus().productionReady).toBe(false);
-    expect(mockInfo).toHaveBeenCalledWith(
-      "analytics.debug_event",
-      expect.objectContaining({
-        name: "onboarding_started",
-        mode: "debug-log",
-      }),
+    expect(mockConsoleLog).toHaveBeenCalledWith(
+      "[Analytics]",
+      "onboarding_started",
+      expect.objectContaining({ source: "welcome" }),
     );
+
+    mockConsoleLog.mockRestore();
   });
 });
