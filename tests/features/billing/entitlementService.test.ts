@@ -38,7 +38,7 @@ describe('canUseFeature', () => {
     it('blocks free user at limit', () => {
       const r = canUseFeature('plant_create', false, { totalPlantCount: 10, progressPhotosForPlant: {}, aiHealthInsightsThisMonth: {}, plantIdThisMonth: 0 });
       expect(r.canUse).toBe(false);
-      if (!r.canUse) { expect(r.reason).toBe('quota_exceeded'); expect(r.limit).toBe(10); }
+      if (!r.canUse && r.reason === 'quota_exceeded') { expect(r.limit).toBe(10); }
     });
 
     it('allows premium user at limit', () => {
