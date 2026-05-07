@@ -53,7 +53,9 @@ export function trackMonetizationEvent(
     | 'upgrade_prompt_viewed'
     | 'upgrade_prompt_dismissed'
     | 'quota_reached'
-    | 'ai_feature_used',
+    | 'ai_feature_used'
+    | 'billing_initialization_failed'
+    | 'offerings_load_failed',
   properties?: Record<string, string | number | boolean | null>,
 ): void {
   trackEvent(name, properties);

@@ -1,5 +1,8 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { insertSyncOutboxOperationInTransaction } from '@/services/database/syncOutbox';
+import { notifySyncQueueChanged } from '@/services/database/syncSignals';
+
 export type TrackableFeature =
   | 'ai_health_insight'
   | 'ai_species_identification';
@@ -29,19 +32,30 @@ export async function incrementUsage(
   const period = options?.periodOverride ?? currentPeriod();
   const id = rowId(userId, feature, period, options?.entityId);
   const now = new Date().toISOString();
+  let newCount = 1;
 
-  await db.runAsync(
-    `INSERT INTO feature_usage (id, user_id, feature, period, count, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 1, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET count = count + 1, updated_at = ?`,
-    [id, userId, feature, period, now, now, now],
-  );
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `INSERT INTO feature_usage (id, user_id, feature, period, count, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 1, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET count = count + 1, updated_at = ?`,
+      [id, userId, feature, period, now, now, now],
+    );
 
-  const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT count FROM feature_usage WHERE id = ?`,
-    [id],
-  );
-  return row?.count ?? 1;
+    const row = await db.getFirstAsync<{ count: number }>(
+      `SELECT count FROM feature_usage WHERE id = ?`,
+      [id],
+    );
+    newCount = row?.count ?? 1;
+
+    await insertSyncOutboxOperationInTransaction(db, {
+      operation: { entity: 'feature_usage', entityId: id, operation: 'upsert' },
+      nowIso: now,
+    });
+  });
+
+  notifySyncQueueChanged();
+  return newCount;
 }
 
 export async function getUsageCount(

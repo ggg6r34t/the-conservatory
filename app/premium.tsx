@@ -54,6 +54,12 @@ export default function PremiumScreen() {
     }
   }, [isPremium, isLoading, router]);
 
+  useEffect(() => {
+    if (!isLoading && !isPremium && offerings !== null && packages.length === 0) {
+      trackMonetizationEvent('offerings_load_failed');
+    }
+  }, [isLoading, isPremium, offerings, packages.length]);
+
   async function handlePurchase() {
     if (!selectedPackage) return;
     setPurchasing(true);
@@ -131,6 +137,7 @@ export default function PremiumScreen() {
             <Text style={[styles.plansLabel, { color: colors.onSurfaceVariant }]}>
               CHOOSE YOUR PLAN
             </Text>
+
             {annualPkg ? (
               <Pressable
                 accessibilityRole="radio"
@@ -208,7 +215,23 @@ export default function PremiumScreen() {
           </View>
         ) : isLoading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
-        ) : null}
+        ) : (
+          <View style={[styles.offeringsEmptyCard, { backgroundColor: colors.surfaceContainerLowest }]}>
+            <Text style={[styles.offeringsEmptyTitle, { color: colors.primary }]}>
+              Plans unavailable
+            </Text>
+            <Text style={[styles.offeringsEmptyBody, { color: colors.onSurface }]}>
+              We couldn't load subscription options right now. Check your connection and try again.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void refreshOfferings()}
+              style={[styles.retryButton, { backgroundColor: colors.surfaceContainerHigh }]}
+            >
+              <Text style={[styles.retryLabel, { color: colors.primary }]}>Try Again</Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* CTA */}
         {error ? (
@@ -311,4 +334,9 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   footerLink: { fontFamily: 'Manrope_500Medium', fontSize: 13 },
   footerDot: { fontSize: 13 },
+  offeringsEmptyCard: { borderRadius: 20, padding: 20, gap: 12 },
+  offeringsEmptyTitle: { fontFamily: 'NotoSerif_700Bold', fontSize: 20, lineHeight: 26 },
+  offeringsEmptyBody: { fontFamily: 'Manrope_500Medium', fontSize: 14, lineHeight: 21 },
+  retryButton: { alignSelf: 'flex-start', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999 },
+  retryLabel: { fontFamily: 'Manrope_700Bold', fontSize: 13, letterSpacing: 0.6 },
 });

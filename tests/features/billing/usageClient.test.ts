@@ -1,6 +1,14 @@
 import { incrementUsage, getUsageCount } from '@/features/billing/services/usageClient';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+jest.mock('@/services/database/syncOutbox', () => ({
+  insertSyncOutboxOperationInTransaction: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/services/database/syncSignals', () => ({
+  notifySyncQueueChanged: jest.fn(),
+}));
+
 /**
  * Lightweight in-memory mock for SQLiteDatabase that handles the
  * INSERT ... ON CONFLICT upsert and SELECT queries used by usageClient.
@@ -24,7 +32,11 @@ function createMockDb(): SQLiteDatabase {
     return store[id] ? { count: store[id]!.count } : null;
   });
 
-  return { runAsync, getFirstAsync } as unknown as SQLiteDatabase;
+  const withTransactionAsync = jest.fn().mockImplementation(async (fn: () => Promise<void>) => {
+    await fn();
+  });
+
+  return { runAsync, getFirstAsync, withTransactionAsync } as unknown as SQLiteDatabase;
 }
 
 describe('usageClient', () => {

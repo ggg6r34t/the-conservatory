@@ -36,6 +36,20 @@ function canTrackLocalSync(entity: string): entity is SyncableEntity {
   );
 }
 
+// feature_usage is synced but not tracked via pending/synced_at (no those columns)
+async function loadFeatureUsageRecord(entityId: string) {
+  const database = await getDatabase();
+  return database.getFirstAsync<{
+    id: string;
+    user_id: string;
+    feature: string;
+    period: string;
+    count: number;
+    created_at: string;
+    updated_at: string;
+  }>("SELECT * FROM feature_usage WHERE id = ? LIMIT 1;", entityId);
+}
+
 function getLocalSyncKeyColumn(entity: SyncableEntity) {
   return entity === "user_preferences" ? "user_id" : "id";
 }
@@ -598,6 +612,16 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
     if (error) {
       throw new Error(error.message);
     }
+    return;
+  }
+
+  if (item.entity === "feature_usage") {
+    const row = await loadFeatureUsageRecord(item.entityId);
+    if (!row) return;
+    const { error } = await supabase
+      .from("feature_usage")
+      .upsert(row, { onConflict: "id" });
+    if (error) throw new Error(error.message);
     return;
   }
 

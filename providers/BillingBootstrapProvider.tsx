@@ -9,7 +9,7 @@ import {
   writeEntitlementCache,
 } from '@/features/billing/services/entitlementCache';
 import { useBillingStore } from '@/features/billing/stores/useBillingStore';
-import { initializeAnalytics } from '@/services/analytics/analyticsService';
+import { initializeAnalytics, resetAnalyticsUser, trackMonetizationEvent } from '@/services/analytics/analyticsService';
 import { setEntitlementState } from '@/services/entitlementState';
 
 export function BillingBootstrapProvider({ children }: PropsWithChildren) {
@@ -21,6 +21,7 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
     if (!isAuthenticated || !user?.id) {
       setSubscriptionState({ tier: 'free', isLoading: false, expiresAt: null, period: null });
       setEntitlementState(false);
+      resetAnalyticsUser();
       void clearEntitlementCache();
       return;
     }
@@ -64,9 +65,12 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
           period: state.period,
           lastVerifiedAt: new Date().toISOString(),
         });
-      } catch {
+      } catch (err) {
         if (cancelled) return;
         setSubscriptionState({ isLoading: false });
+        trackMonetizationEvent('billing_initialization_failed', {
+          reason: err instanceof Error ? err.message : 'unknown',
+        });
       }
     }
 
