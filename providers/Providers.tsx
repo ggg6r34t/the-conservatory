@@ -17,6 +17,7 @@ import { BotanicalThemeProvider } from "@/components/design-system/Theme";
 import { AlertProvider } from "@/providers/AlertProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { SnackbarProvider } from "@/providers/SnackbarProvider";
+import { BillingBootstrapProvider } from "@/providers/BillingBootstrapProvider";
 import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
 import { initializeDatabase } from "@/services/database/sqlite";
 
@@ -47,7 +48,9 @@ export function Providers({ children }: PropsWithChildren) {
           <AlertProvider>
             <SnackbarProvider>
               <QueryProvider>
-                <SyncBootstrapProvider>{children}</SyncBootstrapProvider>
+                <SyncBootstrapProvider>
+                  <BillingBootstrapProvider>{children}</BillingBootstrapProvider>
+                </SyncBootstrapProvider>
               </QueryProvider>
             </SnackbarProvider>
           </AlertProvider>
