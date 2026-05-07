@@ -44,6 +44,14 @@ const sections: LegalSection[] = [
       'To the extent permitted by law, the service is provided on an "as available" and "as is" basis. We do not guarantee uninterrupted operation, complete accuracy, or fitness for every personal, commercial, or horticultural purpose, and our liability is limited to the maximum extent permitted by applicable law.',
     ],
   },
+  {
+    eyebrow: "SUBSCRIPTIONS",
+    title: "Premium membership and auto-renewal",
+    paragraphs: [
+      "The Conservatory Premium is available as a monthly or annual auto-renewing subscription. Payment is charged to your App Store or Google Play account at confirmation of purchase. Subscriptions automatically renew unless cancelled at least 24 hours before the end of the current period. You can manage and cancel your subscription in your platform account settings. Free trials, where offered, automatically convert to a paid subscription unless cancelled before the trial ends.",
+      "Your care logs, plant records, graveyard entries, and memorial notes are yours and are not affected by your subscription status.",
+    ],
+  },
 ];
 
 export default function TermsScreen() {
