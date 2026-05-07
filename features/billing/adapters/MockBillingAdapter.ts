@@ -1,11 +1,30 @@
 import type {
   BillingAdapter,
   BillingOffering,
+  BillingPackage,
   PurchaseResult,
   SubscriptionState,
 } from '../types';
 
 export class MockBillingAdapter implements BillingAdapter {
+  private static readonly ANNUAL_PACKAGE: BillingPackage = {
+    identifier: '$rc_annual',
+    packageType: 'annual',
+    priceString: '$44.99',
+    pricePerMonthString: '$3.75',
+    productIdentifier: 'conservatory_premium_annual',
+    introductoryPrice: '7 days free',
+  };
+
+  private static readonly MONTHLY_PACKAGE: BillingPackage = {
+    identifier: '$rc_monthly',
+    packageType: 'monthly',
+    priceString: '$5.99',
+    pricePerMonthString: '$5.99',
+    productIdentifier: 'conservatory_premium_monthly',
+    introductoryPrice: null,
+  };
+
   private tier: 'free' | 'premium';
 
   constructor(initialTier: 'free' | 'premium' = 'free') {
@@ -25,40 +44,9 @@ export class MockBillingAdapter implements BillingAdapter {
   async getOfferings(): Promise<BillingOffering | null> {
     return {
       identifier: 'default',
-      packages: [
-        {
-          identifier: '$rc_annual',
-          packageType: 'annual',
-          priceString: '$44.99',
-          pricePerMonthString: '$3.75',
-          productIdentifier: 'conservatory_premium_annual',
-          introductoryPrice: '7 days free',
-        },
-        {
-          identifier: '$rc_monthly',
-          packageType: 'monthly',
-          priceString: '$5.99',
-          pricePerMonthString: '$5.99',
-          productIdentifier: 'conservatory_premium_monthly',
-          introductoryPrice: null,
-        },
-      ],
-      annual: {
-        identifier: '$rc_annual',
-        packageType: 'annual',
-        priceString: '$44.99',
-        pricePerMonthString: '$3.75',
-        productIdentifier: 'conservatory_premium_annual',
-        introductoryPrice: '7 days free',
-      },
-      monthly: {
-        identifier: '$rc_monthly',
-        packageType: 'monthly',
-        priceString: '$5.99',
-        pricePerMonthString: '$5.99',
-        productIdentifier: 'conservatory_premium_monthly',
-        introductoryPrice: null,
-      },
+      packages: [MockBillingAdapter.ANNUAL_PACKAGE, MockBillingAdapter.MONTHLY_PACKAGE],
+      annual: MockBillingAdapter.ANNUAL_PACKAGE,
+      monthly: MockBillingAdapter.MONTHLY_PACKAGE,
       lifetime: null,
     };
   }
