@@ -453,6 +453,11 @@ export default function ProfileScreen() {
               label="Privacy Policy"
               onPress={() => router.push("/privacy")}
             />
+            <ProfileRow
+              icon="puzzle-outline"
+              label="Third-Party Licenses"
+              onPress={() => router.push("/license")}
+            />
           </View>
         </View>
 

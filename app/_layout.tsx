@@ -187,6 +187,7 @@ function RootNavigator({
       <Stack.Screen name="privacy-security" options={drillInScreenOptions} />
       <Stack.Screen name="terms" options={drillInScreenOptions} />
       <Stack.Screen name="privacy" options={drillInScreenOptions} />
+      <Stack.Screen name="license" options={drillInScreenOptions} />
       <Stack.Screen name="privavcy" options={drillInScreenOptions} />
       <Stack.Screen name="data-backup" options={drillInScreenOptions} />
       <Stack.Screen name="interface-theme" options={drillInScreenOptions} />

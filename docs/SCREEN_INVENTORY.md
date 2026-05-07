@@ -233,8 +233,9 @@ If reviewing the product surface end to end, this order is the most practical:
 22. Care Log Modal
 23. Terms of Service
 24. Privacy Policy
-25. Login
-26. Sign Up
-27. Forgot Password
-28. Onboarding flow
-29. Debug screens
+25. License
+26. Login
+27. Sign Up
+28. Forgot Password
+29. Onboarding flow
+30. Debug screens
