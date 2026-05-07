@@ -49,7 +49,7 @@ export async function incrementUsage(
     newCount = row?.count ?? 1;
 
     await insertSyncOutboxOperationInTransaction(db, {
-      operation: { entity: 'feature_usage', entityId: id, operation: 'upsert' },
+      operation: { entity: 'feature_usage', entityId: id, operation: 'insert' },
       nowIso: now,
     });
   });

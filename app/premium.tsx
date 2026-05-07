@@ -55,10 +55,10 @@ export default function PremiumScreen() {
   }, [isPremium, isLoading, router]);
 
   useEffect(() => {
-    if (!isLoading && !isPremium && offerings !== null && packages.length === 0) {
+    if (!isLoading && !isPremium && offerings !== null && (offerings.packages ?? []).length === 0) {
       trackMonetizationEvent('offerings_load_failed');
     }
-  }, [isLoading, isPremium, offerings, packages.length]);
+  }, [isLoading, isPremium, offerings]);
 
   async function handlePurchase() {
     if (!selectedPackage) return;
