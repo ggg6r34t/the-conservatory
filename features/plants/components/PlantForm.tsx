@@ -19,6 +19,7 @@ import { useSpeciesSuggestion } from "@/features/ai/hooks/useSpeciesSuggestion";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import type { LightCondition, SpeciesSuggestion } from "@/features/ai/types/ai";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAddPlant } from "@/features/plants/hooks/useAddPlant";
@@ -366,6 +367,12 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
       );
       router.replace(`/plant/${result.plant.id}` as const);
     } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code === 'PLANT_LIMIT_REACHED') {
+        trackMonetizationEvent('quota_reached', { feature: 'plant_create' });
+        router.push('/premium');
+        return;
+      }
       void alert.show({
         variant: "error",
         title: "Unable to save plant",

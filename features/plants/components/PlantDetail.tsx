@@ -15,6 +15,7 @@ import { useRecordCareEvent } from "@/features/care-logs/hooks/useRecordCareEven
 import { useUpdateCareLogNote } from "@/features/care-logs/hooks/useUpdateCareLogNote";
 import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
+import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { buildGrowthTimeline } from "@/features/plants/services/growthTimelineService";
 import { derivePlantStatus } from "@/features/plants/services/plantStatusService";
 import {
@@ -277,6 +278,12 @@ export function PlantDetail({ data }: PlantDetailProps) {
       await addPlantProgressPhoto.mutateAsync(photo);
       snackbar.success("Progress photo saved successfully.");
     } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code === 'PHOTO_LIMIT_REACHED') {
+        trackMonetizationEvent('quota_reached', { feature: 'progress_photo_upload' });
+        router.push('/premium');
+        return;
+      }
       void alert.show({
         variant: "error",
         title: "Unable to add photo",
