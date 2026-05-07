@@ -10,6 +10,7 @@ import { getPlantById } from "@/features/plants/api/plantsClient";
 export function useArchiveCuration(input: {
   userId?: string;
   memorials: GraveyardPlantListItem[];
+  isPremium: boolean;
 }) {
   const plantQueries = useQueries({
     queries: input.memorials.map((memorial) => ({
@@ -46,11 +47,11 @@ export function useArchiveCuration(input: {
     .join("|");
 
   const curationQuery = useQuery({
-    queryKey: ["ai", "archive-curation", input.userId ?? "guest", revision],
+    queryKey: ["ai", "archive-curation", input.userId ?? "guest", revision, input.isPremium],
     enabled: Boolean(input.userId && revision),
     staleTime: 1000 * 60 * 30,
     queryFn: () =>
-      getArchiveCuration(items.filter((item) => item.photoUris.length >= 2)),
+      getArchiveCuration(items.filter((item) => item.photoUris.length >= 2), input.isPremium),
   });
   const overridesQuery = useQuery({
     queryKey: ["ai", "archive-curation-overrides", input.userId ?? "guest"],

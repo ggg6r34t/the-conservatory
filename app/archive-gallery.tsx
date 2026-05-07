@@ -8,6 +8,7 @@ import { useArchiveCuration } from "@/features/ai/hooks/useArchiveCuration";
 import { saveArchiveCurationOverride } from "@/features/ai/services/archiveCurationOverridesService";
 import { getInsightSourceLabel } from "@/features/ai/services/insightSourcePresentation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useSnackbar } from "@/hooks/useSnackbar";
@@ -23,12 +24,14 @@ function formatArchiveDate(value: string) {
 export default function ArchiveGalleryScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { isPremium } = useSubscription();
   const snackbar = useSnackbar();
   const graveyardQuery = useGraveyard();
   const memorials = graveyardQuery.data ?? [];
   const curationQuery = useArchiveCuration({
     userId: user?.id,
     memorials,
+    isPremium,
   });
   const [drafts, setDrafts] = useState<
     Record<string, { beforePhotoId: string | null; afterPhotoId: string | null }>

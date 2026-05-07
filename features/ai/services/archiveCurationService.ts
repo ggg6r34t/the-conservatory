@@ -69,7 +69,9 @@ export function curateArchiveLocally(items: ArchiveCurationItem[]) {
     .slice(0, 3);
 }
 
-export async function getArchiveCuration(items: ArchiveCurationItem[]) {
+export async function getArchiveCuration(items: ArchiveCurationItem[], cloudAllowed = true) {
+  if (!cloudAllowed) return [];
+
   const revision = buildRevision(items);
   if (!revision) {
     return [];
