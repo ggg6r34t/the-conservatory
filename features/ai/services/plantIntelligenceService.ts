@@ -73,19 +73,23 @@ function inferSpeciesLocally(imageUri: string): SpeciesSuggestion | null {
   );
 }
 
-export async function getSpeciesSuggestion(imageUri: string) {
-  const cacheKey = getSpeciesCacheKey(imageUri);
+export async function getSpeciesSuggestion(input: { imageUri: string; cloudAllowed: boolean }) {
+  const cacheKey = getSpeciesCacheKey(input.imageUri);
   const cached = await getCachedValue<SpeciesSuggestion>(cacheKey);
   if (cached) {
     return cached;
   }
 
-  const localSuggestion = inferSpeciesLocally(imageUri);
+  const localSuggestion = inferSpeciesLocally(input.imageUri);
   if (localSuggestion) {
     await setCachedValue(cacheKey, localSuggestion, SPECIES_CACHE_TTL_MS);
   }
 
-  const remote = await requestPlantIdentification({ imageUri });
+  if (!input.cloudAllowed) {
+    return localSuggestion;
+  }
+
+  const remote = await requestPlantIdentification({ imageUri: input.imageUri });
   const parsedRemote = parseSpeciesSuggestionResponse(
     remote as IdentifyPlantResponse | null,
   );

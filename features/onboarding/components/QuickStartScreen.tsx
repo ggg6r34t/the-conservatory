@@ -18,6 +18,7 @@ import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { SpeciesSuggestionBanner } from "@/features/ai/components/SpeciesSuggestionBanner";
 import { useSpeciesSuggestion } from "@/features/ai/hooks/useSpeciesSuggestion";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import {
   markOnboardingAction,
   markOnboardingCompletedAt,
@@ -104,7 +105,8 @@ export default function QuickStartScreen({
   const [dismissedSuggestionUri, setDismissedSuggestionUri] = useState<string | null>(
     null,
   );
-  const speciesSuggestionQuery = useSpeciesSuggestion(photoUri);
+  const { isPremium } = useSubscription();
+  const speciesSuggestionQuery = useSpeciesSuggestion({ imageUri: photoUri, isPremium });
   const visibleSuggestion =
     photoUri && dismissedSuggestionUri !== photoUri
       ? speciesSuggestionQuery.data

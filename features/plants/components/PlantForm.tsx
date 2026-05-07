@@ -18,6 +18,7 @@ import { SpeciesSuggestionBanner } from "@/features/ai/components/SpeciesSuggest
 import { useSpeciesSuggestion } from "@/features/ai/hooks/useSpeciesSuggestion";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import type { LightCondition, SpeciesSuggestion } from "@/features/ai/types/ai";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAddPlant } from "@/features/plants/hooks/useAddPlant";
@@ -182,7 +183,8 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
     photoHeight: initialValues?.photoHeight,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const speciesSuggestionQuery = useSpeciesSuggestion(values.photoUri);
+  const { isPremium } = useSubscription();
+  const speciesSuggestionQuery = useSpeciesSuggestion({ imageUri: values.photoUri, isPremium });
 
   useEffect(() => {
     if (mode !== "create") {
