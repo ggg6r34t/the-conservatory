@@ -52,8 +52,19 @@ describe('usageClient', () => {
   });
 
   it('isolates by period', async () => {
-    await incrementUsage(db, 'user-1', 'ai_health_insight', '2025-01');
-    const count = await getUsageCount(db, 'user-1', 'ai_health_insight', '2025-02');
+    await incrementUsage(db, 'user-1', 'ai_health_insight', { periodOverride: '2025-01' });
+    const count = await getUsageCount(db, 'user-1', 'ai_health_insight', { periodOverride: '2025-02' });
     expect(count).toBe(0);
+  });
+
+  it('isolates by entityId', async () => {
+    await incrementUsage(db, 'user-1', 'ai_health_insight', { entityId: 'plant-1' });
+    await incrementUsage(db, 'user-1', 'ai_health_insight', { entityId: 'plant-1' });
+    const countPlant1 = await getUsageCount(db, 'user-1', 'ai_health_insight', { entityId: 'plant-1' });
+    const countPlant2 = await getUsageCount(db, 'user-1', 'ai_health_insight', { entityId: 'plant-2' });
+    const countNoEntity = await getUsageCount(db, 'user-1', 'ai_health_insight');
+    expect(countPlant1).toBe(2);
+    expect(countPlant2).toBe(0);
+    expect(countNoEntity).toBe(0);
   });
 });

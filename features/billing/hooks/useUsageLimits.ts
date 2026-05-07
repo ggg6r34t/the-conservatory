@@ -30,7 +30,7 @@ async function buildUsageSnapshot(userId: string): Promise<UsageSnapshot> {
   // ai health insight usage this month (per plant)
   const aiHealthInsightsThisMonth: Record<string, number> = {};
   for (const plantId of plantIds) {
-    const count = await getUsageCount(db, userId, 'ai_health_insight', undefined);
+    const count = await getUsageCount(db, userId, 'ai_health_insight', { entityId: plantId });
     aiHealthInsightsThisMonth[plantId] = count;
   }
 

@@ -4,6 +4,8 @@ import { parseHealthInsightResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import { enforceHealthInsightSafety } from "@/features/ai/services/healthInsightSafetyService";
 import { buildHealthSignalAnalysis } from "@/features/ai/services/healthSignalAnalysisService";
+import { incrementUsage } from "@/features/billing/services/usageClient";
+import { getDatabase } from "@/services/database/sqlite";
 import type { HealthInsight } from "@/features/ai/types/ai";
 import type { PlantWithRelations } from "@/types/models";
 
@@ -53,6 +55,7 @@ export async function getHealthInsight(input: {
   plantId: string;
   data: PlantWithRelations;
   cloudAllowed: boolean;
+  userId?: string;
 }) {
   const revision = buildHealthInsightRevision(input.data);
   const cacheKey = buildHealthInsightCacheKey(input.plantId, revision);
@@ -129,6 +132,11 @@ export async function getHealthInsight(input: {
       ? "cloud"
       : "local",
   );
+
+  if (insight.source === "cloud" && input.userId) {
+    const db = await getDatabase();
+    await incrementUsage(db, input.userId, "ai_health_insight", { entityId: input.plantId });
+  }
 
   await setCachedValue(cacheKey, insight, HEALTH_CACHE_TTL_MS);
   return insight;

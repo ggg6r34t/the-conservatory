@@ -4,23 +4,30 @@ export type TrackableFeature =
   | 'ai_health_insight'
   | 'ai_species_identification';
 
+export interface UsageOptions {
+  entityId?: string;
+  periodOverride?: string;
+}
+
 function currentPeriod(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function rowId(userId: string, feature: string, period: string): string {
-  return `${userId}:${feature}:${period}`;
+function rowId(userId: string, feature: string, period: string, entityId?: string): string {
+  return entityId
+    ? `${userId}:${feature}:${entityId}:${period}`
+    : `${userId}:${feature}:${period}`;
 }
 
 export async function incrementUsage(
   db: SQLiteDatabase,
   userId: string,
   feature: TrackableFeature,
-  periodOverride?: string,
+  options?: UsageOptions,
 ): Promise<number> {
-  const period = periodOverride ?? currentPeriod();
-  const id = rowId(userId, feature, period);
+  const period = options?.periodOverride ?? currentPeriod();
+  const id = rowId(userId, feature, period, options?.entityId);
   const now = new Date().toISOString();
 
   await db.runAsync(
@@ -41,10 +48,10 @@ export async function getUsageCount(
   db: SQLiteDatabase,
   userId: string,
   feature: TrackableFeature,
-  periodOverride?: string,
+  options?: UsageOptions,
 ): Promise<number> {
-  const period = periodOverride ?? currentPeriod();
-  const id = rowId(userId, feature, period);
+  const period = options?.periodOverride ?? currentPeriod();
+  const id = rowId(userId, feature, period, options?.entityId);
   const row = await db.getFirstAsync<{ count: number }>(
     `SELECT count FROM feature_usage WHERE id = ?`,
     [id],

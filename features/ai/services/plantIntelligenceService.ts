@@ -6,6 +6,8 @@ import {
 } from "@/features/ai/schemas/aiMappers";
 import { parseSpeciesSuggestionResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
+import { incrementUsage } from "@/features/billing/services/usageClient";
+import { getDatabase } from "@/services/database/sqlite";
 import type {
   IdentifyPlantResponse,
   SpeciesSuggestion,
@@ -73,7 +75,7 @@ function inferSpeciesLocally(imageUri: string): SpeciesSuggestion | null {
   );
 }
 
-export async function getSpeciesSuggestion(input: { imageUri: string; cloudAllowed: boolean }) {
+export async function getSpeciesSuggestion(input: { imageUri: string; cloudAllowed: boolean; userId?: string }) {
   const cacheKey = getSpeciesCacheKey(input.imageUri);
   const cached = await getCachedValue<SpeciesSuggestion>(cacheKey);
   if (cached) {
@@ -97,6 +99,10 @@ export async function getSpeciesSuggestion(input: { imageUri: string; cloudAllow
   if (parsedRemote) {
     const suggestion = withSpeciesSource(parsedRemote, "cloud");
     await setCachedValue(cacheKey, suggestion, SPECIES_CACHE_TTL_MS);
+    if (input.userId) {
+      const db = await getDatabase();
+      await incrementUsage(db, input.userId, "ai_species_identification");
+    }
     return suggestion;
   }
 
