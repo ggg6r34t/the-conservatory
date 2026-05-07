@@ -25,8 +25,7 @@ export function UpgradePrompt({
         <Text style={[styles.compactMessage, { color: colors.onSurface }]}>{message}</Text>
         <Pressable
           accessibilityRole="button"
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onPress={() => router.push('/premium' as any)}
+          onPress={() => router.push('/premium')}
           style={[styles.compactCta, { backgroundColor: colors.primary }]}
         >
           <Text style={[styles.compactCtaLabel, { color: colors.surfaceBright }]}>{cta}</Text>
@@ -56,8 +55,7 @@ export function UpgradePrompt({
       <Text style={[styles.message, { color: colors.onSurface }]}>{message}</Text>
       <Pressable
         accessibilityRole="button"
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        onPress={() => router.push('/premium' as any)}
+        onPress={() => router.push('/premium')}
         style={[styles.cta, { backgroundColor: colors.primary }]}
       >
         <Text style={[styles.ctaLabel, { color: colors.surfaceBright }]}>{cta}</Text>

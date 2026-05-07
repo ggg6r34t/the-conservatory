@@ -27,6 +27,7 @@ import {
   getProfileInitials,
   getProfileVersionLabel,
 } from "@/features/profile/services/profilePresentationService";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 
@@ -173,6 +174,7 @@ export default function ProfileScreen() {
   const graveyardQuery = useGraveyard();
   const settingsQuery = useSettings();
   const updateSettings = useUpdateSettings();
+  const { isPremium } = useSubscription();
 
   const plants = plantsQuery.data ?? [];
   const graveyard = graveyardQuery.data ?? [];
@@ -314,6 +316,36 @@ export default function ProfileScreen() {
             ]}
           />
           <StatItem value={`${plantsRemembered}`} label="PLANTS REMEMBERED" />
+        </View>
+
+        <View style={styles.section}>
+          <Text
+            style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
+          >
+            THE CONSERVATORY
+          </Text>
+          <View
+            style={[
+              styles.groupCard,
+              { backgroundColor: colors.surfaceContainerLowest },
+            ]}
+          >
+            {isPremium ? (
+              <ProfileRow
+                icon="star-circle-outline"
+                label="Premium"
+                value="Active"
+                onPress={() => router.push("/premium")}
+              />
+            ) : (
+              <ProfileRow
+                icon="star-outline"
+                label="Explore Premium"
+                value="Deepen your story"
+                onPress={() => router.push("/premium")}
+              />
+            )}
+          </View>
         </View>
 
         <View style={styles.section}>
