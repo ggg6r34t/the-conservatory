@@ -4,6 +4,10 @@ import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHe
 import { renderWithProviders } from "@/tests/utils/renderWithProviders";
 import type { PlantWithRelations } from "@/types/models";
 
+jest.mock("@/features/billing/hooks/useSubscription", () => ({
+  useSubscription: () => ({ isPremium: false }),
+}));
+
 jest.mock("react-native-safe-area-context", () => {
   const React = require("react");
   return {

@@ -11,6 +11,10 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({ user: { id: "user-1" } }),
 }));
 
+jest.mock("@/features/billing/hooks/useSubscription", () => ({
+  useSubscription: () => ({ isPremium: false }),
+}));
+
 jest.mock("@/features/plants/hooks/useGraveyard", () => ({
   useGraveyard: () => ({ data: [] }),
 }));
