@@ -23,6 +23,7 @@ import { JournalSummaryCard } from "@/features/ai/components/JournalSummaryCard"
 import { useJournalSummary } from "@/features/ai/hooks/useJournalSummary";
 import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
 import { useMonthlyHighlights } from "@/features/journal/hooks/useMonthlyHighlights";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
@@ -186,6 +187,7 @@ function buildSections(entries: JournalEntry[]) {
 export default function JournalScreen() {
   const { colors, spacing } = useTheme();
   const { user } = useAuth();
+  const { isPremium } = useSubscription();
   const insets = useSafeAreaInsets();
   const { onRefresh, refreshing } = usePullToRefreshSync();
   const {
@@ -232,6 +234,7 @@ export default function JournalScreen() {
     logs: entries.map((entry) => entry.log),
     plants,
     photoCount: monthlyHighlights.length,
+    isPremium,
   });
 
   return (

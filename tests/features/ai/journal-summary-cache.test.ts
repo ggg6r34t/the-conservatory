@@ -93,6 +93,7 @@ describe("journalSummaryService cache invalidation", () => {
         createLog("log-2", "2026-03-18T10:00:00.000Z"),
       ],
       photoCount: 2,
+      cloudAllowed: true,
       now,
     });
 
@@ -105,6 +106,7 @@ describe("journalSummaryService cache invalidation", () => {
         createLog("log-2", "2026-03-18T10:00:00.000Z"),
       ],
       photoCount: 2,
+      cloudAllowed: true,
       now,
     });
 

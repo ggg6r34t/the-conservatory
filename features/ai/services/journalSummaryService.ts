@@ -132,6 +132,7 @@ export async function getJournalMonthlySummary(input: {
   logs: CareLog[];
   plants: Plant[];
   photoCount: number;
+  cloudAllowed: boolean;
   now?: Date;
 }) {
   const monthKey = buildMonthKey(input.now);
@@ -156,6 +157,10 @@ export async function getJournalMonthlySummary(input: {
 
   if (!fallback) {
     return null;
+  }
+
+  if (!input.cloudAllowed) {
+    return withSummarySource(fallback, monthKey, "local");
   }
 
   const monthLogs = input.logs.filter((log) => inMonth(log.loggedAt, monthKey));

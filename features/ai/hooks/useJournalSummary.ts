@@ -11,6 +11,7 @@ export function useJournalSummary(input: {
   logs: CareLog[];
   plants: Plant[];
   photoCount: number;
+  isPremium: boolean;
 }) {
   const monthKey = new Date().toISOString().slice(0, 7);
   const signature = buildJournalSummaryStateSignature({
@@ -26,6 +27,7 @@ export function useJournalSummary(input: {
       input.userId ?? "guest",
       monthKey,
       signature,
+      input.isPremium,
     ],
     enabled: Boolean(input.userId),
     staleTime: 1000 * 60 * 30,
@@ -35,6 +37,7 @@ export function useJournalSummary(input: {
         logs: input.logs,
         plants: input.plants,
         photoCount: input.photoCount,
+        cloudAllowed: input.isPremium,
       }),
   });
 }
