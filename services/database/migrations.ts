@@ -691,4 +691,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_archive_curation_overrides_unique_selectio
     `DROP INDEX IF EXISTS idx_care_reminders_unique_plant_user;
      CREATE UNIQUE INDEX IF NOT EXISTS idx_care_reminders_unique_plant_user_type ON care_reminders(plant_id, user_id, reminder_type);`,
   );
+
+  // feature_usage: monthly quota counters
+  await database.execAsync(`
+CREATE TABLE IF NOT EXISTS feature_usage (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  feature TEXT NOT NULL,
+  period TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_feature_usage_unique ON feature_usage(user_id, feature, period);
+CREATE INDEX IF NOT EXISTS idx_feature_usage_user_period ON feature_usage(user_id, period);
+`);
 }
