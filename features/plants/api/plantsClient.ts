@@ -1,4 +1,5 @@
 import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
+import { FREE_PLANT_LIMIT } from "@/features/billing/constants";
 import { upsertReminderInTransaction } from "@/features/notifications/api/remindersClient";
 import { cancelReminderNotification } from "@/features/notifications/services/notificationService";
 import { reschedulePlantReminder } from "@/features/notifications/services/remindersScheduler";
@@ -664,6 +665,7 @@ export async function getPlantById(
 
 export async function createPlant(input: {
   userId: string;
+  isPremium: boolean;
   name: string;
   speciesName: string;
   nickname?: string;
@@ -676,6 +678,21 @@ export async function createPlant(input: {
   photoWidth?: number | null;
   photoHeight?: number | null;
 }) {
+  if (!input.isPremium) {
+    const db = await getDatabase();
+    const row = await db.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM plants WHERE user_id = ? AND status = 'active'`,
+      [input.userId],
+    );
+    const current = row?.count ?? 0;
+    if (current >= FREE_PLANT_LIMIT) {
+      throw Object.assign(new Error('Plant limit reached'), {
+        code: 'PLANT_LIMIT_REACHED' as const,
+        limit: FREE_PLANT_LIMIT,
+        current,
+      });
+    }
+  }
   if (input.wateringIntervalDays < 1 || input.wateringIntervalDays > 60) {
     throw new Error("Watering interval must be between 1 and 60 days.");
   }
