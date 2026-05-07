@@ -2,6 +2,7 @@ import { STORAGE_BUCKET } from "@/config/constants";
 import { supabase } from "@/config/supabase";
 import { getDatabase } from "@/services/database/sqlite";
 import type { SyncQueueItem } from "@/services/database/sync";
+import { getEntitlementState } from "@/services/entitlementState";
 import {
   getStorageAssetUrl,
   normalizeStoragePath,
@@ -552,6 +553,9 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
   }
 
   if (item.entity === "photos") {
+    if (!getEntitlementState()) {
+      return;
+    }
     const localRow = await loadPhotoRecord(item.entityId);
     const row = await uploadPhotoAsset(localRow);
     if (!row) {

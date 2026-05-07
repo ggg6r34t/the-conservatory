@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { billingClient } from '@/features/billing/services/billingClient';
 import { useBillingStore } from '@/features/billing/stores/useBillingStore';
 import { initializeAnalytics } from '@/services/analytics/analyticsService';
+import { setEntitlementState } from '@/services/entitlementState';
 
 export function BillingBootstrapProvider({ children }: PropsWithChildren) {
   const { user, isAuthenticated } = useAuth();
@@ -13,6 +14,7 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!isAuthenticated || !user?.id) {
       setSubscriptionState({ tier: 'free', isLoading: false, expiresAt: null, period: null });
+      setEntitlementState(false);
       return;
     }
 
@@ -32,6 +34,7 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
         if (cancelled) return;
         setSubscriptionState({ ...state, isLoading: false });
         setOfferings(offerings);
+        setEntitlementState(state.tier === 'premium');
         initializeAnalytics(user!.id);
       } catch {
         if (cancelled) return;

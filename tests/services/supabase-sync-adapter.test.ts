@@ -11,9 +11,14 @@ jest.mock("@/services/database/sqlite", () => ({
   getDatabase: jest.fn(),
 }));
 
+jest.mock("@/services/entitlementState", () => ({
+  getEntitlementState: jest.fn(() => true),
+}));
+
 describe("supabase sync adapter", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (require("@/services/entitlementState").getEntitlementState as jest.Mock).mockReturnValue(true);
   });
 
   it("should upsert plant rows and mark local sync state", async () => {
@@ -384,6 +389,37 @@ describe("supabase sync adapter", () => {
     expect(remove).toHaveBeenCalledWith(["user-1/plant-1/photo-1.jpg"]);
     expect(from).toHaveBeenCalledWith("photos");
     expect(deleteFn).toHaveBeenCalled();
+  });
+
+  it("skips photo blob upload and metadata sync for free users", async () => {
+    (require("@/services/entitlementState").getEntitlementState as jest.Mock).mockReturnValue(false);
+
+    const storageFrom = require("@/config/supabase").supabase.storage.from as jest.Mock;
+    const from = require("@/config/supabase").supabase.from as jest.Mock;
+
+    require("@/services/database/sqlite").getDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn(),
+      runAsync: jest.fn(),
+    });
+
+    const { processSyncQueueItemWithSupabase } = require("@/services/database/supabaseSyncAdapter");
+
+    await processSyncQueueItemWithSupabase({
+      id: "sync-photo-free",
+      entity: "photos",
+      entityId: "photo-1",
+      operation: "insert",
+      payload: JSON.stringify({ userId: "user-1" }),
+      status: "pending",
+      attemptCount: 0,
+      lastError: null,
+      nextRetryAt: null,
+      queuedAt: "2026-03-21T10:00:00.000Z",
+      updatedAt: "2026-03-21T10:00:00.000Z",
+    });
+
+    expect(storageFrom).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalledWith("photos");
   });
 
   it("does not mark photo sync successful when required metadata is missing", async () => {
