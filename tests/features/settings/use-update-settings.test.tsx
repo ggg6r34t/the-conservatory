@@ -57,7 +57,7 @@ jest.mock("@/services/database/userDataSync", () => ({
   runUserDataSync: (...args: unknown[]) => mockRunUserDataSync(...args),
 }));
 
-jest.mock("@/features/notifications/services/remindersScheduler", () => ({
+jest.mock("@/features/notifications/services/reminderPreferenceSideEffects", () => ({
   applyReminderPreferenceSideEffects: (...args: unknown[]) =>
     mockApplyReminderPreferenceSideEffects(...args),
 }));

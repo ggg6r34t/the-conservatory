@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/config/constants";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { applyReminderPreferenceSideEffects } from "@/features/notifications/services/remindersScheduler";
+import { applyReminderPreferenceSideEffects } from "@/features/notifications/services/reminderPreferenceSideEffects";
 import { invalidateBackupQueries } from "@/features/profile/utils/invalidateBackupQueries";
 import { updateUserPreferences } from "@/features/settings/api/settingsClient";
 import { useNetworkState } from "@/hooks/useNetworkState";

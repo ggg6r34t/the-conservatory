@@ -21,10 +21,8 @@ jest.mock("expo-router", () => ({
 
 jest.mock("expo-camera", () => ({
   CameraView: ({
-    children,
     onBarcodeScanned,
   }: {
-    children?: React.ReactNode;
     onBarcodeScanned?: (event: { data: string; type: string }) => void;
   }) => {
     const { Pressable, Text } = require("react-native");
@@ -39,7 +37,6 @@ jest.mock("expo-camera", () => ({
         }
       >
         <Text>Mock camera scanner</Text>
-        {children}
       </Pressable>
     );
   },

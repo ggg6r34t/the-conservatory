@@ -78,12 +78,13 @@ export default function SpecimenScanScreen() {
         ]}
       >
         {permission?.granted ? (
-          <CameraView
-            style={styles.camera}
-            facing="back"
-            barcodeScannerSettings={{ barcodeTypes: [...barcodeTypes] }}
-            onBarcodeScanned={scanState === "ready" ? handleScan : undefined}
-          >
+          <View style={styles.cameraWrap}>
+            <CameraView
+              style={StyleSheet.absoluteFill}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: [...barcodeTypes] }}
+              onBarcodeScanned={scanState === "ready" ? handleScan : undefined}
+            />
             <View style={styles.overlay}>
               <View style={[styles.scanFrame, { borderColor: colors.surface }]} />
               <Text style={[styles.scanLabel, { color: colors.surface }]}>
@@ -92,7 +93,7 @@ export default function SpecimenScanScreen() {
                   : "Align the tag inside the frame"}
               </Text>
             </View>
-          </CameraView>
+          </View>
         ) : (
           <View style={styles.permissionCard}>
             <Text style={[styles.permissionTitle, { color: colors.primary }]}>
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
     minHeight: 420,
     overflow: "hidden",
   },
-  camera: {
+  cameraWrap: {
     flex: 1,
     minHeight: 420,
   },

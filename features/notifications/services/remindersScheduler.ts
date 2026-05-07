@@ -6,7 +6,6 @@ import {
   cancelReminderNotification,
   scheduleReminderNotification,
 } from "@/features/notifications/services/notificationService";
-import { getPlantById } from "@/features/plants/api/plantsClient";
 import type { CareReminder } from "@/types/models";
 
 export async function reschedulePlantReminder(
@@ -31,6 +30,7 @@ export async function reschedulePlantReminder(
 export async function applyReminderPreferenceSideEffects(input: {
   userId: string;
   remindersEnabled: boolean;
+  getPlantNameById?: (plantId: string) => Promise<string | null>;
 }) {
   const reminders = await listReminders(input.userId);
 
@@ -50,8 +50,9 @@ export async function applyReminderPreferenceSideEffects(input: {
     reminders
       .filter((reminder) => Boolean(reminder.enabled && reminder.nextDueAt))
       .map(async (reminder) => {
-        const plant = await getPlantById(input.userId, reminder.plantId);
-        await reschedulePlantReminder(reminder, plant?.plant.name ?? "plant");
+        const plantName =
+          (await input.getPlantNameById?.(reminder.plantId)) ?? "plant";
+        await reschedulePlantReminder(reminder, plantName);
       }),
   );
 }
