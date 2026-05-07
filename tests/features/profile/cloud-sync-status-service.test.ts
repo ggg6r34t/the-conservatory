@@ -17,6 +17,7 @@ describe("cloudSyncStatusService", () => {
       hasIssues: false,
       hasPending: false,
       lastSuccessfulSyncAt: "2026-03-29T18:00:00.000Z",
+      isPremium: false,
     });
 
     expect(result.statusTitle).toBe("Auto sync is on");
@@ -31,6 +32,7 @@ describe("cloudSyncStatusService", () => {
       hasIssues: false,
       hasPending: false,
       lastSuccessfulSyncAt: null,
+      isPremium: false,
     });
 
     expect(result.statusTitle).toBe("Auto sync is off");
@@ -51,6 +53,7 @@ describe("cloudSyncStatusService", () => {
       hasIssues: false,
       hasPending: false,
       lastSuccessfulSyncAt: null,
+      isPremium: false,
     });
 
     expect(result.statusTitle).toBe("Cloud sync unavailable");

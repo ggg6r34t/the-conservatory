@@ -13,6 +13,7 @@ import { deriveCloudSyncStatus } from "@/features/profile/services/cloudSyncStat
 import { invalidateBackupQueries } from "@/features/profile/utils/invalidateBackupQueries";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useNetworkState } from "@/hooks/useNetworkState";
 import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 
@@ -24,6 +25,7 @@ export function useBackupStatus() {
   const settingsQuery = useSettings();
   const updateSettings = useUpdateSettings();
   const syncRuntime = useUserDataSyncState();
+  const { isPremium } = useSubscription();
 
   const summaryQuery = useQuery({
     queryKey: ["profile-backup-summary", user?.id],
@@ -104,11 +106,13 @@ export function useBackupStatus() {
         hasIssues,
         hasPending,
         lastSuccessfulSyncAt: summary?.lastSuccessfulSyncAt ?? null,
+        isPremium,
       }),
     [
       autoSyncEnabled,
       hasIssues,
       hasPending,
+      isPremium,
       isSyncRunning,
       network.isOffline,
       remoteAvailability,
