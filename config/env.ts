@@ -8,6 +8,8 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => value === "true"),
+  expoPublicPosthogApiKey: z.string().min(1).optional(),
+  expoPublicPosthogHost: z.string().url().optional(),
 });
 
 const parsed = envSchema.safeParse({
@@ -20,6 +22,12 @@ const parsed = envSchema.safeParse({
   expoPublicEnableAnalytics:
     process.env.EXPO_PUBLIC_ENABLE_ANALYTICS ??
     Constants.expoConfig?.extra?.expoPublicEnableAnalytics,
+  expoPublicPosthogApiKey:
+    process.env.EXPO_PUBLIC_POSTHOG_API_KEY ??
+    Constants.expoConfig?.extra?.expoPublicPosthogApiKey,
+  expoPublicPosthogHost:
+    process.env.EXPO_PUBLIC_POSTHOG_HOST ??
+    Constants.expoConfig?.extra?.expoPublicPosthogHost,
 });
 
 const safeEnv: z.infer<typeof envSchema> = parsed.success
@@ -28,6 +36,8 @@ const safeEnv: z.infer<typeof envSchema> = parsed.success
       expoPublicSupabaseUrl: undefined,
       expoPublicSupabaseAnonKey: undefined,
       expoPublicEnableAnalytics: false,
+      expoPublicPosthogApiKey: undefined,
+      expoPublicPosthogHost: undefined,
     };
 
 const isDevelopmentBuild = __DEV__ || process.env.NODE_ENV === "test";
@@ -46,4 +56,6 @@ export const env = {
     safeEnv.expoPublicSupabaseUrl && safeEnv.expoPublicSupabaseAnonKey,
   ),
   enableAnalytics: Boolean(safeEnv.expoPublicEnableAnalytics),
+  posthogApiKey: safeEnv.expoPublicPosthogApiKey ?? null,
+  posthogHost: safeEnv.expoPublicPosthogHost ?? 'https://app.posthog.com',
 };

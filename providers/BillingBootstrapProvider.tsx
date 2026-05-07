@@ -3,6 +3,7 @@ import { type PropsWithChildren, useEffect } from 'react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { billingClient } from '@/features/billing/services/billingClient';
 import { useBillingStore } from '@/features/billing/stores/useBillingStore';
+import { initializeAnalytics } from '@/services/analytics/analyticsService';
 
 export function BillingBootstrapProvider({ children }: PropsWithChildren) {
   const { user, isAuthenticated } = useAuth();
@@ -31,6 +32,7 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
         if (cancelled) return;
         setSubscriptionState({ ...state, isLoading: false });
         setOfferings(offerings);
+        initializeAnalytics(user!.id);
       } catch {
         if (cancelled) return;
         setSubscriptionState({ isLoading: false });

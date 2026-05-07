@@ -1,40 +1,71 @@
-import { env } from "@/config/env";
-import { logger } from "@/utils/logger";
+import { Platform } from 'react-native';
+import PostHog from 'posthog-react-native';
 
-export type AnalyticsMode = "disabled" | "debug-log";
+import { env } from '@/config/env';
 
-export function getAnalyticsMode(): AnalyticsMode {
-  if (!env.enableAnalytics) {
-    return "disabled";
-  }
+type AnalyticsMode = 'disabled' | 'debug-log' | 'production';
 
-  return "debug-log";
+function getAnalyticsMode(): AnalyticsMode {
+  if (!env.posthogApiKey) return 'disabled';
+  if (__DEV__) return 'debug-log';
+  return 'production';
 }
 
-export function getAnalyticsStatus() {
-  const mode = getAnalyticsMode();
+let posthog: PostHog | null = null;
 
-  return {
-    mode,
-    productionReady: false,
-    description:
-      mode === "disabled"
-        ? "Analytics transport is intentionally disabled for this release."
-        : "Analytics is running in debug-log mode and does not send events to a production analytics provider.",
-  };
+export function initializeAnalytics(distinctId: string): void {
+  const mode = getAnalyticsMode();
+  if (mode !== 'production') return;
+
+  posthog = new PostHog(env.posthogApiKey!, {
+    host: env.posthogHost,
+    captureAppLifecycleEvents: false,
+  });
+  posthog.identify(distinctId, { platform: Platform.OS });
 }
 
-export function trackEvent(name: string, properties?: Record<string, unknown>) {
+export function trackEvent(
+  name: string,
+  properties?: Record<string, string | number | boolean | null>,
+): void {
   const mode = getAnalyticsMode();
+  if (mode === 'disabled') return;
 
-  if (mode === "disabled") {
+  if (mode === 'debug-log') {
+    if (__DEV__) {
+      console.log('[Analytics]', name, properties ?? {});
+    }
     return;
   }
 
-  logger.info("analytics.debug_event", {
-    name,
-    properties,
-    mode,
-    productionReady: false,
-  });
+  posthog?.capture(name, properties ?? {});
+}
+
+export function trackMonetizationEvent(
+  name:
+    | 'premium_screen_viewed'
+    | 'plan_selected'
+    | 'purchase_started'
+    | 'purchase_completed'
+    | 'purchase_cancelled'
+    | 'restore_started'
+    | 'restore_completed'
+    | 'upgrade_prompt_viewed'
+    | 'upgrade_prompt_dismissed'
+    | 'quota_reached'
+    | 'ai_feature_used',
+  properties?: Record<string, string | number | boolean | null>,
+): void {
+  trackEvent(name, properties);
+}
+
+export function resetAnalyticsUser(): void {
+  posthog?.reset();
+}
+
+export function getAnalyticsStatus() {
+  return {
+    mode: getAnalyticsMode(),
+    productionReady: getAnalyticsMode() === 'production',
+  };
 }

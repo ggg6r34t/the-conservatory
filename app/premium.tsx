@@ -17,6 +17,7 @@ import { Icon } from '@/components/common/Icon/Icon';
 import { useTheme } from '@/components/design-system/useTheme';
 import { useSubscription } from '@/features/billing/hooks/useSubscription';
 import type { BillingPackage } from '@/features/billing/types';
+import { trackMonetizationEvent } from '@/services/analytics/analyticsService';
 
 const PREMIUM_FEATURES = [
   { icon: 'heart-pulse', label: 'AI Health Insights', detail: 'Unlimited AI analysis of each plant\'s health, growth signals, and care needs.' },
@@ -37,6 +38,7 @@ export default function PremiumScreen() {
   const [purchasing, setPurchasing] = useState(false);
 
   useEffect(() => {
+    trackMonetizationEvent('premium_screen_viewed');
     void refreshOfferings();
   }, [refreshOfferings]);
 
@@ -55,12 +57,20 @@ export default function PremiumScreen() {
   async function handlePurchase() {
     if (!selectedPackage) return;
     setPurchasing(true);
-    await purchase(selectedPackage.identifier);
+    trackMonetizationEvent('purchase_started', { packageType: selectedPackage.packageType });
+    const result = await purchase(selectedPackage.identifier);
     setPurchasing(false);
+    if (result.success) {
+      trackMonetizationEvent('purchase_completed', { packageType: selectedPackage.packageType });
+    } else if (result.userCancelled) {
+      trackMonetizationEvent('purchase_cancelled');
+    }
   }
 
   async function handleRestore() {
+    trackMonetizationEvent('restore_started');
     await restore();
+    trackMonetizationEvent('restore_completed');
   }
 
   const packages = offerings?.packages ?? [];
@@ -125,7 +135,10 @@ export default function PremiumScreen() {
               <Pressable
                 accessibilityRole="radio"
                 accessibilityState={{ selected: selectedPackage?.identifier === annualPkg.identifier }}
-                onPress={() => setSelectedPackage(annualPkg)}
+                onPress={() => {
+                  setSelectedPackage(annualPkg);
+                  trackMonetizationEvent('plan_selected', { packageType: annualPkg.packageType });
+                }}
                 style={[
                   styles.planCard,
                   {
@@ -167,7 +180,10 @@ export default function PremiumScreen() {
               <Pressable
                 accessibilityRole="radio"
                 accessibilityState={{ selected: selectedPackage?.identifier === monthlyPkg.identifier }}
-                onPress={() => setSelectedPackage(monthlyPkg)}
+                onPress={() => {
+                  setSelectedPackage(monthlyPkg);
+                  trackMonetizationEvent('plan_selected', { packageType: monthlyPkg.packageType });
+                }}
                 style={[
                   styles.planCard,
                   {
