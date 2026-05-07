@@ -14,12 +14,18 @@ export function useSpeciesSuggestion(input: { imageUri?: string; isPremium: bool
     : null;
 
   const cloudAllowed = input.isPremium || (accessResult?.canUse === true);
+  const quotaExhausted =
+    !input.isPremium &&
+    accessResult?.canUse === false &&
+    accessResult.reason === 'quota_exceeded';
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["ai", "species-suggestion", input.imageUri ?? "none", cloudAllowed],
     enabled: Boolean(input.imageUri),
     staleTime: 1000 * 60 * 30,
     queryFn: () =>
       getSpeciesSuggestion({ imageUri: input.imageUri!, cloudAllowed, userId: user?.id }),
   });
+
+  return { ...query, quotaExhausted };
 }

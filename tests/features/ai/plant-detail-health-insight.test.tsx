@@ -4,6 +4,10 @@ import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHe
 import { renderWithProviders } from "@/tests/utils/renderWithProviders";
 import type { PlantWithRelations } from "@/types/models";
 
+jest.mock("@/services/analytics/analyticsService", () => ({
+  trackMonetizationEvent: jest.fn(),
+}));
+
 jest.mock("@/features/billing/hooks/useSubscription", () => ({
   useSubscription: () => ({ isPremium: false }),
 }));
@@ -51,6 +55,7 @@ describe("PlantDetailHealthInsight", () => {
         confidence: 0.82,
         source: "local",
       },
+      quotaExhausted: false,
     });
 
     renderWithProviders(
@@ -62,7 +67,7 @@ describe("PlantDetailHealthInsight", () => {
   });
 
   it("suppresses the module when confidence is too low", () => {
-    useHealthInsight.mockReturnValue({ data: null });
+    useHealthInsight.mockReturnValue({ data: null, quotaExhausted: false });
 
     renderWithProviders(
       <PlantDetailHealthInsight plantId="plant-1" data={fixture} />,
@@ -79,6 +84,7 @@ describe("PlantDetailHealthInsight", () => {
         confidence: 0.63,
         source: "local",
       },
+      quotaExhausted: false,
     });
 
     renderWithProviders(
@@ -89,12 +95,23 @@ describe("PlantDetailHealthInsight", () => {
   });
 
   it("renders nothing when there is no data", () => {
-    useHealthInsight.mockReturnValue({ data: null });
+    useHealthInsight.mockReturnValue({ data: null, quotaExhausted: false });
 
     renderWithProviders(
       <PlantDetailHealthInsight plantId="plant-1" data={fixture} />,
     );
 
     expect(screen.queryByText(/Health insight/i)).toBeNull();
+  });
+
+  it("shows upgrade prompt when quota is exhausted", () => {
+    useHealthInsight.mockReturnValue({ data: null, quotaExhausted: true });
+
+    renderWithProviders(
+      <PlantDetailHealthInsight plantId="plant-1" data={fixture} />,
+    );
+
+    expect(screen.getByText(/used your free AI health insights/i)).toBeTruthy();
+    expect(screen.getByText("Unlock Unlimited Insights")).toBeTruthy();
   });
 });

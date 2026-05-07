@@ -23,10 +23,14 @@ export function useHealthInsight(input: {
       : null;
 
   const cloudAllowed = input.isPremium || (accessResult?.canUse === true);
+  const quotaExhausted =
+    !input.isPremium &&
+    accessResult?.canUse === false &&
+    accessResult.reason === 'quota_exceeded';
 
   const revision = input.data ? buildHealthInsightRevision(input.data) : "none";
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["ai", "health-insight", input.plantId ?? "none", revision, cloudAllowed],
     enabled: Boolean(input.plantId && input.data),
     staleTime: 1000 * 60 * 15,
@@ -38,4 +42,6 @@ export function useHealthInsight(input: {
         userId: user?.id,
       }),
   });
+
+  return { ...query, quotaExhausted };
 }

@@ -18,6 +18,7 @@ import { SpeciesSuggestionBanner } from "@/features/ai/components/SpeciesSuggest
 import { useSpeciesSuggestion } from "@/features/ai/hooks/useSpeciesSuggestion";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import type { LightCondition, SpeciesSuggestion } from "@/features/ai/types/ai";
+import { UpgradePrompt } from "@/features/billing/components/UpgradePrompt";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { useAlert } from "@/hooks/useAlert";
@@ -186,6 +187,12 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { isPremium } = useSubscription();
   const speciesSuggestionQuery = useSpeciesSuggestion({ imageUri: values.photoUri, isPremium });
+
+  useEffect(() => {
+    if (speciesSuggestionQuery.quotaExhausted && values.photoUri) {
+      trackMonetizationEvent('upgrade_prompt_viewed', { feature: 'ai_species_identification' });
+    }
+  }, [speciesSuggestionQuery.quotaExhausted, values.photoUri]);
 
   useEffect(() => {
     if (mode !== "create") {
@@ -506,6 +513,12 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
           onDismiss={() => {
             setDismissedSuggestionUri(values.photoUri ?? null);
           }}
+        />
+      ) : speciesSuggestionQuery.quotaExhausted && values.photoUri ? (
+        <UpgradePrompt
+          message="You've used your free AI species identifications this month. Upgrade to Premium for unlimited identifications."
+          cta="Unlock Unlimited ID"
+          compact
         />
       ) : null}
 
