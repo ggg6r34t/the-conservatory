@@ -5,7 +5,7 @@ export interface SubscriptionState {
   tier: SubscriptionTier;
   isLoading: boolean;
   isRestoring: boolean;
-  expiresAt: Date | null;
+  expiresAt: string | null;
   period: SubscriptionPeriod | null;
   error: string | null;
 }
