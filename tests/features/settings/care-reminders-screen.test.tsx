@@ -12,6 +12,22 @@ jest.mock("expo-router", () => ({
   }),
 }));
 
+jest.mock("@/features/billing/hooks/useSubscription", () => ({
+  useSubscription: () => ({
+    isPremium: false,
+    tier: 'free',
+    isLoading: false,
+    isRestoring: false,
+    expiresAt: null,
+    period: null,
+    error: null,
+    offerings: null,
+    purchase: jest.fn(),
+    restore: jest.fn(),
+    refreshOfferings: jest.fn(),
+  }),
+}));
+
 jest.mock("expo-image", () => ({
   Image: () => null,
 }));

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import {
   Pressable,
   RefreshControl,
@@ -18,6 +18,8 @@ import { TextInputField } from "@/components/common/Forms/TextInput";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
@@ -45,6 +47,8 @@ function chunkPlants(plants: PlantListItem[]) {
 
 export default function LibraryScreen() {
   const { colors, spacing } = useTheme();
+  const router = useRouter();
+  const { isPremium } = useSubscription();
   const plantsQuery = usePlants();
   const { onRefresh, refreshing } = usePullToRefreshSync();
   const filter = usePlantStore((state) => state.filter);
@@ -106,12 +110,12 @@ export default function LibraryScreen() {
           contentContainerStyle={styles.filterRow}
         >
           {[
-            { label: "All", value: "all" as const },
-            { label: "Needs Water", value: "needs-water" as const },
-            { label: "Thriving", value: "thriving" as const },
-            { label: "Recently Watered", value: "recently-watered" as const },
-            { label: "With Notes", value: "with-notes" as const },
-            { label: "Unplaced", value: "unplaced" as const },
+            { label: "All", value: "all" as const, premium: false },
+            { label: "Needs Water", value: "needs-water" as const, premium: false },
+            { label: "Thriving", value: "thriving" as const, premium: false },
+            { label: "Recently Watered", value: "recently-watered" as const, premium: false },
+            { label: "With Notes", value: "with-notes" as const, premium: false },
+            { label: "Unplaced", value: "unplaced" as const, premium: false },
           ].map((option) => {
             const isActive = option.value === filter;
             return (
@@ -140,6 +144,33 @@ export default function LibraryScreen() {
               </Pressable>
             );
           })}
+          {[
+            { label: "By Location", premiumFeature: "advanced_library_filters" as const },
+            { label: "By Species", premiumFeature: "advanced_library_filters" as const },
+          ].map((option) => (
+            <Pressable
+              key={option.label}
+              onPress={() => {
+                if (!isPremium) {
+                  trackMonetizationEvent('upgrade_prompt_viewed', { feature: option.premiumFeature });
+                  router.push('/premium');
+                }
+              }}
+              style={[
+                styles.chip,
+                { backgroundColor: colors.surfaceContainerHigh, opacity: isPremium ? 1 : 0.55 },
+              ]}
+            >
+              <Text style={[styles.chipLabel, { color: colors.onSurface }]}>
+                {option.label}
+              </Text>
+              {!isPremium ? (
+                <Text style={[styles.chipLabel, { color: colors.primary, marginLeft: 4 }]}>
+                  ✦
+                </Text>
+              ) : null}
+            </Pressable>
+          ))}
         </ScrollView>
 
         {plants.length ? (

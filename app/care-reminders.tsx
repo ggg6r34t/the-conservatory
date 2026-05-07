@@ -17,6 +17,7 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useDeleteReminder } from "@/features/notifications/hooks/useDeleteReminder";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
@@ -151,6 +152,7 @@ export default function CareRemindersScreen() {
   const alert = useAlert();
   const snackbar = useSnackbar();
   const { user } = useAuth();
+  const { isPremium } = useSubscription();
   const plantsQuery = useAllActivePlants();
   const remindersQuery = useReminders();
   const settingsQuery = useSettings();
@@ -514,7 +516,7 @@ export default function CareRemindersScreen() {
                         })}
                       </Text>
                     </View>
-                    {optimizedReminder.explanation ? (
+                    {isPremium && optimizedReminder.explanation ? (
                       <Text
                         style={[
                           styles.reminderHint,

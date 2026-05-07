@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
+import { UpgradePrompt } from "@/features/billing/components/UpgradePrompt";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useExportCollectionData } from "@/features/export/hooks/useExportCollectionData";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useAlert } from "@/hooks/useAlert";
@@ -32,6 +34,7 @@ export default function ExportCollectionDataScreen() {
   const { colors } = useTheme();
   const alert = useAlert();
   const snackbar = useSnackbar();
+  const { isPremium } = useSubscription();
   const { summaryQuery, exportMutation, shareAgain } = useExportCollectionData();
   const [shareAgainPending, setShareAgainPending] = useState(false);
 
@@ -172,6 +175,30 @@ export default function ExportCollectionDataScreen() {
             record.
           </Text>
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}>
+          PREMIUM EXPORT
+        </Text>
+        {isPremium ? (
+          <View style={[styles.card, { backgroundColor: colors.surfaceContainerLow }]}>
+            <Text style={[styles.cardTitle, { color: colors.primary }]}>
+              Enhanced archive included
+            </Text>
+            <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
+              Your export includes enriched metadata — photo archive URIs, care
+              observation tags, and species details — so your full conservatory
+              record travels with you.
+            </Text>
+          </View>
+        ) : (
+          <UpgradePrompt
+            message="Premium export adds a full photo archive and enriched metadata to your collection file."
+            cta="Unlock Premium Export"
+            compact
+          />
+        )}
       </View>
 
       {isEmpty ? (
