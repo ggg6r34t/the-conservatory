@@ -219,7 +219,7 @@ describe("auth and onboarding journey harness", () => {
     renderWithProviders(<LoginForm />);
 
     fireEvent.changeText(
-      screen.getByPlaceholderText("botanist@conservatory.com"),
+      screen.getByPlaceholderText("you@example.com"),
       "Curator@example.com",
     );
     fireEvent.changeText(
@@ -245,7 +245,7 @@ describe("auth and onboarding journey harness", () => {
     renderWithProviders(<LoginForm />);
 
     fireEvent.changeText(
-      screen.getByPlaceholderText("botanist@conservatory.com"),
+      screen.getByPlaceholderText("you@example.com"),
       "curator@example.com",
     );
     fireEvent.changeText(

@@ -1000,7 +1000,7 @@ In the `BackupSummary` interface, add:
 
 In the `return` block of `getBackupSummary` (around line 179), add:
 ```typescript
-    syncEnabled: env.enableSyncTrials && env.isSupabaseConfigured,
+    syncEnabled: env.isSupabaseConfigured,
 ```
 
 - [ ] **Step 2: Find the backup status UI component**

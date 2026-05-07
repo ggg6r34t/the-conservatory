@@ -30,7 +30,6 @@ jest.mock("@/config/env", () => ({
     missingSupabaseConfig: [],
     supabaseUrl: "https://example.supabase.co",
     supabaseAnonKey: "anon-key",
-    enableSyncTrials: false,
   },
 }));
 

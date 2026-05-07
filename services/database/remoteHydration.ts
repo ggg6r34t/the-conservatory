@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
 import { supabase } from "@/config/supabase";
+import { downloadRemotePhotoAsset } from "@/features/plants/services/photoStorageService";
 import {
   buildConflictTelemetryMeta,
   resolveConflict,
@@ -96,6 +97,15 @@ interface RemoteCareLogRow extends MergeableRemoteRow {
   updated_by: string | null;
 }
 
+interface RemoteCareLogTagRow extends MergeableRemoteRow {
+  user_id: string;
+  care_log_id: string;
+  plant_id: string;
+  tag: string;
+  created_at: string;
+  updated_by: string | null;
+}
+
 interface RemoteReminderRow extends MergeableRemoteRow {
   user_id: string;
   plant_id: string;
@@ -104,6 +114,36 @@ interface RemoteReminderRow extends MergeableRemoteRow {
   enabled: boolean;
   next_due_at: string | null;
   last_triggered_at: string | null;
+  created_at: string;
+  updated_by: string | null;
+}
+
+interface RemoteStatusSnapshotRow extends MergeableRemoteRow {
+  user_id: string;
+  plant_id: string;
+  status: "thriving" | "stable" | "needs_water";
+  reason: string | null;
+  captured_at: string;
+  created_at: string;
+  updated_by: string | null;
+}
+
+interface RemoteSpecimenTagRow extends MergeableRemoteRow {
+  user_id: string;
+  plant_id: string;
+  code: string;
+  payload: string;
+  qr_matrix: string;
+  created_at: string;
+  updated_by: string | null;
+}
+
+interface RemoteArchiveOverrideRow extends MergeableRemoteRow {
+  user_id: string;
+  plant_id: string;
+  before_photo_id: string;
+  after_photo_id: string;
+  caption: string | null;
   created_at: string;
   updated_by: string | null;
 }
@@ -387,6 +427,10 @@ export async function hydrateRemoteUserData(userId: string) {
     photosResult,
     careLogsResult,
     remindersResult,
+    careLogTagsResult,
+    statusSnapshotsResult,
+    specimenTagsResult,
+    archiveOverridesResult,
     graveyardResult,
     usersResult,
   ] = await Promise.all([
@@ -460,6 +504,65 @@ export async function hydrateRemoteUserData(userId: string) {
       ].join(", "),
       userId,
     ),
+    fetchRemoteRowsSafe<RemoteCareLogTagRow>(
+      "care_log_tags",
+      [
+        "id",
+        "user_id",
+        "care_log_id",
+        "plant_id",
+        "tag",
+        "created_at",
+        "updated_at",
+        "updated_by",
+      ].join(", "),
+      userId,
+    ),
+    fetchRemoteRowsSafe<RemoteStatusSnapshotRow>(
+      "plant_status_snapshots",
+      [
+        "id",
+        "user_id",
+        "plant_id",
+        "status",
+        "reason",
+        "captured_at",
+        "created_at",
+        "updated_at",
+        "updated_by",
+      ].join(", "),
+      userId,
+    ),
+    fetchRemoteRowsSafe<RemoteSpecimenTagRow>(
+      "specimen_tags",
+      [
+        "id",
+        "user_id",
+        "plant_id",
+        "code",
+        "payload",
+        "qr_matrix",
+        "created_at",
+        "updated_at",
+        "updated_by",
+      ].join(", "),
+      userId,
+    ),
+    fetchRemoteRowsSafe<RemoteArchiveOverrideRow>(
+      "archive_curation_overrides",
+      [
+        "id",
+        "user_id",
+        "plant_id",
+        "before_photo_id",
+        "after_photo_id",
+        "caption",
+        "created_at",
+        "updated_at",
+        "updated_by",
+      ].join(", "),
+      userId,
+    ),
     fetchRemoteRowsSafe<RemoteGraveyardRow>(
       "graveyard_plants",
       [
@@ -483,6 +586,10 @@ export async function hydrateRemoteUserData(userId: string) {
   const photos = photosResult.rows;
   const careLogs = careLogsResult.rows;
   const reminders = remindersResult.rows;
+  const careLogTags = careLogTagsResult.rows;
+  const statusSnapshots = statusSnapshotsResult.rows;
+  const specimenTags = specimenTagsResult.rows;
+  const archiveOverrides = archiveOverridesResult.rows;
   const graveyardPlants = graveyardResult.rows;
   const remoteUser = usersResult.rows[0] ?? null;
 
@@ -499,11 +606,25 @@ export async function hydrateRemoteUserData(userId: string) {
           normalizeStoragePath(row.remote_url);
         const resolvedRemoteUrl =
           directRemoteUrl ?? (await getStorageAssetUrl(normalizedStoragePath));
+        const role = row.photo_role ?? (row.is_primary ? "primary" : "progress");
+        const restored =
+          resolvedRemoteUrl && normalizedStoragePath
+            ? await downloadRemotePhotoAsset({
+                remoteUri: resolvedRemoteUrl,
+                userId: row.user_id,
+                plantId: row.plant_id,
+                photoId: row.id,
+                role,
+                mimeType: row.mime_type,
+                storagePath: normalizedStoragePath,
+              })
+            : null;
 
         return {
           ...row,
           resolvedRemoteUrl,
-          normalizedStoragePath,
+          restoredLocalUri: restored?.localUri ?? null,
+          normalizedStoragePath: restored?.storagePath ?? normalizedStoragePath,
         };
       } catch (error) {
         logger.warn("sync.remote_hydration.photo_url_failed", {
@@ -514,6 +635,7 @@ export async function hydrateRemoteUserData(userId: string) {
         return {
           ...row,
           resolvedRemoteUrl: null,
+          restoredLocalUri: null,
           normalizedStoragePath:
             normalizeStoragePath(row.storage_path) ??
             normalizeStoragePath(row.remote_url),
@@ -614,7 +736,7 @@ export async function hydrateRemoteUserData(userId: string) {
         row.id,
         row.user_id,
         row.plant_id,
-        null,
+        row.restoredLocalUri,
         row.resolvedRemoteUrl ?? null,
         row.normalizedStoragePath,
         row.mime_type,
@@ -689,6 +811,113 @@ export async function hydrateRemoteUserData(userId: string) {
       );
     }
 
+    for (const row of careLogTags) {
+      if (!(await shouldReplaceLocalRow(database, "care_log_tags", row))) {
+        continue;
+      }
+
+      await database.runAsync(
+        `INSERT OR REPLACE INTO care_log_tags (
+          id, user_id, care_log_id, plant_id, tag, created_at, updated_at,
+          updated_by, pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        row.id,
+        row.user_id,
+        row.care_log_id,
+        row.plant_id,
+        row.tag,
+        row.created_at,
+        row.updated_at,
+        row.updated_by ?? row.user_id,
+        0,
+        syncedAt,
+        null,
+      );
+    }
+
+    for (const row of statusSnapshots) {
+      if (
+        !(await shouldReplaceLocalRow(database, "plant_status_snapshots", row))
+      ) {
+        continue;
+      }
+
+      await database.runAsync(
+        `INSERT OR REPLACE INTO plant_status_snapshots (
+          id, user_id, plant_id, status, reason, captured_at, created_at,
+          updated_at, updated_by, pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        row.id,
+        row.user_id,
+        row.plant_id,
+        row.status,
+        row.reason,
+        row.captured_at,
+        row.created_at,
+        row.updated_at,
+        row.updated_by ?? row.user_id,
+        0,
+        syncedAt,
+        null,
+      );
+    }
+
+    for (const row of specimenTags) {
+      if (!(await shouldReplaceLocalRow(database, "specimen_tags", row))) {
+        continue;
+      }
+
+      await database.runAsync(
+        `INSERT OR REPLACE INTO specimen_tags (
+          id, user_id, plant_id, code, payload, qr_matrix, created_at,
+          updated_at, updated_by, pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        row.id,
+        row.user_id,
+        row.plant_id,
+        row.code,
+        row.payload,
+        row.qr_matrix,
+        row.created_at,
+        row.updated_at,
+        row.updated_by ?? row.user_id,
+        0,
+        syncedAt,
+        null,
+      );
+    }
+
+    for (const row of archiveOverrides) {
+      if (
+        !(await shouldReplaceLocalRow(
+          database,
+          "archive_curation_overrides",
+          row,
+        ))
+      ) {
+        continue;
+      }
+
+      await database.runAsync(
+        `INSERT OR REPLACE INTO archive_curation_overrides (
+          id, user_id, plant_id, before_photo_id, after_photo_id, caption,
+          created_at, updated_at, updated_by, pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        row.id,
+        row.user_id,
+        row.plant_id,
+        row.before_photo_id,
+        row.after_photo_id,
+        row.caption,
+        row.created_at,
+        row.updated_at,
+        row.updated_by ?? row.user_id,
+        0,
+        syncedAt,
+        null,
+      );
+    }
+
     for (const row of graveyardPlants) {
       if (!(await shouldReplaceLocalRow(database, "graveyard_plants", row))) {
         continue;
@@ -747,6 +976,42 @@ export async function hydrateRemoteUserData(userId: string) {
         table: "graveyard_plants",
         userId,
         remoteIds: graveyardPlants.map((row) => row.id),
+      });
+    }
+
+    if (careLogTagsResult.ok) {
+      await reconcileRemoteDeletions({
+        database,
+        table: "care_log_tags",
+        userId,
+        remoteIds: careLogTags.map((row) => row.id),
+      });
+    }
+
+    if (statusSnapshotsResult.ok) {
+      await reconcileRemoteDeletions({
+        database,
+        table: "plant_status_snapshots",
+        userId,
+        remoteIds: statusSnapshots.map((row) => row.id),
+      });
+    }
+
+    if (specimenTagsResult.ok) {
+      await reconcileRemoteDeletions({
+        database,
+        table: "specimen_tags",
+        userId,
+        remoteIds: specimenTags.map((row) => row.id),
+      });
+    }
+
+    if (archiveOverridesResult.ok) {
+      await reconcileRemoteDeletions({
+        database,
+        table: "archive_curation_overrides",
+        userId,
+        remoteIds: archiveOverrides.map((row) => row.id),
       });
     }
 

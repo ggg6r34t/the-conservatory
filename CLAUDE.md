@@ -48,12 +48,12 @@ Each feature follows the pattern: `api/` (SQLite queries + sync outbox), `compon
 - `migrations.ts` — SQLite schema and versioned migrations
 - `sync.ts` — local sync queue processor
 - `syncOutbox.ts` — `runAtomicMutationWithSyncOutbox()` wraps every mutation in a transaction that simultaneously writes a `sync_queue` entry
-- `supabaseSyncAdapter.ts` — replays outbox to Supabase (feature-flagged)
+- `supabaseSyncAdapter.ts` — replays outbox to Supabase when Supabase is configured
 - `remoteHydration.ts` — seeds local DB from remote on first login
 
 ## Local-First Data Model
 
-Every write goes to SQLite first via `runAtomicMutationWithSyncOutbox()`. This atomically records a `sync_queue` entry in the same transaction. Supabase replay is feature-flagged behind `EXPO_PUBLIC_ENABLE_SYNC_TRIALS`.
+Every write goes to SQLite first via `runAtomicMutationWithSyncOutbox()`. This atomically records a `sync_queue` entry in the same transaction. Supabase replay runs when the build has valid Supabase URL and anon-key configuration.
 
 The local DB is the source of truth — not a cache. Sync state, backup summaries, and export content must be semantically honest. See `docs/architecture/SYNC_AND_DATA_MODEL.md` for rules on what backup/export surfaces may claim.
 

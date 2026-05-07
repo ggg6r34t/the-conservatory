@@ -14,6 +14,25 @@ function formatEntityLabel(entity: string) {
   return entity.replace(/_/g, " ");
 }
 
+function formatAttemptLabel(count: number) {
+  return `${count} ${count === 1 ? "attempt" : "attempts"}`;
+}
+
+function formatItemDiagnostics(item: {
+  operation: string;
+  status: string;
+  attemptCount: number;
+}) {
+  return `${item.operation.toUpperCase()} - ${item.status.toUpperCase()} - ${formatAttemptLabel(item.attemptCount)}`;
+}
+
+function formatRepairTimestampLabel(item: {
+  queuedAt: string;
+  updatedAt: string;
+}) {
+  return `Queued ${new Date(item.queuedAt).toLocaleString()} - Updated ${new Date(item.updatedAt).toLocaleString()}`;
+}
+
 export default function SyncRepairScreen() {
   const { colors } = useTheme();
   const snackbar = useSnackbar();
@@ -23,9 +42,13 @@ export default function SyncRepairScreen() {
     queryFn: listSyncRepairItems,
   });
   const retryMutation = useMutation({
-    mutationFn: () => retrySyncRepairItems(),
-    onSuccess: async () => {
-      snackbar.success("Backup queue is ready to retry.");
+    mutationFn: (ids?: string[]) => retrySyncRepairItems(ids),
+    onSuccess: async (_count, ids) => {
+      snackbar.success(
+        ids?.length
+          ? "Backup item is ready to retry."
+          : "Backup queue is ready to retry.",
+      );
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["sync-repair-items"] }),
         queryClient.invalidateQueries({ queryKey: ["profile-backup-summary"] }),
@@ -54,12 +77,21 @@ export default function SyncRepairScreen() {
                 {formatEntityLabel(item.entity)}
               </Text>
               <Text style={[styles.meta, { color: colors.secondary }]}>
-                {`${item.operation.toUpperCase()} · ${item.status.toUpperCase()}`}
+                {formatItemDiagnostics(item)}
               </Text>
               <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
                 {item.lastError ??
                   "This item was interrupted before backup could finish."}
               </Text>
+              <Text style={[styles.detail, { color: colors.onSurfaceVariant }]}>
+                {formatRepairTimestampLabel(item)}
+              </Text>
+              <PrimaryButton
+                label="Retry Item"
+                disabled={retryMutation.isPending}
+                loading={retryMutation.isPending}
+                onPress={() => retryMutation.mutate([item.id])}
+              />
             </View>
           ))}
         </View>
@@ -80,7 +112,7 @@ export default function SyncRepairScreen() {
         label={retryMutation.isPending ? "Preparing Retry..." : "Retry Queue"}
         disabled={retryMutation.isPending || items.length === 0}
         loading={retryMutation.isPending}
-        onPress={() => retryMutation.mutate()}
+        onPress={() => retryMutation.mutate(undefined)}
       />
     </ProfileScreenScaffold>
   );
@@ -93,7 +125,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 24,
     padding: 18,
-    gap: 6,
+    gap: 8,
   },
   title: {
     fontFamily: "NotoSerif_700Bold",
@@ -110,5 +142,10 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 14,
     lineHeight: 22,
+  },
+  detail: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 12,
+    lineHeight: 18,
   },
 });

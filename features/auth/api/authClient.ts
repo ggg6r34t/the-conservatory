@@ -48,6 +48,12 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function normalizeOptionalEmail(email: unknown) {
+  return typeof email === "string" && email.trim()
+    ? normalizeEmail(email)
+    : null;
+}
+
 function normalizeDisplayName(displayName: string) {
   return displayName.trim().replace(/\s+/g, " ").slice(0, 80);
 }
@@ -500,9 +506,16 @@ export async function getInitialAuthUser() {
         return null;
       }
 
+      const sessionEmail = normalizeOptionalEmail(data.session.user.email);
+      if (!sessionEmail) {
+        logger.warn("auth.restore.missing_email");
+        await clearSession();
+        return null;
+      }
+
       const user = createSupabaseUser(
         data.session.user.id,
-        normalizeEmail(data.session.user.email ?? "botanist@conservatory.com"),
+        sessionEmail,
         data.session.user.user_metadata.display_name,
         data.session.user.user_metadata.avatar_url,
       );

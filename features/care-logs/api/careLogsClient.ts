@@ -1,7 +1,13 @@
 import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
+import {
+  replaceCareLogTagsInTransaction,
+  serializeCareLogTags,
+} from "@/features/care-logs/services/careLogTagsService";
 import { upsertReminderInTransaction } from "@/features/notifications/api/remindersClient";
 import { reschedulePlantReminder } from "@/features/notifications/services/remindersScheduler";
 import { getPlantById } from "@/features/plants/api/plantsClient";
+import { derivePlantStatus } from "@/features/plants/services/plantStatusService";
+import { recordPlantStatusSnapshot } from "@/features/plants/services/statusSnapshotsService";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import { extractEmbeddedTags } from "@/services/database/migrations";
 import { getDatabase } from "@/services/database/sqlite";
@@ -37,6 +43,13 @@ function mapCareLog(row: {
   synced_at: string | null;
   sync_error: string | null;
 }): CareLog {
+  let tags: string[] | null = null;
+  try {
+    tags = row.tags ? (JSON.parse(row.tags) as string[]) : null;
+  } catch {
+    tags = null;
+  }
+
   return {
     id: row.id,
     userId: row.user_id,
@@ -44,7 +57,7 @@ function mapCareLog(row: {
     logType: row.log_type,
     currentCondition: row.current_condition,
     notes: row.notes,
-    tags: row.tags ? (JSON.parse(row.tags) as string[]) : null,
+    tags,
     loggedAt: row.logged_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -55,10 +68,54 @@ function mapCareLog(row: {
   };
 }
 
+async function mergeNormalizedCareLogTags(
+  database: Awaited<ReturnType<typeof getDatabase>>,
+  logs: CareLog[],
+) {
+  const logIds = logs.map((log) => log.id);
+  if (!logIds.length) {
+    return logs;
+  }
+
+  const placeholders = logIds.map(() => "?").join(", ");
+  const tagRows = await database.getAllAsync<{
+    care_log_id: string;
+    tag: string;
+  }>(
+    `SELECT care_log_id, tag
+     FROM care_log_tags
+     WHERE care_log_id IN (${placeholders})
+     ORDER BY tag ASC;`,
+    ...logIds,
+  );
+
+  if (!tagRows.length) {
+    return logs;
+  }
+
+  const tagsByLogId = new Map<string, string[]>();
+  for (const row of tagRows) {
+    const current = tagsByLogId.get(row.care_log_id) ?? [];
+    current.push(row.tag);
+    tagsByLogId.set(row.care_log_id, current);
+  }
+
+  return logs.map((log) => ({
+    ...log,
+    tags: tagsByLogId.get(log.id) ?? log.tags,
+  }));
+}
+
 function computeNextWaterDueAt(loggedAt: string, intervalDays: number) {
   const date = new Date(loggedAt);
   date.setDate(date.getDate() + intervalDays);
   return date.toISOString();
+}
+
+function isReminderCareLogType(
+  logType: CareLogType,
+): logType is "water" | "mist" | "feed" {
+  return logType === "water" || logType === "mist" || logType === "feed";
 }
 
 export async function listCareLogs(
@@ -100,7 +157,7 @@ export async function listCareLogs(
     sync_error: string | null;
   }>(sql, ...params);
 
-  return rows.map(mapCareLog);
+  return mergeNormalizedCareLogTags(database, rows.map(mapCareLog));
 }
 
 export async function listCareLogsForPlants(plantIds: string[]) {
@@ -131,7 +188,7 @@ export async function listCareLogsForPlants(plantIds: string[]) {
     ...uniquePlantIds,
   );
 
-  return rows.map(mapCareLog);
+  return mergeNormalizedCareLogTags(database, rows.map(mapCareLog));
 }
 
 export async function createCareLog(input: {
@@ -149,8 +206,7 @@ export async function createCareLog(input: {
     ? extractEmbeddedTags(input.notes)
     : { cleanNotes: null, tags: [] };
 
-  const tagsJson =
-    extractedTags.length > 0 ? JSON.stringify(extractedTags) : null;
+  const tagsJson = serializeCareLogTags(extractedTags);
 
   const execution = (await runAtomicMutationWithSyncOutbox(database, {
     nowIso: now,
@@ -180,6 +236,15 @@ export async function createCareLog(input: {
         null,
       );
 
+      const tagResult = await replaceCareLogTagsInTransaction(database, {
+        userId: input.userId,
+        plantId: input.plantId,
+        careLogId: logId,
+        tags: extractedTags,
+        nowIso: transactionNowIso,
+        clearExisting: false,
+      });
+
       const operations: SyncOutboxOperation[] = [
         {
           entity: "care_logs",
@@ -192,6 +257,7 @@ export async function createCareLog(input: {
             currentCondition: input.currentCondition ?? null,
           },
         },
+        ...tagResult.operations,
       ];
 
       let reminderInput: {
@@ -214,7 +280,10 @@ export async function createCareLog(input: {
             nextDueAt: nextWaterDueAt,
             lastWateredAt: loggedAt,
             reminderEnabled: true,
-            lastTriggeredAt: plant.reminders[0]?.lastTriggeredAt ?? null,
+            lastTriggeredAt:
+              plant.reminders.find(
+                (reminder) => reminder.reminderType === "water",
+              )?.lastTriggeredAt ?? null,
             defaultWateringHour: preferences.defaultWateringHour,
           });
 
@@ -243,6 +312,7 @@ export async function createCareLog(input: {
             await upsertReminderInTransaction(database, transactionNowIso, {
               userId: input.userId,
               plantId: input.plantId,
+              reminderType: "water",
               frequencyDays: plant.plant.wateringIntervalDays,
               nextDueAt: optimized.nextDueAt,
               enabled: reminderEnabled,
@@ -262,6 +332,45 @@ export async function createCareLog(input: {
             reminderInput = {
               frequencyDays: plant.plant.wateringIntervalDays,
               nextDueAt: optimized.nextDueAt,
+            };
+          }
+        }
+      }
+
+      if (input.logType === "mist" || input.logType === "feed") {
+        const plant = await getPlantById(input.userId, input.plantId);
+        const existingReminder = plant?.reminders.find(
+          (reminder) => reminder.reminderType === input.logType,
+        );
+        if (plant && existingReminder) {
+          const nextDueAt = computeNextWaterDueAt(
+            loggedAt,
+            existingReminder.frequencyDays,
+          );
+          const { reminderId, operation: reminderOp } =
+            await upsertReminderInTransaction(database, transactionNowIso, {
+              userId: input.userId,
+              plantId: input.plantId,
+              reminderType: input.logType,
+              frequencyDays: existingReminder.frequencyDays,
+              nextDueAt,
+              enabled: Boolean(existingReminder.enabled),
+            });
+          operations.push({
+            entity: "care_reminders",
+            entityId: reminderId,
+            operation: reminderOp,
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+              frequencyDays: existingReminder.frequencyDays,
+              enabled: Boolean(existingReminder.enabled),
+            },
+          });
+          if (existingReminder.enabled && nextDueAt) {
+            reminderInput = {
+              frequencyDays: existingReminder.frequencyDays,
+              nextDueAt,
             };
           }
         }
@@ -304,7 +413,12 @@ export async function createCareLog(input: {
   if (execution.reminderInput) {
     try {
       const plantData = await getPlantById(input.userId, input.plantId);
-      const reminder = plantData?.reminders[0];
+      const reminderType = isReminderCareLogType(input.logType)
+        ? input.logType
+        : "water";
+      const reminder = plantData?.reminders.find(
+        (candidate) => candidate.reminderType === reminderType,
+      );
       if (reminder) {
         await reschedulePlantReminder(
           reminder,
@@ -315,6 +429,28 @@ export async function createCareLog(input: {
       warningMessage =
         "Care log saved on this device, but the reminder schedule needs another retry.";
     }
+  }
+
+  try {
+    const plantData = await getPlantById(input.userId, input.plantId);
+    if (plantData) {
+      const status = derivePlantStatus({
+        plant: plantData.plant,
+        reminders: plantData.reminders,
+        logs: plantData.logs,
+      });
+      await recordPlantStatusSnapshot({
+        userId: input.userId,
+        plantId: input.plantId,
+        healthState: status.healthState,
+        reason: `care-log:${input.logType}`,
+        capturedAt: execution.careLog.loggedAt,
+      });
+    }
+  } catch {
+    warningMessage =
+      warningMessage ??
+      "Care log saved on this device, but status history needs another retry.";
   }
 
   return {
@@ -339,8 +475,7 @@ export async function updateCareLogNote(input: {
 
   const { cleanNotes: finalNotes, tags: extractedTags } =
     extractEmbeddedTags(trimmedNotes);
-  const tagsJson =
-    extractedTags.length > 0 ? JSON.stringify(extractedTags) : null;
+  const tagsJson = serializeCareLogTags(extractedTags);
 
   const careLog = await runAtomicMutationWithSyncOutbox(database, {
     nowIso: now,
@@ -357,6 +492,14 @@ export async function updateCareLogNote(input: {
         input.userId,
         input.plantId,
       );
+
+      const tagResult = await replaceCareLogTagsInTransaction(database, {
+        userId: input.userId,
+        plantId: input.plantId,
+        careLogId: input.careLogId,
+        tags: extractedTags,
+        nowIso: transactionNowIso,
+      });
 
       const updated = await database.getFirstAsync<{
         id: string;
@@ -397,6 +540,7 @@ export async function updateCareLogNote(input: {
               notes: trimmedNotes,
             },
           },
+          ...tagResult.operations,
         ],
       };
     },

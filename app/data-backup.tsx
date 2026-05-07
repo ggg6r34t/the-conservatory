@@ -90,7 +90,10 @@ export default function DataBackupScreen() {
               CLOUD SYNC
             </Text>
             <View
-              style={[styles.sectionRule, { backgroundColor: colors.outlineVariant }]}
+              style={[
+                styles.sectionRule,
+                { backgroundColor: colors.outlineVariant },
+              ]}
             />
           </View>
 
@@ -124,12 +127,21 @@ export default function DataBackupScreen() {
               EXPORT
             </Text>
             <View
-              style={[styles.sectionRule, { backgroundColor: colors.outlineVariant }]}
+              style={[
+                styles.sectionRule,
+                { backgroundColor: colors.outlineVariant },
+              ]}
             />
           </View>
 
           <DataBackupExportCard
             onPress={() => router.push("/export-collection-data")}
+          />
+          <PrimaryButton
+            label="Restore From Export"
+            icon="archive-arrow-up-outline"
+            iconFamily="MaterialCommunityIcons"
+            onPress={() => router.push("/import-collection-data")}
           />
 
           <View
@@ -145,8 +157,8 @@ export default function DataBackupScreen() {
               color={colors.secondary}
             />
             <Text style={[styles.noteCopy, { color: colors.onSurfaceVariant }]}>
-              Export files are prepared on-device and exclude sign-in credentials
-              and password data.
+              Export files are prepared on-device and exclude sign-in
+              credentials and password data.
             </Text>
           </View>
         </View>

@@ -1,22 +1,16 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { type Href, useRouter } from "expo-router";
+import QRCode from "react-native-qrcode-svg";
 
 import { useTheme } from "@/components/design-system/useTheme";
-import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
+import { useSpecimenTags } from "@/features/plants/hooks/useSpecimenTags";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 
-function buildSpecimenCode(name: string, id: string) {
-  const stem =
-    name
-      .replace(/[^a-zA-Z]/g, "")
-      .slice(0, 3)
-      .toUpperCase() || "SPC";
-  return `${stem}-${id.slice(-4).toUpperCase()}`;
-}
-
 export default function SpecimenTagsScreen() {
+  const router = useRouter();
   const { colors } = useTheme();
-  const plantsQuery = useAllActivePlants();
-  const plants = plantsQuery.data ?? [];
+  const { plants, tags } = useSpecimenTags();
+  const tagsByPlantId = new Map(tags.map((tag) => [tag.plantId, tag]));
 
   return (
     <ProfileScreenScaffold
@@ -24,37 +18,82 @@ export default function SpecimenTagsScreen() {
       subtitle="Collection registry"
       description="Use these specimen identifiers to keep your collection labeled consistently across care notes, archives, and physical tags."
     >
-      {plants.length ? (
-        plants.map((plant) => (
-          <View
-            key={plant.id}
-            style={[
-              styles.card,
-              { backgroundColor: colors.surfaceContainerLowest },
-            ]}
-          >
-            <View style={styles.copy}>
-              <Text style={[styles.name, { color: colors.primary }]}>
-                {plant.name}
-              </Text>
-              <Text style={[styles.meta, { color: colors.onSurfaceVariant }]}>
-                {plant.speciesName}
-                {plant.location ? ` • ${plant.location}` : ""}
-              </Text>
-            </View>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push("/specimen-scan" as Href)}
+        style={[styles.scanButton, { backgroundColor: colors.primary }]}
+      >
+        <Text style={[styles.scanLabel, { color: colors.surface }]}>
+          Scan Tag
+        </Text>
+      </Pressable>
 
+      {plants.length ? (
+        plants.map((plant) => {
+          const tag = tagsByPlantId.get(plant.id);
+          return (
             <View
+              key={plant.id}
               style={[
-                styles.tagChip,
-                { backgroundColor: colors.surfaceContainerLow },
+                styles.card,
+                { backgroundColor: colors.surfaceContainerLowest },
               ]}
             >
-              <Text style={[styles.tagLabel, { color: colors.secondary }]}>
-                {buildSpecimenCode(plant.name, plant.id)}
-              </Text>
+              <View style={styles.copy}>
+                <Text style={[styles.name, { color: colors.primary }]}>
+                  {plant.name}
+                </Text>
+                <Text style={[styles.meta, { color: colors.onSurfaceVariant }]}>
+                  {plant.speciesName}
+                  {plant.location ? ` - ${plant.location}` : ""}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.tagChip,
+                  { backgroundColor: colors.surfaceContainerLow },
+                ]}
+              >
+                <Text style={[styles.tagLabel, { color: colors.secondary }]}>
+                  {tag?.code ?? "Preparing"}
+                </Text>
+              </View>
+              {tag ? (
+                <View style={styles.tagActions}>
+                  <View style={styles.qrWrap}>
+                    <QRCode
+                      value={tag.payload}
+                      size={72}
+                      color={colors.primary}
+                      backgroundColor={colors.surfaceContainerLow}
+                      ecl="M"
+                    />
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      void Share.share({
+                        title: `${plant.name} specimen tag`,
+                        message: tag.payload,
+                      });
+                    }}
+                    style={[
+                      styles.shareButton,
+                      { backgroundColor: colors.surfaceContainerLow },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.shareLabel, { color: colors.primary }]}
+                    >
+                      Share
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
-          </View>
-        ))
+          );
+        })
       ) : (
         <View
           style={[
@@ -84,6 +123,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
   },
+  scanButton: {
+    minHeight: 44,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    alignSelf: "flex-start",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scanLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 12,
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
+  },
   copy: {
     flex: 1,
     gap: 4,
@@ -104,6 +157,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
+  },
+  qrWrap: {
+    width: 72,
+    height: 72,
+    overflow: "hidden",
+  },
+  tagActions: {
+    alignItems: "center",
+    gap: 8,
+  },
+  shareButton: {
+    minHeight: 34,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shareLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
   },
   tagLabel: {
     fontFamily: "Manrope_700Bold",

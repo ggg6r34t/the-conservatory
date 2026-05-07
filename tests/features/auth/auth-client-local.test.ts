@@ -22,7 +22,6 @@ jest.mock("@/config/env", () => ({
     ],
     supabaseUrl: null,
     supabaseAnonKey: null,
-    enableSyncTrials: false,
   },
 }));
 

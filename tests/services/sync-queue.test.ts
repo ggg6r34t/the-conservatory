@@ -6,9 +6,15 @@ import {
 
 jest.mock("@/config/env", () => ({
   env: {
-    enableSyncTrials: false,
     isSupabaseConfigured: true,
   },
+}));
+
+const mockProcessSyncQueueItemWithSupabase = jest.fn();
+
+jest.mock("@/services/database/supabaseSyncAdapter", () => ({
+  processSyncQueueItemWithSupabase: (...args: unknown[]) =>
+    mockProcessSyncQueueItemWithSupabase(...args),
 }));
 
 class InMemorySyncQueueStorage implements SyncQueueStorage {
@@ -132,7 +138,11 @@ class InMemorySyncQueueStorage implements SyncQueueStorage {
 }
 
 describe("sync queue replay", () => {
-  it("should skip default replay when sync trials are disabled", async () => {
+  beforeEach(() => {
+    mockProcessSyncQueueItemWithSupabase.mockResolvedValue(undefined);
+  });
+
+  it("uses the Supabase replay adapter when Supabase is configured", async () => {
     const storage = new InMemorySyncQueueStorage();
     const service = createSyncQueueService(storage);
 
@@ -147,11 +157,11 @@ describe("sync queue replay", () => {
       nowIso: "2026-03-21T10:05:00.000Z",
     });
 
-    expect(report.processed).toBe(0);
-    expect(report.successful).toBe(0);
+    expect(report.processed).toBe(1);
+    expect(report.successful).toBe(1);
     expect(report.failed).toBe(0);
-    expect(report.remaining).toBe(1);
-    expect(storage.findByEntity("plants")?.status).toBe("pending");
+    expect(report.remaining).toBe(0);
+    expect(storage.findByEntity("plants")?.status).toBe("completed");
   });
 
   it("should enqueue and process pending operations", async () => {

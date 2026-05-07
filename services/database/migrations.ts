@@ -95,6 +95,22 @@ CREATE TABLE IF NOT EXISTS care_logs (
   FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS care_log_tags (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  care_log_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  tag TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT,
+  FOREIGN KEY (care_log_id) REFERENCES care_logs(id) ON DELETE CASCADE,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS care_reminders (
   id TEXT PRIMARY KEY NOT NULL,
   user_id TEXT NOT NULL,
@@ -112,6 +128,65 @@ CREATE TABLE IF NOT EXISTS care_reminders (
   synced_at TEXT,
   sync_error TEXT,
   FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS plant_status_snapshots (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  reason TEXT,
+  captured_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS specimen_tags (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  code TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  qr_matrix TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS archive_curation_overrides (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  before_photo_id TEXT NOT NULL,
+  after_photo_id TEXT NOT NULL,
+  caption TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS import_runs (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  source_version INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  error_message TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS graveyard_plants (
@@ -147,8 +222,13 @@ CREATE TABLE IF NOT EXISTS sync_queue (
 CREATE INDEX IF NOT EXISTS idx_plants_user_id ON plants(user_id);
 CREATE INDEX IF NOT EXISTS idx_plants_next_water_due_at ON plants(next_water_due_at);
 CREATE INDEX IF NOT EXISTS idx_care_logs_plant_id ON care_logs(plant_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_care_log_tags_unique_log_tag ON care_log_tags(care_log_id, tag);
+CREATE INDEX IF NOT EXISTS idx_care_log_tags_user_id ON care_log_tags(user_id);
 CREATE INDEX IF NOT EXISTS idx_care_reminders_plant_id ON care_reminders(plant_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_care_reminders_unique_plant_user ON care_reminders(plant_id, user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_care_reminders_unique_plant_user_type ON care_reminders(plant_id, user_id, reminder_type);
+CREATE INDEX IF NOT EXISTS idx_plant_status_snapshots_plant_id ON plant_status_snapshots(plant_id, captured_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_specimen_tags_unique_plant_user ON specimen_tags(plant_id, user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_archive_curation_overrides_unique_selection ON archive_curation_overrides(user_id, plant_id, before_photo_id, after_photo_id);
 CREATE INDEX IF NOT EXISTS idx_photos_plant_id ON photos(plant_id);
 CREATE INDEX IF NOT EXISTS idx_local_auth_credentials_email ON local_auth_credentials(email);
 CREATE INDEX IF NOT EXISTS idx_sync_queue_status_retry ON sync_queue(status, next_retry_at);
@@ -180,7 +260,11 @@ async function removeOrphanedPlantChildren(database: SQLiteDatabase) {
   await database.execAsync(`
 DELETE FROM photos WHERE plant_id NOT IN (SELECT id FROM plants);
 DELETE FROM care_logs WHERE plant_id NOT IN (SELECT id FROM plants);
+DELETE FROM care_log_tags WHERE plant_id NOT IN (SELECT id FROM plants) OR care_log_id NOT IN (SELECT id FROM care_logs);
 DELETE FROM care_reminders WHERE plant_id NOT IN (SELECT id FROM plants);
+DELETE FROM plant_status_snapshots WHERE plant_id NOT IN (SELECT id FROM plants);
+DELETE FROM specimen_tags WHERE plant_id NOT IN (SELECT id FROM plants);
+DELETE FROM archive_curation_overrides WHERE plant_id NOT IN (SELECT id FROM plants);
 DELETE FROM graveyard_plants WHERE plant_id NOT IN (SELECT id FROM plants);
 `);
 }
@@ -364,7 +448,7 @@ ALTER TABLE graveyard_plants_v2 RENAME TO graveyard_plants;
 CREATE INDEX IF NOT EXISTS idx_photos_plant_id ON photos(plant_id);
 CREATE INDEX IF NOT EXISTS idx_care_logs_plant_id ON care_logs(plant_id);
 CREATE INDEX IF NOT EXISTS idx_care_reminders_plant_id ON care_reminders(plant_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_care_reminders_unique_plant_user ON care_reminders(plant_id, user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_care_reminders_unique_plant_user_type ON care_reminders(plant_id, user_id, reminder_type);
 `);
   } finally {
     await database.execAsync("PRAGMA foreign_keys = ON;");
@@ -400,7 +484,10 @@ WHERE captured_at IS NULL;
 `);
 }
 
-export function extractEmbeddedTags(notes: string): { cleanNotes: string; tags: string[] } {
+export function extractEmbeddedTags(notes: string): {
+  cleanNotes: string;
+  tags: string[];
+} {
   const metaPattern = /\n\n\[meta:(\{[^}]+\})\]/g;
   const tags: string[] = [];
   let match: RegExpExecArray | null;
@@ -443,6 +530,60 @@ async function backfillEmbeddedTagsFromNotes(database: SQLiteDatabase) {
   }
 }
 
+async function backfillNormalizedCareLogTags(database: SQLiteDatabase) {
+  const rows = await database.getAllAsync<{
+    id: string;
+    user_id: string;
+    plant_id: string;
+    tags: string | null;
+    created_at: string;
+    updated_at: string;
+    updated_by: string | null;
+  }>(
+    `SELECT id, user_id, plant_id, tags, created_at, updated_at, updated_by FROM care_logs WHERE tags IS NOT NULL;`,
+  );
+
+  for (const row of rows) {
+    let parsed: unknown;
+    try {
+      parsed = row.tags ? JSON.parse(row.tags) : [];
+    } catch {
+      parsed = [];
+    }
+
+    const tags = Array.isArray(parsed)
+      ? Array.from(
+          new Set(
+            parsed
+              .filter((tag): tag is string => typeof tag === "string")
+              .map((tag) => tag.trim())
+              .filter(Boolean),
+          ),
+        ).sort((left, right) => left.localeCompare(right))
+      : [];
+
+    for (const tag of tags) {
+      await database.runAsync(
+        `INSERT OR IGNORE INTO care_log_tags (
+          id, user_id, care_log_id, plant_id, tag, created_at, updated_at, updated_by,
+          pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        `${row.id}:${tag}`,
+        row.user_id,
+        row.id,
+        row.plant_id,
+        tag,
+        row.created_at,
+        row.updated_at,
+        row.updated_by,
+        0,
+        null,
+        null,
+      );
+    }
+  }
+}
+
 export async function runDatabaseMigrations(database: SQLiteDatabase) {
   await database.execAsync(bootstrapSql);
   await database.execAsync("PRAGMA foreign_keys = ON;");
@@ -473,7 +614,81 @@ export async function runDatabaseMigrations(database: SQLiteDatabase) {
   await backfillPhotoTimelineMetadata(database);
   await ensureColumn(database, "care_logs", "tags", "TEXT");
   await backfillEmbeddedTagsFromNotes(database);
+  await database.execAsync(`
+CREATE TABLE IF NOT EXISTS care_log_tags (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  care_log_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  tag TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT
+);
+CREATE TABLE IF NOT EXISTS plant_status_snapshots (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  reason TEXT,
+  captured_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT
+);
+CREATE TABLE IF NOT EXISTS specimen_tags (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  code TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  qr_matrix TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT
+);
+CREATE TABLE IF NOT EXISTS archive_curation_overrides (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  before_photo_id TEXT NOT NULL,
+  after_photo_id TEXT NOT NULL,
+  caption TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT
+);
+CREATE TABLE IF NOT EXISTS import_runs (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  source_version INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  error_message TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_care_log_tags_unique_log_tag ON care_log_tags(care_log_id, tag);
+CREATE INDEX IF NOT EXISTS idx_care_log_tags_user_id ON care_log_tags(user_id);
+CREATE INDEX IF NOT EXISTS idx_plant_status_snapshots_plant_id ON plant_status_snapshots(plant_id, captured_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_specimen_tags_unique_plant_user ON specimen_tags(plant_id, user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_archive_curation_overrides_unique_selection ON archive_curation_overrides(user_id, plant_id, before_photo_id, after_photo_id);
+`);
+  await backfillNormalizedCareLogTags(database);
   await database.execAsync(
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_care_reminders_unique_plant_user ON care_reminders(plant_id, user_id);",
+    `DROP INDEX IF EXISTS idx_care_reminders_unique_plant_user;
+     CREATE UNIQUE INDEX IF NOT EXISTS idx_care_reminders_unique_plant_user_type ON care_reminders(plant_id, user_id, reminder_type);`,
   );
 }

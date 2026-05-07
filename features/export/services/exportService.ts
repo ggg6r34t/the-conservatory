@@ -46,6 +46,9 @@ interface ExportPayload {
   photos: Photo[];
   reminders: CareReminder[];
   memorialEntries: GraveyardPlant[];
+  statusSnapshots: unknown[];
+  specimenTags: unknown[];
+  archiveCurationOverrides: unknown[];
 }
 
 interface CountRow {
@@ -387,6 +390,9 @@ async function buildExportPayload(
     photoRows,
     reminderRows,
     graveyardRows,
+    statusSnapshotRows,
+    specimenTagRows,
+    archiveOverrideRows,
   ] = await Promise.all([
     getExportCollectionSummary(user.id),
     database.getFirstAsync<PreferencesRow>(
@@ -413,6 +419,18 @@ async function buildExportPayload(
       "SELECT * FROM graveyard_plants WHERE user_id = ? ORDER BY archived_at DESC;",
       user.id,
     ),
+    database.getAllAsync(
+      "SELECT * FROM plant_status_snapshots WHERE user_id = ? ORDER BY captured_at DESC;",
+      user.id,
+    ),
+    database.getAllAsync(
+      "SELECT * FROM specimen_tags WHERE user_id = ? ORDER BY updated_at DESC;",
+      user.id,
+    ),
+    database.getAllAsync(
+      "SELECT * FROM archive_curation_overrides WHERE user_id = ? ORDER BY updated_at DESC;",
+      user.id,
+    ),
   ]);
 
   return {
@@ -434,6 +452,9 @@ async function buildExportPayload(
       photos: photoRows.map(mapPhoto),
       reminders: reminderRows.map(mapReminder),
       memorialEntries: graveyardRows.map(mapGraveyard),
+      statusSnapshots: statusSnapshotRows,
+      specimenTags: specimenTagRows,
+      archiveCurationOverrides: archiveOverrideRows,
     },
   };
 }

@@ -9,6 +9,7 @@ const ARCHIVE_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 export interface ArchiveCurationItem {
   plantId: string;
   plantName: string;
+  photos?: { id: string; uri: string }[];
   photoUris: string[];
 }
 
@@ -33,12 +34,20 @@ export function curateArchiveLocally(items: ArchiveCurationItem[]) {
   return items
     .map((item) => {
       const photoUris = uniqueUris(item.photoUris);
+      const photos = item.photos?.length
+        ? item.photos.filter((photo) => photo.uri)
+        : photoUris.map((uri, index) => ({
+            id: `${item.plantId}:${index}`,
+            uri,
+          }));
       if (photoUris.length < 2) {
         return null;
       }
 
-      const beforeUri = photoUris[photoUris.length - 1];
-      const afterUri = photoUris[0];
+      const beforePhoto = photos[photos.length - 1];
+      const afterPhoto = photos[0];
+      const beforeUri = beforePhoto.uri;
+      const afterUri = afterPhoto.uri;
       if (beforeUri === afterUri) {
         return null;
       }
@@ -49,6 +58,8 @@ export function curateArchiveLocally(items: ArchiveCurationItem[]) {
           plantName: item.plantName,
           beforeUri,
           afterUri,
+          beforePhotoId: beforePhoto.id,
+          afterPhotoId: afterPhoto.id,
           caption: "Earlier and later moments, held together in the archive.",
         },
         "local",

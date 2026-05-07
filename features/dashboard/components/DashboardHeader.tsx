@@ -6,29 +6,21 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import {
+  getProfileDisplayName,
+  getProfileInitials,
+} from "@/features/profile/services/profilePresentationService";
 
 interface DashboardHeaderProps {
   isOffline: boolean;
-}
-
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) {
-    return "C";
-  }
-
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
 }
 
 export function DashboardHeader({ isOffline }: DashboardHeaderProps) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const [avatarFailed, setAvatarFailed] = useState(false);
-  const displayName = user?.displayName ?? "Curator";
-  const initials = getInitials(displayName);
+  const displayName = getProfileDisplayName(user?.displayName);
+  const initials = getProfileInitials(displayName);
   const avatarSource = useMemo(
     () =>
       user?.avatarUrl

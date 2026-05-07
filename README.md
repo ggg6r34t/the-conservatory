@@ -1,6 +1,6 @@
 # The Conservatory
 
-The Conservatory is an Expo + React Native plant care app focused on a premium editorial UI, local-first reliability, and staged Supabase sync.
+The Conservatory is an Expo + React Native plant care app focused on a premium editorial UI, local-first reliability, and Supabase-backed sync when backend configuration is present.
 
 ## Core Features
 
@@ -44,7 +44,6 @@ Required/available values:
 
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-- `EXPO_PUBLIC_ENABLE_SYNC_TRIALS` (`false` by default)
 
 If Supabase vars are omitted, the app uses local fallbacks where implemented.
 
@@ -90,7 +89,7 @@ The app includes runtime safeguards so unsupported notification paths are skippe
 - Mutations write to local SQLite first.
 - A `sync_queue` records pending operations.
 - Replay is processed by `services/database/sync.ts`.
-- Supabase replay adapter is feature-flagged behind `EXPO_PUBLIC_ENABLE_SYNC_TRIALS`.
+- Supabase replay runs when Supabase URL and anon key are configured for the build.
 
 ## Supabase Schema
 

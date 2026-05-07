@@ -2,6 +2,8 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "@/config/constants";
 import { getArchiveCuration } from "@/features/ai/services/archiveCurationService";
+import { listArchiveCurationOverrides } from "@/features/ai/services/archiveCurationOverridesService";
+import type { ArchiveCuratedPair } from "@/features/ai/types/ai";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
 import { getPlantById } from "@/features/plants/api/plantsClient";
 
@@ -26,23 +28,74 @@ export function useArchiveCuration(input: {
         plant?.photos
           .map((photo) => photo.localUri ?? photo.remoteUrl ?? "")
           .filter(Boolean) ?? [],
+      photos:
+        plant?.photos
+          .map((photo) => ({
+            id: photo.id,
+            uri: photo.localUri ?? photo.remoteUrl ?? "",
+          }))
+          .filter((photo) => Boolean(photo.uri)) ?? [],
     };
   });
 
   const revision = items
-    .map((item) => `${item.plantId}:${item.photoUris.length}:${item.photoUris[0] ?? "none"}`)
+    .map(
+      (item) =>
+        `${item.plantId}:${item.photoUris.length}:${item.photoUris[0] ?? "none"}`,
+    )
     .join("|");
 
   const curationQuery = useQuery({
     queryKey: ["ai", "archive-curation", input.userId ?? "guest", revision],
     enabled: Boolean(input.userId && revision),
     staleTime: 1000 * 60 * 30,
-    queryFn: () => getArchiveCuration(items.filter((item) => item.photoUris.length >= 2)),
+    queryFn: () =>
+      getArchiveCuration(items.filter((item) => item.photoUris.length >= 2)),
+  });
+  const overridesQuery = useQuery({
+    queryKey: ["ai", "archive-curation-overrides", input.userId ?? "guest"],
+    enabled: Boolean(input.userId),
+    queryFn: () => listArchiveCurationOverrides(input.userId!),
+  });
+
+  const data = (curationQuery.data ?? []).map((pair): ArchiveCuratedPair => {
+    const override = (overridesQuery.data ?? []).find(
+      (candidate) => candidate.plantId === pair.plantId,
+    );
+    if (!override) {
+      const item = items.find((candidate) => candidate.plantId === pair.plantId);
+      return {
+        ...pair,
+        candidatePhotos: item?.photos ?? [],
+      };
+    }
+    const item = items.find((candidate) => candidate.plantId === pair.plantId);
+    const before = item?.photos.find(
+      (photo) => photo.id === override.beforePhotoId,
+    );
+    const after = item?.photos.find(
+      (photo) => photo.id === override.afterPhotoId,
+    );
+    if (!item || !before || !after) {
+      return pair;
+    }
+    return {
+      ...pair,
+      beforeUri: before.uri,
+      afterUri: after.uri,
+      beforePhotoId: before.id,
+      afterPhotoId: after.id,
+      candidatePhotos: item.photos,
+      caption: override.caption ?? pair.caption,
+      source: "local",
+    };
   });
 
   return {
-    data: curationQuery.data ?? [],
+    data,
     isLoading:
-      curationQuery.isLoading || plantQueries.some((query) => query.isLoading),
+      curationQuery.isLoading ||
+      overridesQuery.isLoading ||
+      plantQueries.some((query) => query.isLoading),
   };
 }

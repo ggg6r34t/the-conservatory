@@ -4,7 +4,7 @@
 
 **Goal:** Fix every hard blocker, sync integrity gap, and product truthfulness issue uncovered by the V1 enterprise audit so the app is App Store / Play Store submission ready.
 
-**Architecture:** Local-first SQLite primary store with optional Supabase sync gated by `EXPO_PUBLIC_ENABLE_SYNC_TRIALS`. Every mutation must atomically write to the entity table AND the `sync_queue` in the same `withTransactionAsync` call via `runAtomicMutationWithSyncOutbox`. Tier 1 fixes require zero migrations; Tier 2–3 extend the schema using the existing `ensureColumn` pattern.
+**Architecture:** Local-first SQLite primary store with Supabase sync enabled by valid Supabase build configuration. Every mutation must atomically write to the entity table AND the `sync_queue` in the same `withTransactionAsync` call via `runAtomicMutationWithSyncOutbox`. Tier 1 fixes require zero migrations; Tier 2–3 extend the schema using the existing `ensureColumn` pattern.
 
 **Tech Stack:** Expo SDK 54, React Native 0.81, Expo Router, Expo SQLite, TypeScript strict, Zustand v5 (`zustand/middleware` persist), React Query v5, Supabase JS v2, Jest + jest-expo, EAS CLI.
 
@@ -14,7 +14,7 @@
 
 | File                                                    | Action               | Why                                                                                                                          |
 | ------------------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `eas.json`                                              | Modify               | Add `EXPO_PUBLIC_ENABLE_SYNC_TRIALS=true` to production env — without it sync is permanently disabled in production builds   |
+| `eas.json`                                              | Modify               | Ensure production build profile relies on configured Supabase URL and anon key for cloud sync                                |
 | `features/onboarding/components/PermissionsScreen.tsx`  | Modify               | Remove Location permission card — no location feature exists; App Store 5.1.1 violation                                      |
 | `features/onboarding/hooks/useOnboardingPermissions.ts` | Modify               | Remove location from snapshot type, initial state, request handler, and bulk-request loop                                    |
 | `app/profile.tsx`                                       | Modify               | Remove SUBSCRIPTION section (dead "coming soon" UI); rename "Watering Alerts" to "Reminders Enabled"                         |
@@ -48,7 +48,7 @@
   cat eas.json | grep -A5 '"production"'
   ```
 
-  Expected: no `env` block under `production`. Confirm `EXPO_PUBLIC_ENABLE_SYNC_TRIALS` is absent.
+  Expected: no legacy sync trial flag under `production`.
 
 - [ ] **Step 2: Fix `eas.json`**
 
@@ -63,9 +63,7 @@
     "android": {
       "buildType": "app-bundle"
     },
-    "env": {
-      "EXPO_PUBLIC_ENABLE_SYNC_TRIALS": "true"
-    }
+    "env": {}
   }
   ```
 
@@ -74,7 +72,7 @@
   Run:
 
   ```bash
-  node -e "const e=require('./eas.json'); const v=e.build.production.env.EXPO_PUBLIC_ENABLE_SYNC_TRIALS; if(v!=='true') throw new Error('Missing flag'); console.log('OK:', v);"
+  node -e "const e=require('./eas.json'); if(e.build.production.env?.EXPO_PUBLIC_ENABLE_SYNC_TRIALS) throw new Error('Legacy sync trial flag present'); console.log('OK')"
   ```
 
   Expected: `OK: true`
@@ -83,7 +81,7 @@
 
   ```bash
   git add eas.json
-  git commit -m "fix(eas): enable EXPO_PUBLIC_ENABLE_SYNC_TRIALS in production build profile"
+  git commit -m "fix(eas): rely on configured Supabase sync in production"
   ```
 
 ---
@@ -1779,7 +1777,7 @@ After all the above changes, run a final typecheck and lint pass to catch any da
 
 | Audit Item                                                         | Task             |
 | ------------------------------------------------------------------ | ---------------- |
-| `EXPO_PUBLIC_ENABLE_SYNC_TRIALS` missing from production EAS build | Task 1           |
+| Legacy sync trial flag present in production EAS build             | Task 1           |
 | Location permission requested with no location feature             | Task 2 + Task 11 |
 | Subscription card shows "coming soon" UI                           | Task 3           |
 | "Watering Alerts" toggle controls all reminders                    | Task 4 (rename)  |

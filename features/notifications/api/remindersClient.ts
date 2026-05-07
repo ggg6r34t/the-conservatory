@@ -1,6 +1,6 @@
 import { getDatabase } from "@/services/database/sqlite";
 import { runAtomicMutationWithSyncOutbox } from "@/services/database/syncOutbox";
-import type { CareReminder } from "@/types/models";
+import type { CareReminder, ReminderType } from "@/types/models";
 import { createId } from "@/utils/id";
 
 function mapReminder(row: {
@@ -93,15 +93,17 @@ export async function upsertReminderInTransaction(
   input: {
     userId: string;
     plantId: string;
+    reminderType?: ReminderType;
     frequencyDays: number;
     nextDueAt: string | null;
     enabled: boolean;
   },
 ): Promise<{ reminderId: string; operation: "insert" | "update" }> {
   const existing = await database.getFirstAsync<{ id: string }>(
-    "SELECT id FROM care_reminders WHERE plant_id = ? AND user_id = ? LIMIT 1;",
+    "SELECT id FROM care_reminders WHERE plant_id = ? AND user_id = ? AND reminder_type = ? LIMIT 1;",
     input.plantId,
     input.userId,
+    input.reminderType ?? "water",
   );
 
   if (existing) {
@@ -128,7 +130,7 @@ export async function upsertReminderInTransaction(
     reminderId,
     input.userId,
     input.plantId,
-    "water",
+    input.reminderType ?? "water",
     input.frequencyDays,
     Number(input.enabled),
     input.nextDueAt,
@@ -147,14 +149,17 @@ export async function upsertReminderInTransaction(
 export async function upsertReminder(input: {
   userId: string;
   plantId: string;
+  reminderType?: ReminderType;
   frequencyDays: number;
   nextDueAt: string | null;
   enabled: boolean;
 }) {
   const database = await getDatabase();
   const existing = await database.getFirstAsync<{ id: string }>(
-    "SELECT id FROM care_reminders WHERE plant_id = ? LIMIT 1;",
+    "SELECT id FROM care_reminders WHERE plant_id = ? AND user_id = ? AND reminder_type = ? LIMIT 1;",
     input.plantId,
+    input.userId,
+    input.reminderType ?? "water",
   );
   const now = new Date().toISOString();
 
@@ -224,7 +229,7 @@ export async function upsertReminder(input: {
         reminderId,
         input.userId,
         input.plantId,
-        "water",
+        input.reminderType ?? "water",
         input.frequencyDays,
         Number(input.enabled),
         input.nextDueAt,
@@ -302,6 +307,67 @@ export async function updateReminderNotificationId(
             operation: "update" as const,
             payload: {
               notificationId,
+            },
+          },
+        ],
+      };
+    },
+  });
+}
+
+export async function deleteReminder(input: {
+  userId: string;
+  reminderId: string;
+}): Promise<{
+  reminderId: string;
+  plantId: string;
+  notificationId: string | null;
+}> {
+  const database = await getDatabase();
+  const now = new Date().toISOString();
+
+  return runAtomicMutationWithSyncOutbox<{
+    reminderId: string;
+    plantId: string;
+    notificationId: string | null;
+  }>(database, {
+    nowIso: now,
+    perform: async () => {
+      const existing = await database.getFirstAsync<{
+        id: string;
+        user_id: string;
+        plant_id: string;
+        notification_id: string | null;
+      }>(
+        "SELECT id, user_id, plant_id, notification_id FROM care_reminders WHERE id = ? AND user_id = ? LIMIT 1;",
+        input.reminderId,
+        input.userId,
+      );
+
+      if (!existing) {
+        throw new Error("Reminder could not be found.");
+      }
+
+      await database.runAsync(
+        "DELETE FROM care_reminders WHERE id = ? AND user_id = ?;",
+        input.reminderId,
+        input.userId,
+      );
+
+      return {
+        result: {
+          reminderId: existing.id,
+          plantId: existing.plant_id,
+          notificationId: existing.notification_id,
+        },
+        operations: [
+          {
+            entity: "care_reminders",
+            entityId: existing.id,
+            operation: "delete" as const,
+            payload: {
+              userId: input.userId,
+              plantId: existing.plant_id,
             },
           },
         ],

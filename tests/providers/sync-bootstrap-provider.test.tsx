@@ -71,6 +71,7 @@ describe("SyncBootstrapProvider", () => {
 
     rendered.unmount();
     queryClient.clear();
+    queryClient.unmount();
   });
 
   it("does not auto sync queued changes when the persisted preference is off", async () => {
@@ -98,5 +99,6 @@ describe("SyncBootstrapProvider", () => {
 
     rendered.unmount();
     queryClient.clear();
+    queryClient.unmount();
   });
 });

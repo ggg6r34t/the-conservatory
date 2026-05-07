@@ -5,6 +5,7 @@ create type public.user_role as enum ('user', 'admin');
 create type public.plant_status as enum ('active', 'graveyard');
 create type public.care_log_type as enum ('water', 'mist', 'feed', 'repot', 'prune', 'inspect', 'pest', 'note');
 create type public.reminder_type as enum ('water', 'mist', 'feed');
+create type public.plant_health_status as enum ('thriving', 'stable', 'needs_water');
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -102,6 +103,18 @@ create table if not exists public.care_logs (
   updated_by uuid references auth.users(id)
 );
 
+create table if not exists public.care_log_tags (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  care_log_id uuid not null references public.care_logs(id) on delete cascade,
+  plant_id uuid not null references public.plants(id) on delete cascade,
+  tag text not null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  updated_by uuid references auth.users(id),
+  unique (care_log_id, tag)
+);
+
 create table if not exists public.care_reminders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,
@@ -114,6 +127,44 @@ create table if not exists public.care_reminders (
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   updated_by uuid references auth.users(id)
+);
+
+create table if not exists public.plant_status_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  plant_id uuid not null references public.plants(id) on delete cascade,
+  status public.plant_health_status not null,
+  reason text,
+  captured_at timestamptz not null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  updated_by uuid references auth.users(id)
+);
+
+create table if not exists public.specimen_tags (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  plant_id uuid not null references public.plants(id) on delete cascade,
+  code text not null,
+  payload text not null,
+  qr_matrix text not null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  updated_by uuid references auth.users(id),
+  unique (plant_id, user_id)
+);
+
+create table if not exists public.archive_curation_overrides (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  plant_id uuid not null references public.plants(id) on delete cascade,
+  before_photo_id uuid not null references public.photos(id) on delete cascade,
+  after_photo_id uuid not null references public.photos(id) on delete cascade,
+  caption text,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  updated_by uuid references auth.users(id),
+  unique (user_id, plant_id, before_photo_id, after_photo_id)
 );
 
 create table if not exists public.graveyard_plants (
@@ -132,14 +183,21 @@ create index if not exists idx_plants_user_id_created_at on public.plants (user_
 create index if not exists idx_plants_user_id_status on public.plants (user_id, status);
 create index if not exists idx_care_logs_plant_id_logged_at on public.care_logs (plant_id, logged_at desc);
 create index if not exists idx_care_reminders_user_id_next_due_at on public.care_reminders (user_id, next_due_at asc);
+create unique index if not exists idx_care_reminders_unique_plant_user_type on public.care_reminders (plant_id, user_id, reminder_type);
 create index if not exists idx_photos_plant_id_created_at on public.photos (plant_id, created_at desc);
+create index if not exists idx_care_log_tags_user_id on public.care_log_tags (user_id);
+create index if not exists idx_plant_status_snapshots_plant_id on public.plant_status_snapshots (plant_id, captured_at desc);
 
 create trigger set_users_updated_at before update on public.users for each row execute procedure public.set_updated_at();
 create trigger set_user_preferences_updated_at before update on public.user_preferences for each row execute procedure public.set_updated_at();
 create trigger set_plants_updated_at before update on public.plants for each row execute procedure public.set_updated_at();
 create trigger set_photos_updated_at before update on public.photos for each row execute procedure public.set_updated_at();
 create trigger set_care_logs_updated_at before update on public.care_logs for each row execute procedure public.set_updated_at();
+create trigger set_care_log_tags_updated_at before update on public.care_log_tags for each row execute procedure public.set_updated_at();
 create trigger set_care_reminders_updated_at before update on public.care_reminders for each row execute procedure public.set_updated_at();
+create trigger set_plant_status_snapshots_updated_at before update on public.plant_status_snapshots for each row execute procedure public.set_updated_at();
+create trigger set_specimen_tags_updated_at before update on public.specimen_tags for each row execute procedure public.set_updated_at();
+create trigger set_archive_curation_overrides_updated_at before update on public.archive_curation_overrides for each row execute procedure public.set_updated_at();
 create trigger set_graveyard_updated_at before update on public.graveyard_plants for each row execute procedure public.set_updated_at();
 
 alter table public.users enable row level security;
@@ -147,7 +205,11 @@ alter table public.user_preferences enable row level security;
 alter table public.plants enable row level security;
 alter table public.photos enable row level security;
 alter table public.care_logs enable row level security;
+alter table public.care_log_tags enable row level security;
 alter table public.care_reminders enable row level security;
+alter table public.plant_status_snapshots enable row level security;
+alter table public.specimen_tags enable row level security;
+alter table public.archive_curation_overrides enable row level security;
 alter table public.graveyard_plants enable row level security;
 
 create policy "users select own or admin" on public.users for select using (auth.uid() = id or public.is_admin());
@@ -157,7 +219,11 @@ create policy "user_preferences own or admin" on public.user_preferences for all
 create policy "plants own or admin" on public.plants for all using (auth.uid() = user_id or public.is_admin()) with check (auth.uid() = user_id or public.is_admin());
 create policy "photos own or admin" on public.photos for all using (auth.uid() = user_id or public.is_admin()) with check (auth.uid() = user_id or public.is_admin());
 create policy "care_logs own or admin" on public.care_logs for all using (auth.uid() = user_id or public.is_admin()) with check (auth.uid() = user_id or public.is_admin());
+create policy "care_log_tags own or admin" on public.care_log_tags for all using (auth.uid() = user_id or public.is_admin()) with check (auth.uid() = user_id or public.is_admin());
 create policy "care_reminders own or admin" on public.care_reminders for all using (auth.uid() = user_id or public.is_admin()) with check (auth.uid() = user_id or public.is_admin());
+create policy "plant_status_snapshots own or admin" on public.plant_status_snapshots for all using (auth.uid() = user_id or public.is_admin()) with check (auth.uid() = user_id or public.is_admin());
+create policy "specimen_tags own or admin" on public.specimen_tags for all using (auth.uid() = user_id or public.is_admin()) with check (auth.uid() = user_id or public.is_admin());
+create policy "archive_curation_overrides own or admin" on public.archive_curation_overrides for all using (auth.uid() = user_id or public.is_admin()) with check (auth.uid() = user_id or public.is_admin());
 create policy "graveyard own or admin" on public.graveyard_plants for all using (auth.uid() = user_id or public.is_admin()) with check (auth.uid() = user_id or public.is_admin());
 
 insert into storage.buckets (id, name, public)

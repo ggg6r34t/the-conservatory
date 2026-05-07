@@ -1,13 +1,16 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Image } from "expo-image";
 
 import { useTheme } from "@/components/design-system/useTheme";
 import { useArchiveCuration } from "@/features/ai/hooks/useArchiveCuration";
+import { saveArchiveCurationOverride } from "@/features/ai/services/archiveCurationOverridesService";
 import { getInsightSourceLabel } from "@/features/ai/services/insightSourcePresentation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
+import { useSnackbar } from "@/hooks/useSnackbar";
 
 function formatArchiveDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -20,12 +23,22 @@ function formatArchiveDate(value: string) {
 export default function ArchiveGalleryScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const snackbar = useSnackbar();
   const graveyardQuery = useGraveyard();
   const memorials = graveyardQuery.data ?? [];
   const curationQuery = useArchiveCuration({
     userId: user?.id,
     memorials,
   });
+  const [drafts, setDrafts] = useState<
+    Record<string, { beforePhotoId: string | null; afterPhotoId: string | null }>
+  >({});
+
+  const getDraftPair = (pair: (typeof curationQuery.data)[number]) =>
+    drafts[pair.plantId] ?? {
+      beforePhotoId: pair.beforePhotoId ?? null,
+      afterPhotoId: pair.afterPhotoId ?? null,
+    };
 
   return (
     <ProfileScreenScaffold
@@ -38,14 +51,17 @@ export default function ArchiveGalleryScreen() {
           <Text style={[styles.curatedLabel, { color: colors.secondary }]}>
             QUIET PAIRS
           </Text>
-          {curationQuery.data.map((pair) => (
-            <View
-              key={pair.plantId}
-              style={[
-                styles.curatedCard,
-                { backgroundColor: colors.surfaceContainerLow },
-              ]}
-            >
+          {curationQuery.data.map((pair) => {
+            const draft = getDraftPair(pair);
+            const candidatePhotos = pair.candidatePhotos ?? [];
+            return (
+              <View
+                key={pair.plantId}
+                style={[
+                  styles.curatedCard,
+                  { backgroundColor: colors.surfaceContainerLow },
+                ]}
+              >
               <View style={styles.curatedHeader}>
                 <Text style={[styles.curatedTitle, { color: colors.primary }]}>
                   {pair.plantName}
@@ -66,6 +82,122 @@ export default function ArchiveGalleryScreen() {
                 >
                   {getInsightSourceLabel(pair.source).toUpperCase()}
                 </Text>
+                {candidatePhotos.length > 2 ? (
+                  <View style={styles.pairEditor}>
+                    <Text
+                      accessibilityRole="button"
+                      onPress={() =>
+                        setDrafts((current) => ({
+                          ...current,
+                          [pair.plantId]: {
+                            beforePhotoId: pair.beforePhotoId ?? null,
+                            afterPhotoId: pair.afterPhotoId ?? null,
+                          },
+                        }))
+                      }
+                      style={[styles.curatedSource, { color: colors.primary }]}
+                    >
+                      Edit Pairing
+                    </Text>
+                    {candidatePhotos.map((photo, index) => (
+                      <View key={photo.id} style={styles.pairButtonRow}>
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() =>
+                            setDrafts((current) => ({
+                              ...current,
+                              [pair.plantId]: {
+                                ...draft,
+                                beforePhotoId: photo.id,
+                              },
+                            }))
+                          }
+                          style={[
+                            styles.pairButton,
+                            {
+                              backgroundColor:
+                                draft.beforePhotoId === photo.id
+                                  ? colors.primary
+                                  : colors.surfaceContainerLowest,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.pairButtonLabel,
+                              {
+                                color:
+                                  draft.beforePhotoId === photo.id
+                                    ? colors.surfaceContainerLow
+                                    : colors.primary,
+                              },
+                            ]}
+                          >
+                            {`Set before: ${index + 1}`}
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() =>
+                            setDrafts((current) => ({
+                              ...current,
+                              [pair.plantId]: {
+                                ...draft,
+                                afterPhotoId: photo.id,
+                              },
+                            }))
+                          }
+                          style={[
+                            styles.pairButton,
+                            {
+                              backgroundColor:
+                                draft.afterPhotoId === photo.id
+                                  ? colors.primary
+                                  : colors.surfaceContainerLowest,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.pairButtonLabel,
+                              {
+                                color:
+                                  draft.afterPhotoId === photo.id
+                                    ? colors.surfaceContainerLow
+                                    : colors.primary,
+                              },
+                            ]}
+                          >
+                            {`Set after: ${index + 1}`}
+                          </Text>
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+                {draft.beforePhotoId && draft.afterPhotoId && user?.id ? (
+                  <Text
+                    accessibilityRole="button"
+                    onPress={() => {
+                      saveArchiveCurationOverride({
+                        userId: user.id,
+                        selection: {
+                          plantId: pair.plantId,
+                          beforePhotoId: draft.beforePhotoId!,
+                          afterPhotoId: draft.afterPhotoId!,
+                          caption: pair.caption,
+                        },
+                      })
+                        .then(() => snackbar.success("Archive pairing saved."))
+                        .catch(() =>
+                          snackbar.warning("Archive pairing was not saved."),
+                        );
+                    }}
+                    style={[styles.curatedSource, { color: colors.primary }]}
+                  >
+                    Save Pairing
+                  </Text>
+                ) : null}
               </View>
 
               <View style={styles.curatedImageRow}>
@@ -80,8 +212,9 @@ export default function ArchiveGalleryScreen() {
                   contentFit="cover"
                 />
               </View>
-            </View>
-          ))}
+              </View>
+            );
+          })}
         </View>
       ) : null}
 
@@ -177,6 +310,26 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     letterSpacing: 1.4,
+  },
+  pairEditor: {
+    gap: 8,
+    paddingTop: 6,
+  },
+  pairButtonRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  pairButton: {
+    minHeight: 32,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pairButtonLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 14,
   },
   curatedImageRow: {
     flexDirection: "row",

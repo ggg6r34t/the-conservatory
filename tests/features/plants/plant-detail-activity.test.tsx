@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import React from "react";
 
 import { PlantDetail } from "@/features/plants/components/PlantDetail";
@@ -300,7 +300,9 @@ describe("PlantDetail recent activity", () => {
   it("records Water Now as a real water event instead of routing into the generic form", async () => {
     renderWithProviders(<PlantDetail data={baseFixture} />);
 
-    fireEvent.press(screen.getByText("Water Now"));
+    await act(async () => {
+      fireEvent.press(screen.getByText("Water Now"));
+    });
 
     expect(mockRecordCareEvent).toHaveBeenCalledWith({
       logType: "water",
@@ -311,7 +313,9 @@ describe("PlantDetail recent activity", () => {
   it("offers an optional Add note follow-up that updates the same saved water log", async () => {
     renderWithProviders(<PlantDetail data={baseFixture} />);
 
-    fireEvent.press(screen.getByText("Water Now"));
+    await act(async () => {
+      fireEvent.press(screen.getByText("Water Now"));
+    });
 
     await waitFor(() => {
       expect(mockSnackbarSuccess).toHaveBeenCalledWith(
@@ -335,7 +339,9 @@ describe("PlantDetail recent activity", () => {
 
     expect(snackbarOptions?.action?.label).toBe("Add note");
 
-    snackbarOptions?.action?.onPress();
+    await act(async () => {
+      snackbarOptions?.action?.onPress();
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Add a note")).toBeTruthy();

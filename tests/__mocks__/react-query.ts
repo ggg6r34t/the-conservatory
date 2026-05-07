@@ -21,6 +21,8 @@ export function createTestQueryClient() {
 
 afterEach(() => {
   while (createdClients.length > 0) {
-    createdClients.pop()?.clear();
+    const client = createdClients.pop();
+    client?.clear();
+    client?.unmount();
   }
 });

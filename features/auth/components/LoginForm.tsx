@@ -89,7 +89,7 @@ export function LoginForm() {
         autoComplete="email"
         textContentType="emailAddress"
         returnKeyType="next"
-        placeholder="botanist@conservatory.com"
+        placeholder="you@example.com"
         error={errors.email}
       />
       <TextInputField

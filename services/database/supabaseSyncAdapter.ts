@@ -12,8 +12,12 @@ type SyncableEntity =
   | "user_preferences"
   | "plants"
   | "care_logs"
+  | "care_log_tags"
   | "care_reminders"
   | "photos"
+  | "plant_status_snapshots"
+  | "specimen_tags"
+  | "archive_curation_overrides"
   | "graveyard_plants";
 
 function canTrackLocalSync(entity: string): entity is SyncableEntity {
@@ -21,8 +25,12 @@ function canTrackLocalSync(entity: string): entity is SyncableEntity {
     entity === "user_preferences" ||
     entity === "plants" ||
     entity === "care_logs" ||
+    entity === "care_log_tags" ||
     entity === "care_reminders" ||
     entity === "photos" ||
+    entity === "plant_status_snapshots" ||
+    entity === "specimen_tags" ||
+    entity === "archive_curation_overrides" ||
     entity === "graveyard_plants"
   );
 }
@@ -206,6 +214,68 @@ async function loadReminderRecord(entityId: string) {
     updated_at: row.updated_at,
     updated_by: row.updated_by ?? row.user_id,
   };
+}
+
+async function loadCareLogTagRecord(entityId: string) {
+  const database = await getDatabase();
+  return database.getFirstAsync<{
+    id: string;
+    user_id: string;
+    care_log_id: string;
+    plant_id: string;
+    tag: string;
+    created_at: string;
+    updated_at: string;
+    updated_by: string | null;
+  }>("SELECT * FROM care_log_tags WHERE id = ? LIMIT 1;", entityId);
+}
+
+async function loadStatusSnapshotRecord(entityId: string) {
+  const database = await getDatabase();
+  return database.getFirstAsync<{
+    id: string;
+    user_id: string;
+    plant_id: string;
+    status: "thriving" | "stable" | "needs_water";
+    reason: string | null;
+    captured_at: string;
+    created_at: string;
+    updated_at: string;
+    updated_by: string | null;
+  }>("SELECT * FROM plant_status_snapshots WHERE id = ? LIMIT 1;", entityId);
+}
+
+async function loadSpecimenTagRecord(entityId: string) {
+  const database = await getDatabase();
+  return database.getFirstAsync<{
+    id: string;
+    user_id: string;
+    plant_id: string;
+    code: string;
+    payload: string;
+    qr_matrix: string;
+    created_at: string;
+    updated_at: string;
+    updated_by: string | null;
+  }>("SELECT * FROM specimen_tags WHERE id = ? LIMIT 1;", entityId);
+}
+
+async function loadArchiveOverrideRecord(entityId: string) {
+  const database = await getDatabase();
+  return database.getFirstAsync<{
+    id: string;
+    user_id: string;
+    plant_id: string;
+    before_photo_id: string;
+    after_photo_id: string;
+    caption: string | null;
+    created_at: string;
+    updated_at: string;
+    updated_by: string | null;
+  }>(
+    "SELECT * FROM archive_curation_overrides WHERE id = ? LIMIT 1;",
+    entityId,
+  );
 }
 
 async function loadPhotoRecord(entityId: string) {
@@ -438,6 +508,46 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
     if (error) {
       throw new Error(error.message);
     }
+    return;
+  }
+
+  if (item.entity === "care_log_tags") {
+    const row = await loadCareLogTagRecord(item.entityId);
+    if (!row) return;
+    const { error } = await supabase
+      .from("care_log_tags")
+      .upsert(row, { onConflict: "id" });
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  if (item.entity === "plant_status_snapshots") {
+    const row = await loadStatusSnapshotRecord(item.entityId);
+    if (!row) return;
+    const { error } = await supabase
+      .from("plant_status_snapshots")
+      .upsert(row, { onConflict: "id" });
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  if (item.entity === "specimen_tags") {
+    const row = await loadSpecimenTagRecord(item.entityId);
+    if (!row) return;
+    const { error } = await supabase
+      .from("specimen_tags")
+      .upsert(row, { onConflict: "id" });
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  if (item.entity === "archive_curation_overrides") {
+    const row = await loadArchiveOverrideRecord(item.entityId);
+    if (!row) return;
+    const { error } = await supabase
+      .from("archive_curation_overrides")
+      .upsert(row, { onConflict: "id" });
+    if (error) throw new Error(error.message);
     return;
   }
 

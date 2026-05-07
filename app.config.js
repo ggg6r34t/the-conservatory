@@ -14,7 +14,7 @@ module.exports = {
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription:
-          "The Conservatory uses the camera so you can capture plant and growth progress photos.",
+          "The Conservatory uses the camera so you can capture plant photos and scan specimen tags.",
         NSPhotoLibraryUsageDescription:
           "The Conservatory uses your photo library so you can add existing plant photos to your local archive.",
         NSPhotoLibraryAddUsageDescription:
@@ -51,7 +51,14 @@ module.exports = {
           photosPermission:
             "The Conservatory uses your photo library so you can add existing plant photos to your archive.",
           cameraPermission:
-            "The Conservatory uses the camera so you can capture plant and growth progress photos.",
+            "The Conservatory uses the camera so you can capture plant photos and scan specimen tags.",
+        },
+      ],
+      [
+        "expo-camera",
+        {
+          cameraPermission:
+            "The Conservatory uses the camera so you can capture plant photos and scan specimen tags.",
         },
       ],
       [

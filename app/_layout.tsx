@@ -173,10 +173,15 @@ function RootNavigator({
       <Stack.Screen name="profile-edit" options={drillInScreenOptions} />
       <Stack.Screen name="archive-gallery" options={drillInScreenOptions} />
       <Stack.Screen name="specimen-tags" options={drillInScreenOptions} />
+      <Stack.Screen name="specimen-scan" options={drillInScreenOptions} />
       <Stack.Screen name="backup-details" options={drillInScreenOptions} />
       <Stack.Screen name="sync-repair" options={drillInScreenOptions} />
       <Stack.Screen
         name="export-collection-data"
+        options={drillInScreenOptions}
+      />
+      <Stack.Screen
+        name="import-collection-data"
         options={drillInScreenOptions}
       />
       <Stack.Screen name="privacy-security" options={drillInScreenOptions} />

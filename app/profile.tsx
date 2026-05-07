@@ -21,6 +21,12 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
+import {
+  getProfileDisplayEmail,
+  getProfileDisplayName,
+  getProfileInitials,
+  getProfileVersionLabel,
+} from "@/features/profile/services/profilePresentationService";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 
@@ -37,18 +43,6 @@ type StatItemProps = {
   value: string;
   label: string;
 };
-
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) {
-    return "C";
-  }
-
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
 
 function computeCareStreak(loggedAtValues: string[]) {
   if (!loggedAtValues.length) {
@@ -198,13 +192,12 @@ export default function ProfileScreen() {
     return computeCareStreak(allLoggedAt);
   }, [careLogsQuery.data]);
 
-  const displayName = user?.displayName?.trim() || "Signed-in curator";
-  const email = user?.email?.trim() || "Account email unavailable";
+  const displayName = getProfileDisplayName(user?.displayName);
+  const email = getProfileDisplayEmail(user?.email);
   const appVersion =
     Constants.expoConfig?.version ??
-    Constants.manifest2?.extra?.expoClient?.version ??
-    "Unknown";
-  const initials = getInitials(displayName);
+    Constants.manifest2?.extra?.expoClient?.version;
+  const initials = getProfileInitials(displayName);
   const avatarSource = useMemo(
     () =>
       user?.avatarUrl
@@ -521,7 +514,7 @@ export default function ProfileScreen() {
             <Text
               style={[styles.footerMeta, { color: colors.onSurfaceVariant }]}
             >
-              VERSION {appVersion}
+              {getProfileVersionLabel(appVersion)}
             </Text>
             <Icon
               name="circle-small"

@@ -90,18 +90,6 @@ export async function probeRemoteBackendAvailability(): Promise<RemoteBackendAva
     };
   }
 
-  if (!env.enableSyncTrials) {
-    return {
-      state: "unavailable",
-      canSync: false,
-      title: "Remote sync disabled",
-      description:
-        "Supabase is configured, but remote sync is not enabled for this build yet. Your conservatory remains stored locally until sync is explicitly turned on.",
-      detail:
-        "Set EXPO_PUBLIC_ENABLE_SYNC_TRIALS=true to enable remote sync processing.",
-    };
-  }
-
   try {
     const { error } = await supabase.auth.getUser();
 

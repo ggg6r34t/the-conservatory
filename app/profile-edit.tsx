@@ -8,18 +8,13 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useUpdateProfile } from "@/features/profile/hooks/useUpdateProfile";
+import {
+  getProfileDisplayEmail,
+  getProfileDisplayName,
+  getProfileInitials,
+} from "@/features/profile/services/profilePresentationService";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
-
-function getInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
 
 export default function ProfileEditScreen() {
   const { colors } = useTheme();
@@ -35,7 +30,10 @@ export default function ProfileEditScreen() {
   }, [user?.displayName]);
 
   const trimmedName = displayName.trim();
-  const initials = getInitials(trimmedName || user?.displayName || "Curator");
+  const displayNamePreview = getProfileDisplayName(
+    trimmedName || user?.displayName,
+  );
+  const initials = getProfileInitials(displayNamePreview);
   const avatarSource = useMemo(
     () =>
       user?.avatarUrl
@@ -83,10 +81,10 @@ export default function ProfileEditScreen() {
 
         <View style={styles.heroCopy}>
           <Text style={[styles.heroTitle, { color: colors.primary }]}>
-            {trimmedName || "Curator"}
+            {displayNamePreview}
           </Text>
           <Text style={[styles.heroBody, { color: colors.onSurfaceVariant }]}>
-            {user?.email ?? "botanist@conservatory.com"}
+            {getProfileDisplayEmail(user?.email)}
           </Text>
         </View>
       </View>

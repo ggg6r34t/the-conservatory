@@ -20,7 +20,6 @@ jest.mock("@/config/env", () => ({
     missingSupabaseConfig: [],
     supabaseUrl: "https://example.supabase.co",
     supabaseAnonKey: "anon-key",
-    enableSyncTrials: true,
   },
 }));
 
@@ -114,6 +113,29 @@ describe("auth client supabase mapping", () => {
 
     await expect(getInitialAuthUser()).resolves.toBeNull();
     expect(mockClearSession).toHaveBeenCalled();
+  });
+
+  it("clears Supabase session state instead of fabricating an email when identity is incomplete", async () => {
+    mockSupabaseAuth.getSession.mockResolvedValue({
+      data: {
+        session: {
+          user: {
+            id: "user-no-email",
+            email: null,
+            user_metadata: {},
+          },
+        },
+      },
+      error: null,
+    });
+
+    const { getInitialAuthUser } = require("@/features/auth/api/authClient");
+
+    await expect(getInitialAuthUser()).resolves.toBeNull();
+    expect(mockClearSession).toHaveBeenCalled();
+    expect(mockWriteSession).not.toHaveBeenCalledWith(
+      expect.objectContaining({ email: "botanist@conservatory.com" }),
+    );
   });
 
   it("maps invalid Supabase credentials to a safe user-facing error", async () => {

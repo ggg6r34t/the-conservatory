@@ -150,6 +150,12 @@ export interface ArchiveCuratedPair {
   plantName: string;
   beforeUri: string;
   afterUri: string;
+  beforePhotoId?: string | null;
+  afterPhotoId?: string | null;
+  candidatePhotos?: {
+    id: string;
+    uri: string;
+  }[];
   caption: string;
   source: AiSource;
 }

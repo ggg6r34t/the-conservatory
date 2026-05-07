@@ -1,12 +1,20 @@
 import React from "react";
 
-import { screen, waitFor } from "@testing-library/react-native";
+import { act, screen, waitFor } from "@testing-library/react-native";
 
 import JournalScreen from "@/app/(tabs)/journal";
 import { renderWithProviders } from "@/tests/utils/renderWithProviders";
 
 const mockUseMonthlyHighlights = jest.fn();
 const mockListCareLogsForPlants = jest.fn();
+
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQuery: () => ({ data: [], isLoading: false, error: null }),
+  };
+});
 
 jest.mock("expo-router", () => ({
   Link: ({ children }: { children: React.ReactNode }) => children,
@@ -56,7 +64,8 @@ jest.mock("@/features/journal/hooks/useMonthlyHighlights", () => ({
 }));
 
 jest.mock("@/features/care-logs/api/careLogsClient", () => ({
-  listCareLogsForPlants: (...args: unknown[]) => mockListCareLogsForPlants(...args),
+  listCareLogsForPlants: (...args: unknown[]) =>
+    mockListCareLogsForPlants(...args),
 }));
 
 jest.mock("@/features/ai/hooks/useJournalSummary", () => ({
@@ -136,6 +145,9 @@ describe("JournalScreen monthly highlights preview", () => {
     await waitFor(() => {
       expect(screen.getByText("Monthly Highlights")).toBeTruthy();
     });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(screen.getByText("file:///progress-1.jpg")).toBeTruthy();
     expect(screen.getByText("MAR 18")).toBeTruthy();
@@ -165,6 +177,9 @@ describe("JournalScreen monthly highlights preview", () => {
 
     await waitFor(() => {
       expect(screen.queryByText("Monthly Highlights")).toBeNull();
+    });
+    await act(async () => {
+      await Promise.resolve();
     });
   });
 });

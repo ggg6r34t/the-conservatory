@@ -1,4 +1,5 @@
 import { env } from "@/config/env";
+import { processSyncQueueItemWithSupabase } from "@/services/database/supabaseSyncAdapter";
 import { getDatabase } from "@/services/database/sqlite";
 import { createId } from "@/utils/id";
 import { logger } from "@/utils/logger";
@@ -280,13 +281,7 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
       );
       let processOperation = options?.processOperation ?? null;
 
-      if (
-        !processOperation &&
-        env.enableSyncTrials &&
-        env.isSupabaseConfigured
-      ) {
-        const { processSyncQueueItemWithSupabase } =
-          await import("@/services/database/supabaseSyncAdapter");
+      if (!processOperation && env.isSupabaseConfigured) {
         processOperation = processSyncQueueItemWithSupabase;
       }
 

@@ -347,6 +347,40 @@ describe("care logs client", () => {
     expect(result[0]?.currentCondition).toBe("Needs Attention");
   });
 
+  it("reads normalized care log tags when legacy JSON tags are empty", async () => {
+    const getAllAsync = jest
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          id: "log-1",
+          user_id: "user-1",
+          plant_id: "plant-1",
+          log_type: "inspect",
+          current_condition: null,
+          notes: "Leaf check",
+          tags: null,
+          logged_at: "2026-03-24T10:00:00.000Z",
+          created_at: "2026-03-24T10:00:00.000Z",
+          updated_at: "2026-03-24T10:00:00.000Z",
+          updated_by: "user-1",
+          pending: 0,
+          synced_at: null,
+          sync_error: null,
+        },
+      ])
+      .mockResolvedValueOnce([
+        { care_log_id: "log-1", tag: "leaf" },
+        { care_log_id: "log-1", tag: "pest-check" },
+      ]);
+    mockGetDatabase.mockResolvedValue({ getAllAsync });
+
+    const { listCareLogs } = require("@/features/care-logs/api/careLogsClient");
+
+    const logs = await listCareLogs("plant-1");
+
+    expect(logs[0].tags).toEqual(["leaf", "pest-check"]);
+  });
+
   it("updates the same just-created care log note without inserting a second row", async () => {
     const runAsync = jest.fn().mockResolvedValue(undefined);
     const withTransactionAsync = jest.fn(
@@ -508,5 +542,190 @@ describe("care logs client", () => {
       }),
     );
     expect(mockReschedulePlantReminder).not.toHaveBeenCalled();
+  });
+
+  it("uses the water reminder when care logs reschedule after watering", async () => {
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
+    const getFirstAsync = jest.fn().mockResolvedValue({
+      id: "log-water",
+      user_id: "user-1",
+      plant_id: "plant-1",
+      log_type: "water",
+      current_condition: null,
+      notes: null,
+      tags: null,
+      logged_at: "2026-03-24T10:00:00.000Z",
+      created_at: "2026-03-24T10:00:00.000Z",
+      updated_at: "2026-03-24T10:00:00.000Z",
+      updated_by: "user-1",
+      pending: 1,
+      synced_at: null,
+      sync_error: null,
+    });
+
+    const mistReminder = {
+      id: "reminder-mist",
+      userId: "user-1",
+      plantId: "plant-1",
+      reminderType: "mist",
+      frequencyDays: 3,
+      enabled: 1,
+      nextDueAt: "2026-03-26T09:00:00.000Z",
+      lastTriggeredAt: "2026-03-20T09:00:00.000Z",
+      notificationId: null,
+      createdAt: "2026-03-01T10:00:00.000Z",
+      updatedAt: "2026-03-24T10:00:00.000Z",
+      updatedBy: "user-1",
+      pending: 1,
+      syncedAt: null,
+      syncError: null,
+    };
+    const waterReminder = {
+      ...mistReminder,
+      id: "reminder-water",
+      reminderType: "water",
+      frequencyDays: 7,
+      nextDueAt: "2026-03-31T09:00:00.000Z",
+    };
+    mockGetPlantById.mockResolvedValue({
+      plant: {
+        id: "plant-1",
+        userId: "user-1",
+        name: "Aster",
+        speciesName: "Monstera deliciosa",
+        status: "active",
+        wateringIntervalDays: 7,
+        lastWateredAt: "2026-03-17T10:00:00.000Z",
+        nextWaterDueAt: "2026-03-24T09:00:00.000Z",
+        createdAt: "2026-03-01T10:00:00.000Z",
+        updatedAt: "2026-03-20T10:00:00.000Z",
+        pending: 0,
+      },
+      photos: [],
+      reminders: [mistReminder, waterReminder],
+      logs: [],
+    });
+    mockGetDatabase.mockResolvedValue({
+      runAsync,
+      getFirstAsync,
+      withTransactionAsync,
+    });
+
+    const {
+      createCareLog,
+    } = require("@/features/care-logs/api/careLogsClient");
+
+    await createCareLog({
+      userId: "user-1",
+      plantId: "plant-1",
+      logType: "water",
+    });
+
+    expect(mockUpsertReminderInTransaction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      expect.objectContaining({
+        reminderType: "water",
+      }),
+    );
+    expect(mockReschedulePlantReminder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "reminder-water",
+        reminderType: "water",
+      }),
+      "Aster",
+    );
+  });
+
+  it("reschedules the matching mist reminder when a mist log is recorded", async () => {
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
+    const getFirstAsync = jest.fn().mockResolvedValue({
+      id: "log-mist",
+      user_id: "user-1",
+      plant_id: "plant-1",
+      log_type: "mist",
+      current_condition: null,
+      notes: null,
+      tags: null,
+      logged_at: "2026-03-24T10:00:00.000Z",
+      created_at: "2026-03-24T10:00:00.000Z",
+      updated_at: "2026-03-24T10:00:00.000Z",
+      updated_by: "user-1",
+      pending: 1,
+      synced_at: null,
+      sync_error: null,
+    });
+    const mistReminder = {
+      id: "reminder-mist",
+      userId: "user-1",
+      plantId: "plant-1",
+      reminderType: "mist",
+      frequencyDays: 3,
+      enabled: 1,
+      nextDueAt: "2026-03-26T09:00:00.000Z",
+      lastTriggeredAt: null,
+      notificationId: null,
+      createdAt: "2026-03-01T10:00:00.000Z",
+      updatedAt: "2026-03-24T10:00:00.000Z",
+      updatedBy: "user-1",
+      pending: 1,
+      syncedAt: null,
+      syncError: null,
+    };
+    mockGetPlantById.mockResolvedValue({
+      plant: {
+        id: "plant-1",
+        userId: "user-1",
+        name: "Aster",
+        speciesName: "Monstera deliciosa",
+        status: "active",
+        wateringIntervalDays: 7,
+        createdAt: "2026-03-01T10:00:00.000Z",
+        updatedAt: "2026-03-20T10:00:00.000Z",
+        pending: 0,
+      },
+      photos: [],
+      reminders: [mistReminder],
+      logs: [],
+    });
+    mockGetDatabase.mockResolvedValue({
+      runAsync,
+      getFirstAsync,
+      withTransactionAsync,
+    });
+
+    const {
+      createCareLog,
+    } = require("@/features/care-logs/api/careLogsClient");
+
+    await createCareLog({
+      userId: "user-1",
+      plantId: "plant-1",
+      logType: "mist",
+      loggedAt: "2026-03-24T10:00:00.000Z",
+    });
+
+    expect(mockUpsertReminderInTransaction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      expect.objectContaining({
+        reminderType: "mist",
+        frequencyDays: 3,
+        nextDueAt: "2026-03-27T10:00:00.000Z",
+      }),
+    );
+    expect(mockReschedulePlantReminder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "reminder-mist",
+        reminderType: "mist",
+      }),
+      "Aster",
+    );
   });
 });

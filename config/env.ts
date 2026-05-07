@@ -8,10 +8,6 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => value === "true"),
-  expoPublicEnableSyncTrials: z
-    .string()
-    .optional()
-    .transform((value) => value === "true"),
 });
 
 const parsed = envSchema.safeParse({
@@ -24,9 +20,6 @@ const parsed = envSchema.safeParse({
   expoPublicEnableAnalytics:
     process.env.EXPO_PUBLIC_ENABLE_ANALYTICS ??
     Constants.expoConfig?.extra?.expoPublicEnableAnalytics,
-  expoPublicEnableSyncTrials:
-    process.env.EXPO_PUBLIC_ENABLE_SYNC_TRIALS ??
-    Constants.expoConfig?.extra?.expoPublicEnableSyncTrials,
 });
 
 const safeEnv: z.infer<typeof envSchema> = parsed.success
@@ -35,7 +28,6 @@ const safeEnv: z.infer<typeof envSchema> = parsed.success
       expoPublicSupabaseUrl: undefined,
       expoPublicSupabaseAnonKey: undefined,
       expoPublicEnableAnalytics: false,
-      expoPublicEnableSyncTrials: false,
     };
 
 const isDevelopmentBuild = __DEV__ || process.env.NODE_ENV === "test";
@@ -54,10 +46,4 @@ export const env = {
     safeEnv.expoPublicSupabaseUrl && safeEnv.expoPublicSupabaseAnonKey,
   ),
   enableAnalytics: Boolean(safeEnv.expoPublicEnableAnalytics),
-  enableSyncTrials: Boolean(
-    safeEnv.expoPublicEnableSyncTrials ||
-    (!isDevelopmentBuild &&
-      safeEnv.expoPublicSupabaseUrl &&
-      safeEnv.expoPublicSupabaseAnonKey),
-  ),
 };

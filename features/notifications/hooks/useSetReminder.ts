@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
 import { queryKeys } from "@/config/constants";
+import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { upsertReminder } from "@/features/notifications/api/remindersClient";
 import { reschedulePlantReminder } from "@/features/notifications/services/remindersScheduler";
-import { useAuth } from "@/features/auth/hooks/useAuth";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
+import type { ReminderType } from "@/types/models";
 
 export function useSetReminder() {
   const { user } = useAuth();
@@ -21,12 +22,14 @@ export function useSetReminder() {
       frequencyDays,
       nextDueAt,
       enabled,
+      reminderType,
     }: {
       plantId: string;
       plantName: string;
       speciesName: string;
       lastWateredAt?: string | null;
       lastTriggeredAt?: string | null;
+      reminderType?: ReminderType;
       frequencyDays: number;
       nextDueAt: string | null;
       enabled: boolean;
@@ -45,6 +48,7 @@ export function useSetReminder() {
       const reminder = await upsertReminder({
         userId: user!.id,
         plantId,
+        reminderType,
         frequencyDays,
         nextDueAt: optimized.nextDueAt,
         enabled,

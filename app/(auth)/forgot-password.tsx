@@ -104,7 +104,7 @@ export default function ForgotPasswordScreen() {
           }}
           keyboardType="email-address"
           autoCapitalize="none"
-          placeholder="botanist@conservatory.com"
+          placeholder="you@example.com"
           error={error}
           autoComplete="email"
           textContentType="emailAddress"

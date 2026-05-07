@@ -11,6 +11,16 @@ export interface PersistPhotoAssetInput {
   mimeType?: string | null;
 }
 
+export interface DownloadRemotePhotoAssetInput {
+  remoteUri: string;
+  userId: string;
+  plantId: string;
+  photoId: string;
+  role: ManagedPhotoRole;
+  mimeType?: string | null;
+  storagePath?: string | null;
+}
+
 export interface PersistedPhotoAsset {
   localUri: string;
   storagePath: string;
@@ -74,6 +84,24 @@ function createManagedDirectory(input: {
   return roleDirectory;
 }
 
+function createManagedPhotoFile(input: {
+  userId: string;
+  plantId: string;
+  photoId: string;
+  role: ManagedPhotoRole;
+  extension: string;
+}) {
+  const directory = createManagedDirectory({
+    userId: input.userId,
+    plantId: input.plantId,
+    role: input.role,
+  });
+  return new File(
+    directory,
+    `${sanitizePathSegment(input.photoId)}.${input.extension}`,
+  );
+}
+
 export function isManagedPhotoUri(uri: string | null | undefined) {
   return Boolean(uri && uri.startsWith(managedRootUri()));
 }
@@ -110,15 +138,13 @@ export async function persistPhotoAsset(
     };
   }
 
-  const directory = createManagedDirectory({
+  const destination = createManagedPhotoFile({
     userId: input.userId,
     plantId: input.plantId,
+    photoId: input.photoId,
     role: input.role,
+    extension,
   });
-  const destination = new File(
-    directory,
-    `${sanitizePathSegment(input.photoId)}.${extension}`,
-  );
   const source = new File(input.sourceUri);
 
   await source.copy(destination);
@@ -126,6 +152,47 @@ export async function persistPhotoAsset(
   const info = await destination.info();
   if (!info.exists) {
     throw new Error("Photo could not be persisted on this device.");
+  }
+
+  return {
+    localUri: destination.uri,
+    storagePath,
+  };
+}
+
+export async function downloadRemotePhotoAsset(
+  input: DownloadRemotePhotoAssetInput,
+): Promise<PersistedPhotoAsset> {
+  const extension = resolveExtension({
+    sourceUri: input.storagePath ?? input.remoteUri,
+    mimeType: input.mimeType,
+  });
+  const storagePath =
+    input.storagePath ??
+    buildPhotoStoragePath({
+      userId: input.userId,
+      plantId: input.plantId,
+      photoId: input.photoId,
+      extension,
+    });
+  const destination = createManagedPhotoFile({
+    userId: input.userId,
+    plantId: input.plantId,
+    photoId: input.photoId,
+    role: input.role,
+    extension,
+  });
+
+  const info = await destination.info();
+  if (!info.exists) {
+    await File.downloadFileAsync(input.remoteUri, destination, {
+      idempotent: true,
+    });
+  }
+
+  const nextInfo = await destination.info();
+  if (!nextInfo.exists) {
+    throw new Error("Remote photo could not be restored on this device.");
   }
 
   return {

@@ -1,5 +1,6 @@
 const mockGetDatabase = jest.fn();
 const mockFrom = jest.fn();
+const mockDownloadRemotePhotoAsset = jest.fn();
 
 jest.mock("@/config/supabase", () => ({
   supabase: {
@@ -9,6 +10,18 @@ jest.mock("@/config/supabase", () => ({
 
 jest.mock("@/services/database/sqlite", () => ({
   getDatabase: (...args: unknown[]) => mockGetDatabase(...args),
+}));
+
+jest.mock("@/services/supabase/storage", () => ({
+  getStorageAssetUrl: jest.fn(async (path: string | null) =>
+    path ? `https://storage.example/${path}` : null,
+  ),
+  normalizeStoragePath: jest.fn((path: string | null | undefined) => path ?? null),
+}));
+
+jest.mock("@/features/plants/services/photoStorageService", () => ({
+  downloadRemotePhotoAsset: (...args: unknown[]) =>
+    mockDownloadRemotePhotoAsset(...args),
 }));
 
 describe("remoteHydration user preferences", () => {
@@ -349,6 +362,97 @@ describe("remoteHydration care logs", () => {
       "user-1",
       0,
       expect.any(String),
+      null,
+    );
+  });
+});
+
+describe("remoteHydration photos", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDownloadRemotePhotoAsset.mockResolvedValue({
+      localUri: "file://documents/photos/user-1/plant-1/progress/photo-1.jpg",
+      storagePath: "user-1/plant-1/photo-1.jpg",
+    });
+  });
+
+  it("restores hydrated remote photos into app-owned local storage", async () => {
+    mockFrom.mockImplementation((table: string) => ({
+      select: () => ({
+        eq: async () => ({
+          data:
+            table === "photos"
+              ? [
+                  {
+                    id: "photo-1",
+                    user_id: "user-1",
+                    plant_id: "plant-1",
+                    remote_url: null,
+                    storage_path: "user-1/plant-1/photo-1.jpg",
+                    mime_type: "image/jpeg",
+                    width: 1200,
+                    height: 900,
+                    photo_role: "progress",
+                    captured_at: "2026-03-22T10:00:00.000Z",
+                    taken_at: "2026-03-22T10:00:00.000Z",
+                    caption: "New leaf",
+                    is_primary: 0,
+                    created_at: "2026-03-22T10:00:00.000Z",
+                    updated_at: "2026-03-22T10:00:00.000Z",
+                    updated_by: "user-1",
+                  },
+                ]
+              : [],
+          error: null,
+        }),
+      }),
+    }));
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    const getFirstAsync = jest.fn().mockResolvedValue(null);
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync,
+      runAsync,
+      withTransactionAsync,
+    });
+
+    const {
+      hydrateRemoteUserData,
+    } = require("@/services/database/remoteHydration");
+
+    await hydrateRemoteUserData("user-1");
+
+    expect(mockDownloadRemotePhotoAsset).toHaveBeenCalledWith(
+      expect.objectContaining({
+        remoteUri: "https://storage.example/user-1/plant-1/photo-1.jpg",
+        userId: "user-1",
+        plantId: "plant-1",
+        photoId: "photo-1",
+        role: "progress",
+      }),
+    );
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT OR REPLACE INTO photos"),
+      "photo-1",
+      "user-1",
+      "plant-1",
+      "file://documents/photos/user-1/plant-1/progress/photo-1.jpg",
+      "https://storage.example/user-1/plant-1/photo-1.jpg",
+      "user-1/plant-1/photo-1.jpg",
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      "progress",
+      expect.anything(),
+      expect.anything(),
+      "New leaf",
+      0,
+      expect.anything(),
+      expect.anything(),
+      0,
+      expect.anything(),
       null,
     );
   });

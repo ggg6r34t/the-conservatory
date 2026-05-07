@@ -2,6 +2,7 @@ const mockCopy = jest.fn();
 const mockDelete = jest.fn();
 const mockInfo = jest.fn();
 const mockDirectoryCreate = jest.fn();
+const mockDownloadFileAsync = jest.fn();
 
 jest.mock("expo-file-system", () => {
   class MockDirectory {
@@ -18,9 +19,13 @@ jest.mock("expo-file-system", () => {
 
   class MockFile {
     uri: string;
+    static downloadFileAsync = mockDownloadFileAsync;
 
-    constructor(directory: { uri: string }, name: string) {
-      this.uri = `${directory.uri}/${name}`;
+    constructor(directory: { uri: string } | string, name?: string) {
+      this.uri =
+        typeof directory === "string"
+          ? directory
+          : `${directory.uri}/${name ?? ""}`;
     }
 
     async copy(destination: { uri: string }) {
@@ -104,5 +109,37 @@ describe("photo storage service", () => {
     } = require("@/features/plants/services/photoStorageService");
 
     expect(isManagedPhotoUri("file://cache/temporary.jpg")).toBe(false);
+  });
+
+  it("downloads hydrated remote photos into app-owned storage", async () => {
+    mockInfo.mockResolvedValueOnce({ exists: false });
+    mockInfo.mockResolvedValueOnce({ exists: true });
+    mockDownloadFileAsync.mockResolvedValue({
+      uri: "file://documents/photos/user-1/plant-1/progress/photo-1.jpg",
+    });
+    const {
+      downloadRemotePhotoAsset,
+    } = require("@/features/plants/services/photoStorageService");
+
+    const result = await downloadRemotePhotoAsset({
+      remoteUri: "https://storage.example/photo-1.jpg",
+      userId: "user-1",
+      plantId: "plant-1",
+      photoId: "photo-1",
+      role: "progress",
+      mimeType: "image/jpeg",
+    });
+
+    expect(mockDownloadFileAsync).toHaveBeenCalledWith(
+      "https://storage.example/photo-1.jpg",
+      expect.objectContaining({
+        uri: "file://documents/photos/user-1/plant-1/progress/photo-1.jpg",
+      }),
+      expect.objectContaining({ idempotent: true }),
+    );
+    expect(result.localUri).toBe(
+      "file://documents/photos/user-1/plant-1/progress/photo-1.jpg",
+    );
+    expect(result.storagePath).toBe("user-1/plant-1/photo-1.jpg");
   });
 });
