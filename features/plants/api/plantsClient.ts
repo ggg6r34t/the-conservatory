@@ -1,5 +1,8 @@
 import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
-import { FREE_PLANT_LIMIT } from "@/features/billing/constants";
+import {
+  FREE_PLANT_LIMIT,
+  FREE_PROGRESS_PHOTOS_PER_PLANT,
+} from "@/features/billing/constants";
 import { upsertReminderInTransaction } from "@/features/notifications/api/remindersClient";
 import { cancelReminderNotification } from "@/features/notifications/services/notificationService";
 import { reschedulePlantReminder } from "@/features/notifications/services/remindersScheduler";
@@ -873,11 +876,27 @@ export async function addPlantProgressPhoto(input: {
   width?: number | null;
   height?: number | null;
   caption?: string | null;
+  isPremium?: boolean;
 }) {
   const database = await getDatabase();
   const current = await getPlantById(input.userId, input.plantId);
   if (!current) {
     throw new Error("Plant not found.");
+  }
+
+  if (!input.isPremium) {
+    const photoCountRow = await database.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM photos WHERE plant_id = ? AND photo_role = 'progress'`,
+      [input.plantId],
+    );
+    const currentCount = photoCountRow?.count ?? 0;
+    if (currentCount >= FREE_PROGRESS_PHOTOS_PER_PLANT) {
+      throw Object.assign(new Error("Photo limit reached"), {
+        code: "PHOTO_LIMIT_REACHED" as const,
+        limit: FREE_PROGRESS_PHOTOS_PER_PLANT,
+        current: currentCount,
+      });
+    }
   }
 
   const now = new Date().toISOString();
