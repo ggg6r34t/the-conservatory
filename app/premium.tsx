@@ -87,7 +87,7 @@ export default function PremiumScreen() {
 
   return (
     <ProfileScreenScaffold
-      title="Subscription Editorial"
+      title="Membership Editorial"
       subtitle="Account Stewardship"
       description="Refine your botanical journey. Your membership nurtures both your collection and the curated knowledge of the Digital Conservatory."
     >
