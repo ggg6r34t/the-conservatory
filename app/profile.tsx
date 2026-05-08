@@ -233,7 +233,10 @@ export default function ProfileScreen() {
         <AppHeader title="Profile" subtitle="Curator's Corner" showBackButton />
 
         <View style={styles.hero}>
-          <View
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Edit profile photo"
+            onPress={() => router.push("/profile-edit")}
             style={[styles.avatarOuter, { borderColor: colors.primaryFixed }]}
           >
             <View
@@ -268,7 +271,7 @@ export default function ProfileScreen() {
             >
               <Icon name="pencil" size={16} color={colors.surfaceBright} />
             </View>
-          </View>
+          </Pressable>
 
           <Text style={[styles.profileName, { color: colors.primary }]}>
             {displayName}
