@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   section: {
-    gap: 16,
+    gap: 20,
   },
   sectionEyebrow: {
     fontFamily: "Manrope_700Bold",

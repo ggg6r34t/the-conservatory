@@ -342,20 +342,19 @@ export default function SubscriptionPlansScreen() {
 
 const styles = StyleSheet.create({
   section: {
-    gap: 12,
+    gap: 20,
   },
-  plans: { gap: 12 },
+  plans: { gap: 16 },
   sectionLabel: {
     fontFamily: "Manrope_700Bold",
     fontSize: 11,
     letterSpacing: 2.1,
-    paddingHorizontal: 4,
   },
   loader: {
     marginTop: 4,
   },
   purchaseSection: {
-    gap: 14,
+    gap: 16,
   },
   planCard: { borderRadius: 20, borderWidth: 1.5, padding: 20, gap: 6 },
   planCardBadge: { alignItems: "flex-start" },
@@ -390,10 +389,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   ctaButton: {
-    height: 58,
+    minHeight: 58,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
   ctaLabel: { fontFamily: "Manrope_700Bold", fontSize: 16, letterSpacing: 0.6 },
   trialDisclosure: {
