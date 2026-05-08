@@ -499,6 +499,11 @@ export default function ProfileScreen() {
             ]}
           >
             <ProfileRow
+              icon="credit-card-outline"
+              label="Manage Subscription"
+              onPress={() => router.push("/premium")}
+            />
+            <ProfileRow
               icon="shield-account-outline"
               label="Privacy & Security"
               onPress={() => router.push("/privacy-security")}
