@@ -70,7 +70,9 @@ export function curateArchiveLocally(items: ArchiveCurationItem[]) {
 }
 
 export async function getArchiveCuration(items: ArchiveCurationItem[], cloudAllowed = true) {
-  if (!cloudAllowed) return [];
+  if (!cloudAllowed) {
+    return curateArchiveLocally(items);
+  }
 
   const revision = buildRevision(items);
   if (!revision) {
