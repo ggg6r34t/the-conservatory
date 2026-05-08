@@ -1,18 +1,18 @@
 import type {
   GenerateDashboardInsightRequest,
   GenerateDashboardInsightResponse,
-} from "../../../features/ai/types/ai";
+} from "../../../features/ai/types/ai.ts";
 
-import { validateAiRequest, validateAiResponse } from "../_shared/aiSchemas";
+import { validateAiRequest, validateAiResponse } from "../_shared/aiSchemas.ts";
 import {
   assertAiUsageQuota,
   createEdgeContext,
   logEdgeEvent,
   readJsonWithLimit,
   safeErrorResponse,
-} from "../_shared/edge";
-import { assertPremiumEntitlement } from "../_shared/entitlements";
-import { jsonResponse } from "../_shared/json";
+} from "../_shared/edge.ts";
+import { assertPremiumEntitlement } from "../_shared/entitlements.ts";
+import { jsonResponse } from "../_shared/json.ts";
 
 const FUNCTION_NAME = "generate-dashboard-insight";
 

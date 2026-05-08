@@ -1,4 +1,4 @@
-import { EdgeFunctionError } from "./edge";
+import { EdgeFunctionError } from "./edge.ts";
 
 type Validator = (value: unknown) => unknown;
 

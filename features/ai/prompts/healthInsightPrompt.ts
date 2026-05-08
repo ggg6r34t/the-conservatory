@@ -1,4 +1,4 @@
-import type { GenerateHealthInsightRequest } from "@/features/ai/types/ai";
+import type { GenerateHealthInsightRequest } from "../types/ai.ts";
 
 export function buildHealthInsightPrompt(input: GenerateHealthInsightRequest) {
   return [

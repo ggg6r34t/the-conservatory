@@ -1,7 +1,7 @@
 // @ts-ignore - Deno runtime import, not resolved by app tsc
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { jsonResponse } from "./json";
+import { jsonResponse } from "./json.ts";
 
 // @ts-ignore - Deno global available at runtime
 const _Deno = Deno as typeof Deno & {

@@ -3,8 +3,8 @@ import {
   EdgeFunctionError,
   logEdgeEvent,
   safeErrorResponse,
-} from "../_shared/edge";
-import { jsonResponse } from "../_shared/json";
+} from "../_shared/edge.ts";
+import { jsonResponse } from "../_shared/json.ts";
 
 const FUNCTION_NAME = "delete-account";
 
