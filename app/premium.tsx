@@ -93,64 +93,68 @@ export default function PremiumScreen() {
       subtitle="Account Stewardship"
       description="Refine your botanical journey. Your subscription nurtures both your collection and the curated knowledge of the Digital Conservatory."
     >
-      <View
-        style={[styles.membershipCard, { backgroundColor: colors.primary }]}
-      >
-        <View style={styles.membershipImagePanel}>
-          <Image
-            source={HEIRLOOM_CARD_IMAGE}
-            resizeMode="cover"
-            style={styles.membershipCardImage}
-          />
-          <View style={styles.membershipImageOverlay} />
-        </View>
-        <View style={styles.membershipCardOverlay} />
-        <View style={styles.membershipHeader}>
-          <View style={styles.membershipTitleBlock}>
-            <Text
-              style={[styles.membershipTitle, { color: colors.surfaceBright }]}
-            >
-              The Heirloom
-            </Text>
-            <Text
-              style={[styles.membershipSince, { color: colors.surfaceBright }]}
-            >
-              {isPremium
-                ? `Active since ${new Date(subscribedAt ?? lastVerifiedAt ?? Date.now()).toLocaleDateString(undefined, { month: "long", year: "numeric" })}`
-                : "No active subscription"}
-            </Text>
+      {isPremium ? (
+        <View
+          style={[styles.membershipCard, { backgroundColor: colors.primary }]}
+        >
+          <View style={styles.membershipImagePanel}>
+            <Image
+              source={HEIRLOOM_CARD_IMAGE}
+              resizeMode="cover"
+              style={styles.membershipCardImage}
+            />
+            <View style={styles.membershipImageOverlay} />
           </View>
-          <View
-            style={[
-              styles.membershipBadge,
-              { backgroundColor: colors.surfaceBright },
-            ]}
-          >
-            <Text
-              style={[styles.membershipBadgeLabel, { color: colors.primary }]}
-            >
-              PREMIUM
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.membershipFooter}>
-          <Text
-            style={[styles.membershipPrice, { color: colors.surfaceBright }]}
-          >
-            {displayPriceString}
-            {periodLabel ? (
+          <View style={styles.membershipCardOverlay} />
+          <View style={styles.membershipHeader}>
+            <View style={styles.membershipTitleBlock}>
               <Text
                 style={[
-                  styles.membershipPeriod,
+                  styles.membershipTitle,
                   { color: colors.surfaceBright },
                 ]}
               >
-                /{periodLabel}
+                The Heirloom
               </Text>
-            ) : null}
-          </Text>
-          {isPremium ? (
+              <Text
+                style={[
+                  styles.membershipSince,
+                  { color: colors.surfaceBright },
+                ]}
+              >
+                {`Active since ${new Date(subscribedAt ?? lastVerifiedAt ?? Date.now()).toLocaleDateString(undefined, { month: "long", year: "numeric" })}`}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.membershipBadge,
+                { backgroundColor: colors.surfaceBright },
+              ]}
+            >
+              <Text
+                style={[styles.membershipBadgeLabel, { color: colors.primary }]}
+              >
+                PREMIUM
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.membershipFooter}>
+            <Text
+              style={[styles.membershipPrice, { color: colors.surfaceBright }]}
+            >
+              {displayPriceString}
+              {periodLabel ? (
+                <Text
+                  style={[
+                    styles.membershipPeriod,
+                    { color: colors.surfaceBright },
+                  ]}
+                >
+                  /{periodLabel}
+                </Text>
+              ) : null}
+            </Text>
             <View style={styles.membershipRenewal}>
               <Text
                 style={[
@@ -169,9 +173,60 @@ export default function PremiumScreen() {
                 {verifiedDate}
               </Text>
             </View>
-          ) : null}
+          </View>
         </View>
-      </View>
+      ) : (
+        <View
+          style={[
+            styles.membershipCard,
+            { backgroundColor: colors.primaryFixed },
+          ]}
+        >
+          <View style={styles.membershipImagePanel}>
+            <Image
+              source={HEIRLOOM_CARD_IMAGE}
+              resizeMode="cover"
+              style={[styles.membershipCardImage, { opacity: 0.07 }]}
+            />
+          </View>
+          <View style={styles.membershipHeader}>
+            <View style={styles.membershipTitleBlock}>
+              <Text style={[styles.membershipTitle, { color: colors.primary }]}>
+                Conservatory Free
+              </Text>
+              <Text style={[styles.membershipSince, { color: colors.primary }]}>
+                Basic plant tracking, no subscription required
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.membershipBadge,
+                { backgroundColor: colors.primary },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.membershipBadgeLabel,
+                  { color: colors.primaryFixed },
+                ]}
+              >
+                FREE
+              </Text>
+            </View>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/subscription-plans")}
+            style={styles.freeUpgradeRow}
+          >
+            <Text style={[styles.freeUpgradeText, { color: colors.primary }]}>
+              Upgrade to unlock all features
+            </Text>
+            <Icon name="chevron-right" size={18} color={colors.primary} />
+          </Pressable>
+        </View>
+      )}
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -215,63 +270,85 @@ export default function PremiumScreen() {
       </View>
 
       <View style={styles.membershipActions}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push("/subscription-plans")}
-          style={[
-            styles.membershipActionButton,
-            { backgroundColor: colors.primary },
-          ]}
-        >
-          <Text
+        {isPremium ? (
+          <>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push("/subscription-plans")}
+              style={[
+                styles.membershipActionButton,
+                { backgroundColor: colors.primary },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.membershipActionButtonLabel,
+                  { color: colors.surfaceBright },
+                ]}
+              >
+                Change Plan
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => {
+                void Linking.openURL(
+                  Platform.OS === "ios"
+                    ? "https://apps.apple.com/account/subscriptions"
+                    : "https://play.google.com/store/account/subscriptions",
+                );
+              }}
+              style={styles.membershipCancelLinkWrap}
+            >
+              <Text
+                style={[
+                  styles.membershipCancelLink,
+                  {
+                    color: colors.primary,
+                    borderBottomColor: colors.primaryFixed,
+                  },
+                ]}
+              >
+                Cancel Subscription
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => router.push("/downgrade")}
+              style={styles.membershipCancelLinkWrap}
+            >
+              <Text
+                style={[
+                  styles.membershipCancelLink,
+                  {
+                    color: colors.onSurfaceVariant,
+                    borderBottomColor: colors.surfaceContainerHigh,
+                  },
+                ]}
+              >
+                After Premium
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/subscription-plans")}
             style={[
-              styles.membershipActionButtonLabel,
-              { color: colors.surfaceBright },
+              styles.membershipActionButton,
+              { backgroundColor: colors.primary },
             ]}
           >
-            Change Plan
-          </Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="link"
-          onPress={() => {
-            void Linking.openURL(
-              Platform.OS === "ios"
-                ? "https://apps.apple.com/account/subscriptions"
-                : "https://play.google.com/store/account/subscriptions",
-            );
-          }}
-          style={styles.membershipCancelLinkWrap}
-        >
-          <Text
-            style={[
-              styles.membershipCancelLink,
-              {
-                color: colors.primary,
-                borderBottomColor: colors.primaryFixed,
-              },
-            ]}
-          >
-            Cancel Subscription
-          </Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="link"
-          onPress={() => router.push("/downgrade")}
-          style={styles.membershipCancelLinkWrap}
-        >
-          <Text
-            style={[
-              styles.membershipCancelLink,
-              {
-                color: colors.onSurfaceVariant,
-                borderBottomColor: colors.surfaceContainerHigh,
-              },
-            ]}
-          >
-            After Premium
-          </Text>
-        </Pressable>
+            <Text
+              style={[
+                styles.membershipActionButtonLabel,
+                { color: colors.surfaceBright },
+              ]}
+            >
+              View Subscription Plans
+            </Text>
+          </Pressable>
+        )}
         <View style={styles.membershipQuote}>
           <Icon
             family="MaterialCommunityIcons"
@@ -451,5 +528,15 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     fontStyle: "italic",
     textAlign: "center",
+  },
+  freeUpgradeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  freeUpgradeText: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
