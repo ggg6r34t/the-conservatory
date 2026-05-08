@@ -398,17 +398,27 @@ export async function listPlants(input: {
     input.userId,
     "active",
   );
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const plantIds = rows.map((r) => r.id);
+  const placeholders = plantIds.map(() => "?").join(", ");
+
+  // Scope all queries to the exact plant IDs returned above — avoids loading
+  // every photo/reminder/log for the user when only active plants are needed.
   const photos = await database.getAllAsync<PhotoRow>(
     `SELECT * FROM photos
-     WHERE user_id = ?
+     WHERE plant_id IN (${placeholders})
      ORDER BY is_primary DESC, updated_at DESC, created_at DESC;`,
-    input.userId,
+    ...plantIds,
   );
   const reminders = await database.getAllAsync<ReminderRow>(
     `SELECT * FROM care_reminders
-     WHERE user_id = ?
+     WHERE plant_id IN (${placeholders})
      ORDER BY next_due_at ASC, updated_at DESC;`,
-    input.userId,
+    ...plantIds,
   );
   const logs = await database.getAllAsync<{
     id: string;
@@ -426,35 +436,17 @@ export async function listPlants(input: {
     sync_error: string | null;
   }>(
     `SELECT * FROM care_logs
-     WHERE user_id = ?
-     ORDER BY logged_at DESC;`,
-    input.userId,
+     WHERE plant_id IN (${placeholders})
+     ORDER BY logged_at DESC
+     LIMIT 500;`,
+    ...plantIds,
   );
-  const hydratedPhotos = await hydratePhotosForDisplay(photos);
-  const photoByPlantId = buildPhotoByPlantIdMap(
-    hydratedPhotos.map((photo) => ({
-      id: photo.id,
-      user_id: photo.userId,
-      plant_id: photo.plantId,
-      local_uri: photo.localUri ?? null,
-      remote_url: photo.remoteUrl ?? null,
-      storage_path: photo.storagePath ?? null,
-      mime_type: photo.mimeType ?? null,
-      width: photo.width ?? null,
-      height: photo.height ?? null,
-      photo_role:
-        photo.photoRole ?? (photo.isPrimary === 1 ? "primary" : "progress"),
-      captured_at: photo.capturedAt ?? null,
-      taken_at: photo.takenAt ?? null,
-      caption: photo.caption ?? null,
-      is_primary: photo.isPrimary,
-      created_at: photo.createdAt,
-      updated_at: photo.updatedAt,
-      pending: photo.pending,
-      synced_at: photo.syncedAt ?? null,
-      sync_error: photo.syncError ?? null,
-    })),
-  );
+
+  // Build photo map directly from raw rows — no async URL hydration.
+  // resolveRenderablePhotoUri falls back to localUri when remoteUrl is absent,
+  // which is correct for list display (signed URLs are generated lazily on
+  // detail/timeline screens via hydratePhotosForDisplay).
+  const photoByPlantId = buildPhotoByPlantIdMap(photos);
   const remindersByPlantId = new Map<string, CareReminder[]>();
   for (const reminder of reminders.map(toReminder)) {
     const existing = remindersByPlantId.get(reminder.plantId) ?? [];

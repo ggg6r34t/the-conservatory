@@ -706,4 +706,12 @@ CREATE TABLE IF NOT EXISTS feature_usage (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_feature_usage_unique ON feature_usage(user_id, feature, period);
 CREATE INDEX IF NOT EXISTS idx_feature_usage_user_period ON feature_usage(user_id, period);
 `);
+
+  // Performance indexes: cover the common user_id-based scans that were doing
+  // full table scans before. All IF NOT EXISTS so they're safe to run repeatedly.
+  await database.execAsync(`
+CREATE INDEX IF NOT EXISTS idx_care_logs_user_id ON care_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_photos_user_id ON photos(user_id);
+CREATE INDEX IF NOT EXISTS idx_care_reminders_user_id ON care_reminders(user_id);
+`);
 }

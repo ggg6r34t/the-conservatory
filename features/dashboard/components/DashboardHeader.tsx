@@ -31,7 +31,7 @@ export function DashboardHeader({ isOffline }: DashboardHeaderProps) {
 
   useEffect(() => {
     setAvatarFailed(false);
-  }, [avatarSource]);
+  }, [user?.avatarUrl]);
 
   return (
     <View style={styles.container}>

@@ -192,6 +192,7 @@ export default function GrowthTimelineScreen() {
                       source={{ uri: moment.imageUri }}
                       style={styles.filmstripImage}
                       contentFit="cover"
+                      cachePolicy="memory-disk"
                     />
                   </View>
                 ))}
@@ -235,6 +236,7 @@ export default function GrowthTimelineScreen() {
                       source={{ uri: moment.imageUri }}
                       style={styles.entryImage}
                       contentFit="cover"
+                      cachePolicy="memory-disk"
                     />
                   </View>
 

@@ -423,6 +423,7 @@ export function PlantDetail({ data }: PlantDetailProps) {
             }}
             style={styles.heroImage}
             contentFit="cover"
+            cachePolicy="memory-disk"
           />
         ) : (
           <View
@@ -769,6 +770,7 @@ export function PlantDetail({ data }: PlantDetailProps) {
                 source={{ uri: item.imageUri }}
                 style={styles.growthPhoto}
                 contentFit="cover"
+                cachePolicy="memory-disk"
               />
             </View>
           ))}

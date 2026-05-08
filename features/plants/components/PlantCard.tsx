@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Image } from "expo-image";
 import { Link } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
@@ -10,7 +11,7 @@ interface PlantCardProps {
   plant: PlantListItem;
 }
 
-export function PlantCard({ plant }: PlantCardProps) {
+export const PlantCard = memo(function PlantCard({ plant }: PlantCardProps) {
   const { colors } = useTheme();
 
   return (
@@ -47,7 +48,7 @@ export function PlantCard({ plant }: PlantCardProps) {
       </View>
     </Link>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

@@ -34,6 +34,7 @@ function PlantImage({ plant, style }: { plant: PlantListItem; style: object }) {
         source={{ uri: plant.primaryPhotoUri }}
         style={style}
         contentFit="cover"
+        cachePolicy="memory-disk"
       />
     );
   }

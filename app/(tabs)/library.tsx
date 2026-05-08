@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Link, useRouter } from "expo-router";
 import {
+  FlatList,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -26,24 +27,135 @@ import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge"
 import { usePlants } from "@/features/plants/hooks/usePlants";
 import {
   buildPlantStatusMap,
+  type PlantStatusMap,
 } from "@/features/plants/services/plantLibraryStatusService";
 import { usePlantStore } from "@/features/plants/stores/usePlantStore";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import { formatDueLabel } from "@/utils/dateFormatter";
+import type { BotanicalTokens } from "@/styles/tokens";
 
 function formatMetaLabel(nextWateringDate: string | null) {
   return `NEXT WATER: ${formatDueLabel(nextWateringDate).toUpperCase()}`;
 }
 
-function chunkPlants(plants: PlantListItem[]) {
-  const rows: PlantListItem[][] = [];
+// Pair of plants that forms one row in the 2-column grid.
+type PlantRow = [PlantListItem] | [PlantListItem, PlantListItem];
 
+function chunkPlants(plants: PlantListItem[]): PlantRow[] {
+  const rows: PlantRow[] = [];
   for (let index = 0; index < plants.length; index += 2) {
-    rows.push(plants.slice(index, index + 2));
+    const pair = plants.slice(index, index + 2) as PlantRow;
+    rows.push(pair);
   }
-
   return rows;
 }
+
+// ─── Memoized single plant card ────────────────────────────────────────────
+
+interface LibraryCardProps {
+  plant: PlantListItem;
+  plantStatusMap: PlantStatusMap;
+  colors: BotanicalTokens["colors"];
+}
+
+const LibraryCard = memo(function LibraryCard({
+  plant,
+  plantStatusMap,
+  colors,
+}: LibraryCardProps) {
+  const plantStatus = plantStatusMap.get(plant.id);
+  const needsAttention = plantStatus?.healthState === "needs_attention";
+
+  return (
+    <Link href={`/plant/${plant.id}` as const} key={plant.id} asChild>
+      <Pressable style={styles.card}>
+        <View
+          style={[
+            styles.media,
+            {
+              backgroundColor: plant.primaryPhotoUri
+                ? colors.surfaceContainerLowest
+                : colors.surfaceContainerLow,
+            },
+          ]}
+        >
+          {plant.primaryPhotoUri ? (
+            <Image
+              source={{ uri: plant.primaryPhotoUri }}
+              style={styles.image}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View
+              style={[
+                styles.fallback,
+                { backgroundColor: colors.surfaceContainerLow },
+              ]}
+            />
+          )}
+          {plantStatus ? (
+            <PlantStatusBadge
+              healthState={plantStatus.healthState}
+              variant="compact"
+              style={styles.statusChip}
+            />
+          ) : null}
+        </View>
+
+        <View style={styles.copy}>
+          <Text style={[styles.name, { color: colors.onSurface }]}>
+            {plant.name}
+          </Text>
+          <Text
+            style={[
+              styles.meta,
+              {
+                color: needsAttention
+                  ? colors.error
+                  : colors.onSurfaceVariant,
+              },
+            ]}
+          >
+            {formatMetaLabel(
+              plantStatus?.effectiveNextWateringDate ?? null,
+            )}
+          </Text>
+        </View>
+      </Pressable>
+    </Link>
+  );
+});
+
+// ─── Memoized row (renders two LibraryCards side by side) ──────────────────
+
+interface PlantRowItemProps {
+  row: PlantRow;
+  plantStatusMap: PlantStatusMap;
+  colors: BotanicalTokens["colors"];
+}
+
+const PlantRowItem = memo(function PlantRowItem({
+  row,
+  plantStatusMap,
+  colors,
+}: PlantRowItemProps) {
+  return (
+    <View style={styles.galleryRow}>
+      {row.map((plant) => (
+        <LibraryCard
+          key={plant.id}
+          plant={plant}
+          plantStatusMap={plantStatusMap}
+          colors={colors}
+        />
+      ))}
+      {row.length === 1 ? <View style={styles.cardSpacer} /> : null}
+    </View>
+  );
+});
+
+// ─── Screen ────────────────────────────────────────────────────────────────
 
 export default function LibraryScreen() {
   const { colors, spacing } = useTheme();
@@ -57,7 +169,7 @@ export default function LibraryScreen() {
   const setQuery = usePlantStore((state) => state.setQuery);
   const plants = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
   const remindersQuery = useReminders();
-  const plantIds = plants.map((plant) => plant.id);
+  const plantIds = useMemo(() => plants.map((p) => p.id), [plants]);
   const logsQuery = useQuery({
     queryKey: ["care-logs", "library", plantIds.join("|")],
     queryFn: () => listCareLogsForPlants(plantIds),
@@ -72,30 +184,11 @@ export default function LibraryScreen() {
       }),
     [logsQuery.data, plants, remindersQuery.data],
   );
-  const plantRows = chunkPlants(plants);
+  const plantRows = useMemo(() => chunkPlants(plants), [plants]);
 
-  return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.surface }]}
-    >
-      <ScrollView
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingHorizontal: spacing.lg,
-            paddingTop: spacing.lg,
-            paddingBottom: 113,
-          },
-        ]}
-      >
+  const ListHeader = useMemo(
+    () => (
+      <View style={styles.listHeader}>
         <AppHeader title="Living Gallery" subtitle="Your collection" />
         <TextInputField
           label="Search"
@@ -103,19 +196,18 @@ export default function LibraryScreen() {
           onChangeText={setQuery}
           placeholder="Find a monstera, ficus, or pothos"
         />
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterRow}
         >
           {[
-            { label: "All", value: "all" as const, premium: false },
-            { label: "Needs Water", value: "needs-water" as const, premium: false },
-            { label: "Thriving", value: "thriving" as const, premium: false },
-            { label: "Recently Watered", value: "recently-watered" as const, premium: false },
-            { label: "With Notes", value: "with-notes" as const, premium: false },
-            { label: "Unplaced", value: "unplaced" as const, premium: false },
+            { label: "All", value: "all" as const },
+            { label: "Needs Water", value: "needs-water" as const },
+            { label: "Thriving", value: "thriving" as const },
+            { label: "Recently Watered", value: "recently-watered" as const },
+            { label: "With Notes", value: "with-notes" as const },
+            { label: "Unplaced", value: "unplaced" as const },
           ].map((option) => {
             const isActive = option.value === filter;
             return (
@@ -135,7 +227,9 @@ export default function LibraryScreen() {
                   style={[
                     styles.chipLabel,
                     {
-                      color: isActive ? colors.surfaceBright : colors.onSurface,
+                      color: isActive
+                        ? colors.surfaceBright
+                        : colors.onSurface,
                     },
                   ]}
                 >
@@ -145,135 +239,115 @@ export default function LibraryScreen() {
             );
           })}
           {[
-            { label: "By Location", premiumFeature: "advanced_library_filters" as const },
-            { label: "By Species", premiumFeature: "advanced_library_filters" as const },
+            {
+              label: "By Location",
+              premiumFeature: "advanced_library_filters" as const,
+            },
+            {
+              label: "By Species",
+              premiumFeature: "advanced_library_filters" as const,
+            },
           ].map((option) => (
             <Pressable
               key={option.label}
               onPress={() => {
                 if (!isPremium) {
-                  trackMonetizationEvent('upgrade_prompt_viewed', { feature: option.premiumFeature });
-                  router.push('/premium');
+                  trackMonetizationEvent("upgrade_prompt_viewed", {
+                    feature: option.premiumFeature,
+                  });
+                  router.push("/premium");
                 }
               }}
               style={[
                 styles.chip,
-                { backgroundColor: colors.surfaceContainerHigh, opacity: isPremium ? 1 : 0.55 },
+                {
+                  backgroundColor: colors.surfaceContainerHigh,
+                  opacity: isPremium ? 1 : 0.55,
+                },
               ]}
             >
               <Text style={[styles.chipLabel, { color: colors.onSurface }]}>
                 {option.label}
               </Text>
               {!isPremium ? (
-                <Text style={[styles.chipLabel, { color: colors.primary, marginLeft: 4 }]}>
+                <Text
+                  style={[
+                    styles.chipLabel,
+                    { color: colors.primary, marginLeft: 4 },
+                  ]}
+                >
                   ✦
                 </Text>
               ) : null}
             </Pressable>
           ))}
         </ScrollView>
+      </View>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [colors, filter, isPremium, query, setFilter, setQuery],
+  );
 
-        {plants.length ? (
-          <View style={styles.gallery}>
-            {plantRows.map((row, rowIndex) => (
-              <View key={`row-${rowIndex}`} style={styles.galleryRow}>
-                {row.map((plant) => {
-                  const plantStatus = plantStatusMap.get(plant.id);
-                  const needsAttention =
-                    plantStatus?.healthState === "needs_attention";
+  const EmptyState = useMemo(
+    () => (
+      <View
+        style={[
+          styles.emptyCard,
+          { backgroundColor: colors.surfaceContainerLow },
+        ]}
+      >
+        <View style={styles.emptyCopy}>
+          <Text style={[styles.emptyTitle, { color: colors.primary }]}>
+            Your conservatory is quiet.
+          </Text>
+          <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
+            Every collection starts with a single specimen. Begin your botanical
+            archive today.
+          </Text>
+          <PrimaryButton label="Add First Specimen" href="/plant/add" />
+        </View>
+      </View>
+    ),
+    [colors],
+  );
 
-                  return (
-                    <Link
-                      href={`/plant/${plant.id}` as const}
-                      key={plant.id}
-                      asChild
-                    >
-                      <Pressable style={styles.card}>
-                        <View
-                          style={[
-                            styles.media,
-                            {
-                              backgroundColor: plant.primaryPhotoUri
-                                ? colors.surfaceContainerLowest
-                                : colors.surfaceContainerLow,
-                            },
-                          ]}
-                        >
-                          {plant.primaryPhotoUri ? (
-                            <Image
-                              source={{ uri: plant.primaryPhotoUri }}
-                              style={styles.image}
-                              contentFit="cover"
-                            />
-                          ) : (
-                            <View
-                              style={[
-                                styles.fallback,
-                                { backgroundColor: colors.surfaceContainerLow },
-                              ]}
-                            />
-                          )}
-                          {plantStatus ? (
-                            <PlantStatusBadge
-                              healthState={plantStatus.healthState}
-                              variant="compact"
-                              style={styles.statusChip}
-                            />
-                          ) : null}
-                        </View>
-
-                        <View style={styles.copy}>
-                          <Text
-                            style={[styles.name, { color: colors.onSurface }]}
-                          >
-                            {plant.name}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.meta,
-                              {
-                                color: needsAttention
-                                  ? colors.error
-                                  : colors.onSurfaceVariant,
-                              },
-                            ]}
-                          >
-                            {formatMetaLabel(
-                              plantStatus?.effectiveNextWateringDate ?? null,
-                            )}
-                          </Text>
-                        </View>
-                      </Pressable>
-                    </Link>
-                  );
-                })}
-
-                {row.length === 1 ? <View style={styles.cardSpacer} /> : null}
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View
-            style={[
-              styles.emptyCard,
-              { backgroundColor: colors.surfaceContainerLow },
-            ]}
-          >
-            <View style={styles.emptyCopy}>
-              <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-                Your conservatory is quiet.
-              </Text>
-              <Text
-                style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}
-              >
-                Every collection starts with a single specimen. Begin your
-                botanical archive today.
-              </Text>
-              <PrimaryButton label="Add First Specimen" href="/plant/add" />
-            </View>
-          </View>
+  return (
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.surface }]}
+    >
+      <FlatList
+        data={plantRows}
+        keyExtractor={(_, index) => `row-${index}`}
+        renderItem={({ item }) => (
+          <PlantRowItem
+            row={item}
+            plantStatusMap={plantStatusMap}
+            colors={colors}
+          />
         )}
-      </ScrollView>
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={EmptyState}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.lg,
+            paddingBottom: 113,
+          },
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={6}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        removeClippedSubviews
+      />
     </SafeAreaView>
   );
 }
@@ -283,7 +357,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
+    gap: 38,
+  },
+  listHeader: {
     gap: 24,
+    marginBottom: 0,
   },
   filterRow: {
     flexDirection: "row",
@@ -298,9 +376,6 @@ const styles = StyleSheet.create({
   chipLabel: {
     fontFamily: "Manrope_700Bold",
     fontSize: 14,
-  },
-  gallery: {
-    gap: 38,
   },
   galleryRow: {
     flexDirection: "row",

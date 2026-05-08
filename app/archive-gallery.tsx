@@ -228,11 +228,13 @@ export default function ArchiveGalleryScreen() {
                   source={{ uri: pair.beforeUri }}
                   style={styles.curatedImage}
                   contentFit="cover"
+                  cachePolicy="memory-disk"
                 />
                 <Image
                   source={{ uri: pair.afterUri }}
                   style={styles.curatedImage}
                   contentFit="cover"
+                  cachePolicy="memory-disk"
                 />
               </View>
               </View>
@@ -261,6 +263,7 @@ export default function ArchiveGalleryScreen() {
                   source={{ uri: memorial.primaryPhotoUri }}
                   style={styles.image}
                   contentFit="cover"
+                  cachePolicy="memory-disk"
                 />
               ) : null}
             </View>

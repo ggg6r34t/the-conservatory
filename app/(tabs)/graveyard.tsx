@@ -1,9 +1,9 @@
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   Pressable,
   RefreshControl,
-  Image as RNImage,
   ScrollView,
   StyleSheet,
   Text,
@@ -79,7 +79,12 @@ function GrayscaleImage({
 
   return (
     <View style={style}>
-      <RNImage source={{ uri }} style={styles.nativeImage} resizeMode="cover" />
+      <Image
+        source={{ uri }}
+        style={styles.nativeImage}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+      />
     </View>
   );
 }

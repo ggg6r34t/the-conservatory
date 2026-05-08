@@ -3,6 +3,8 @@ import type { CareLog, CareReminder } from "@/types/models";
 import type { PlantListItem } from "../api/plantsClient";
 import { derivePlantStatus, type PlantStatus } from "./plantStatusService";
 
+export type PlantStatusMap = Map<string, PlantStatus>;
+
 export function buildPlantStatusMap(input: {
   plants: PlantListItem[];
   reminders: CareReminder[];
@@ -33,5 +35,5 @@ export function buildPlantStatusMap(input: {
         now: input.now,
       }),
     ]),
-  ) as Map<string, PlantStatus>;
+  ) as PlantStatusMap;
 }

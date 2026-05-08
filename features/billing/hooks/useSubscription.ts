@@ -80,7 +80,14 @@ export function useSubscription() {
     return result;
   }, [store, user?.id]);
 
-  const refreshOfferings = useCallback(async () => {
+  const refreshOfferings = useCallback(async (force = false) => {
+    // Skip the network round-trip if offerings are already loaded and the
+    // caller hasn't explicitly requested a forced refresh. BillingBootstrapProvider
+    // already fetches offerings at startup; premium/subscription screens should
+    // just reuse that result rather than issuing duplicate RevenueCat calls.
+    if (!force && store.offerings && store.offerings.packages.length > 0) {
+      return;
+    }
     const offerings = await billingClient.getOfferings();
     store.setOfferings(offerings);
     if (!offerings || offerings.packages.length === 0) {

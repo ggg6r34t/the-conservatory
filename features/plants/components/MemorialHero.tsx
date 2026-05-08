@@ -1,5 +1,6 @@
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { Image as RNImage, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
@@ -56,10 +57,11 @@ export function MemorialHero({
       </View>
 
       {photoUri ? (
-        <RNImage
+        <Image
           source={{ uri: photoUri }}
           style={styles.heroImage}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="memory-disk"
         />
       ) : (
         <View style={[styles.heroImage, styles.heroFallback]} />
