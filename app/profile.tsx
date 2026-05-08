@@ -390,7 +390,7 @@ export default function ProfileScreen() {
                 ]}
               >
                 {isPremium
-                  ? "Thank you for supporting The Conservatory. Your membership helps us continue building a calm, thoughtful home for plant care and collection keeping."
+                  ? "Thank you for supporting The Conservatory. Your subscription helps us continue building a calm, thoughtful home for plant care and collection keeping."
                   : "Upgrade to Premium for deeper insights, full collection backup, and enhanced tools designed for dedicated plant collectors."}
               </Text>
               <Pressable
