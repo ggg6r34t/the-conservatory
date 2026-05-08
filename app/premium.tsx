@@ -59,8 +59,13 @@ const PREMIUM_FEATURES = [
 export default function PremiumScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { isPremium, offerings, lastVerifiedAt, subscribedAt, refreshOfferings } =
-    useSubscription();
+  const {
+    isPremium,
+    offerings,
+    lastVerifiedAt,
+    subscribedAt,
+    refreshOfferings,
+  } = useSubscription();
 
   useEffect(() => {
     void refreshOfferings();
