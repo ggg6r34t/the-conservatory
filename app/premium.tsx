@@ -1,23 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { useRouter } from "expo-router";
 import {
-  ActivityIndicator,
+  Image,
   Linking,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
-import type { BillingPackage } from "@/features/billing/types";
-import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
+import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
+
+const HEIRLOOM_CARD_IMAGE = require("@/assets/images/intricate-vintage-botanical-illustration-of-fern-leaves.png");
 
 const PREMIUM_FEATURES = [
   {
@@ -30,7 +29,7 @@ const PREMIUM_FEATURES = [
     icon: "book-open-outline",
     label: "Journal Narratives",
     detail:
-      "Monthly AI-written stories of your care rituals — not just statistics.",
+      "Monthly AI-written stories of your care rituals, not just statistics.",
   },
   {
     icon: "image-multiple-outline",
@@ -47,8 +46,7 @@ const PREMIUM_FEATURES = [
   {
     icon: "cloud-sync-outline",
     label: "Full Cloud Backup",
-    detail:
-      "Every photo and record backed up and accessible across all your devices.",
+    detail: "Every photo and record backed up and accessible across devices.",
   },
   {
     icon: "qrcode",
@@ -59,112 +57,116 @@ const PREMIUM_FEATURES = [
 ];
 
 export default function PremiumScreen() {
-  const { colors, spacing } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
-  const {
-    isPremium,
-    isLoading,
-    isRestoring,
-    error,
-    offerings,
-    lastVerifiedAt,
-    entitlementUnavailable,
-    purchase,
-    restore,
-    refreshOfferings,
-  } = useSubscription();
-
-  const [selectedPackage, setSelectedPackage] = useState<BillingPackage | null>(
-    null,
-  );
-  const [purchasing, setPurchasing] = useState(false);
+  const { isPremium, offerings, lastVerifiedAt, refreshOfferings } =
+    useSubscription();
 
   useEffect(() => {
-    trackMonetizationEvent("premium_screen_viewed");
     void refreshOfferings();
   }, [refreshOfferings]);
 
-  useEffect(() => {
-    if (offerings?.annual) {
-      setSelectedPackage(offerings.annual);
-    }
-  }, [offerings]);
-
-  useEffect(() => {
-    if (
-      !isLoading &&
-      !isPremium &&
-      offerings !== null &&
-      (offerings.packages ?? []).length === 0
-    ) {
-      trackMonetizationEvent("offerings_load_failed");
-    }
-  }, [isLoading, isPremium, offerings]);
-
-  async function handlePurchase() {
-    if (!selectedPackage) return;
-    setPurchasing(true);
-    trackMonetizationEvent("purchase_started", {
-      packageType: selectedPackage.packageType,
-    });
-    const result = await purchase(selectedPackage.identifier);
-    setPurchasing(false);
-    if (result.success) {
-      trackMonetizationEvent("purchase_completed", {
-        packageType: selectedPackage.packageType,
-      });
-    } else if (result.userCancelled) {
-      trackMonetizationEvent("purchase_cancelled");
-    }
-  }
-
-  async function handleRestore() {
-    trackMonetizationEvent("restore_started");
-    const result = await restore();
-    if (result.success) {
-      trackMonetizationEvent("restore_completed");
-    }
-  }
-
-  const packages = offerings?.packages ?? [];
-  const annualPkg = offerings?.annual;
-  const monthlyPkg = offerings?.monthly;
+  const displayPackage = offerings?.annual ?? offerings?.monthly ?? null;
+  const periodLabel =
+    displayPackage?.packageType === "annual"
+      ? "year"
+      : displayPackage?.packageType === "monthly"
+        ? "month"
+        : null;
+  const displayPrice =
+    displayPackage && periodLabel
+      ? `${displayPackage.priceString}/${periodLabel}`
+      : (displayPackage?.priceString ?? "Plans");
+  const verifiedDate = lastVerifiedAt
+    ? new Date(lastVerifiedAt).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "After purchase";
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.surface }]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingHorizontal: spacing.lg, paddingBottom: 48 },
-        ]}
+    <ProfileScreenScaffold
+      title="Subscription Editorial"
+      subtitle="Account Stewardship"
+      description="Refine your botanical journey. Your membership nurtures both your collection and the curated knowledge of the Digital Conservatory."
+    >
+      <View
+        style={[styles.membershipCard, { backgroundColor: colors.primary }]}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-            onPress={() => router.back()}
-            style={styles.closeButton}
+        <View style={styles.membershipImagePanel}>
+          <Image
+            source={HEIRLOOM_CARD_IMAGE}
+            resizeMode="cover"
+            style={styles.membershipCardImage}
+          />
+          <View style={styles.membershipImageOverlay} />
+        </View>
+        <View style={styles.membershipCardOverlay} />
+        <View style={styles.membershipHeader}>
+          <View style={styles.membershipTitleBlock}>
+            <Text
+              style={[styles.membershipTitle, { color: colors.surfaceBright }]}
+            >
+              The Heirloom{"\n"}Tier
+            </Text>
+            <Text
+              style={[styles.membershipSince, { color: colors.surfaceBright }]}
+            >
+              {isPremium ? "Active membership" : "Ready when you are"}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.membershipBadge,
+              { backgroundColor: colors.surfaceBright },
+            ]}
           >
-            <Icon name="close" size={24} color={colors.onSurfaceVariant} />
-          </Pressable>
+            <Text
+              style={[styles.membershipBadgeLabel, { color: colors.primary }]}
+            >
+              PREMIUM
+            </Text>
+          </View>
         </View>
 
-        {/* Hero */}
-        <View style={styles.hero}>
-          <Text style={[styles.eyebrow, { color: colors.secondary }]}>
-            THE CONSERVATORY
+        <View style={styles.membershipFooter}>
+          <Text
+            style={[styles.membershipPrice, { color: colors.surfaceBright }]}
+          >
+            {displayPrice}
           </Text>
-          <Text style={[styles.heroTitle, { color: colors.primary }]}>
-            Premium
+          <View style={styles.membershipRenewal}>
+            <Text
+              style={[
+                styles.membershipRenewalLabel,
+                { color: colors.surfaceBright },
+              ]}
+            >
+              {isPremium ? "LAST VERIFIED" : "STARTS"}
+            </Text>
+            <Text
+              style={[
+                styles.membershipRenewalDate,
+                { color: colors.surfaceBright },
+              ]}
+            >
+              {isPremium ? verifiedDate : "Today"}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionEyebrow, { color: colors.secondary }]}>
+            MEMBERSHIP BENEFITS
           </Text>
-          <Text style={[styles.heroSubtitle, { color: colors.onSurface }]}>
-            Deepen your collection&apos;s story.
+          <Text style={[styles.sectionTitle, { color: colors.primary }]}>
+            Your Curated Perks
           </Text>
         </View>
 
-        {/* Feature list */}
         <View
           style={[
             styles.featureList,
@@ -194,282 +196,170 @@ export default function PremiumScreen() {
             </View>
           ))}
         </View>
+      </View>
 
-        {/* Plan selector */}
-        {packages.length > 0 ? (
-          <View style={styles.plans}>
-            <Text
-              style={[styles.plansLabel, { color: colors.onSurfaceVariant }]}
-            >
-              CHOOSE YOUR PLAN
-            </Text>
-
-            {annualPkg ? (
-              <Pressable
-                accessibilityRole="radio"
-                accessibilityState={{
-                  selected:
-                    selectedPackage?.identifier === annualPkg.identifier,
-                }}
-                onPress={() => {
-                  setSelectedPackage(annualPkg);
-                  trackMonetizationEvent("plan_selected", {
-                    packageType: annualPkg.packageType,
-                  });
-                }}
-                style={[
-                  styles.planCard,
-                  {
-                    backgroundColor:
-                      selectedPackage?.identifier === annualPkg.identifier
-                        ? colors.primaryFixed
-                        : colors.surfaceContainerLowest,
-                    borderColor:
-                      selectedPackage?.identifier === annualPkg.identifier
-                        ? colors.primary
-                        : colors.surfaceContainerHigh,
-                  },
-                ]}
-              >
-                <View style={styles.planCardBadge}>
-                  <View
-                    style={[
-                      styles.badge,
-                      { backgroundColor: colors.secondary },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.badgeLabel,
-                        { color: colors.surfaceBright },
-                      ]}
-                    >
-                      BEST VALUE
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.planTitle, { color: colors.primary }]}>
-                  Annual
-                </Text>
-                <Text style={[styles.planPrice, { color: colors.primary }]}>
-                  {annualPkg.priceString}
-                  <Text
-                    style={[styles.planPeriod, { color: colors.onSurface }]}
-                  >
-                    /year
-                  </Text>
-                </Text>
-                <Text
-                  style={[styles.planPerMonth, { color: colors.onSurface }]}
-                >
-                  {annualPkg.pricePerMonthString}/month
-                </Text>
-                {annualPkg.introductoryPrice ? (
-                  <Text style={[styles.planTrial, { color: colors.secondary }]}>
-                    {annualPkg.introductoryPrice} free trial
-                  </Text>
-                ) : null}
-              </Pressable>
-            ) : null}
-
-            {monthlyPkg ? (
-              <Pressable
-                accessibilityRole="radio"
-                accessibilityState={{
-                  selected:
-                    selectedPackage?.identifier === monthlyPkg.identifier,
-                }}
-                onPress={() => {
-                  setSelectedPackage(monthlyPkg);
-                  trackMonetizationEvent("plan_selected", {
-                    packageType: monthlyPkg.packageType,
-                  });
-                }}
-                style={[
-                  styles.planCard,
-                  {
-                    backgroundColor:
-                      selectedPackage?.identifier === monthlyPkg.identifier
-                        ? colors.primaryFixed
-                        : colors.surfaceContainerLowest,
-                    borderColor:
-                      selectedPackage?.identifier === monthlyPkg.identifier
-                        ? colors.primary
-                        : colors.surfaceContainerHigh,
-                  },
-                ]}
-              >
-                <Text style={[styles.planTitle, { color: colors.primary }]}>
-                  Monthly
-                </Text>
-                <Text style={[styles.planPrice, { color: colors.primary }]}>
-                  {monthlyPkg.priceString}
-                  <Text
-                    style={[styles.planPeriod, { color: colors.onSurface }]}
-                  >
-                    /month
-                  </Text>
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : isLoading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
-        ) : (
-          <View
-            style={[
-              styles.offeringsEmptyCard,
-              { backgroundColor: colors.surfaceContainerLowest },
-            ]}
-          >
-            <Text
-              style={[styles.offeringsEmptyTitle, { color: colors.primary }]}
-            >
-              Plans unavailable
-            </Text>
-            <Text
-              style={[styles.offeringsEmptyBody, { color: colors.onSurface }]}
-            >
-              We couldn&apos;t load subscription options right now. Check your
-              connection and try again.
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => void refreshOfferings()}
-              style={[
-                styles.retryButton,
-                { backgroundColor: colors.surfaceContainerHigh },
-              ]}
-            >
-              <Text style={[styles.retryLabel, { color: colors.primary }]}>
-                Try Again
-              </Text>
-            </Pressable>
-          </View>
-        )}
-
-        {/* CTA */}
-        {error ? (
-          <Text style={[styles.errorText, { color: colors.error }]}>
-            {error}
-          </Text>
-        ) : null}
-
-        {entitlementUnavailable ? (
-          <Text style={[styles.statusText, { color: colors.onSurfaceVariant }]}>
-            Subscription status is temporarily unavailable.
-            {lastVerifiedAt
-              ? ` Last verified ${new Date(lastVerifiedAt).toLocaleDateString()}.`
-              : " Try again when your connection is steady."}
-          </Text>
-        ) : null}
-
+      <View style={styles.membershipActions}>
         <Pressable
           accessibilityRole="button"
-          disabled={!selectedPackage || purchasing || isLoading}
-          onPress={() => void handlePurchase()}
+          onPress={() => router.push("/subscription-plans")}
           style={[
-            styles.ctaButton,
-            {
-              backgroundColor:
-                !selectedPackage || purchasing
-                  ? colors.surfaceContainerHigh
-                  : colors.primary,
-            },
+            styles.membershipActionButton,
+            { backgroundColor: colors.primary },
           ]}
         >
-          {purchasing ? (
-            <ActivityIndicator color={colors.surfaceBright} />
-          ) : (
-            <Text style={[styles.ctaLabel, { color: colors.surfaceBright }]}>
-              {selectedPackage?.introductoryPrice
-                ? `Start Free Trial`
-                : `Subscribe — ${selectedPackage?.priceString ?? "..."}`}
-            </Text>
-          )}
+          <Text
+            style={[
+              styles.membershipActionButtonLabel,
+              { color: colors.surfaceBright },
+            ]}
+          >
+            Change Plan
+          </Text>
         </Pressable>
-
-        {/* Legal */}
-        <Text
-          style={[styles.trialDisclosure, { color: colors.onSurfaceVariant }]}
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => {
+            void Linking.openURL(
+              Platform.OS === "ios"
+                ? "https://apps.apple.com/account/subscriptions"
+                : "https://play.google.com/store/account/subscriptions",
+            );
+          }}
+          style={styles.membershipCancelLinkWrap}
         >
-          {selectedPackage?.introductoryPrice
-            ? `${selectedPackage.introductoryPrice} free, then `
-            : ""}
-          {selectedPackage
-            ? `${selectedPackage.priceString}${
-                selectedPackage.packageType === "annual" ? "/year" : "/month"
-              }`
-            : "Subscriptions"}{" "}
-          renew automatically until cancelled. Payment is charged to your{" "}
-          {Platform.OS === "ios" ? "App Store" : "Google Play"} account. Cancel
-          anytime in{" "}
-          {Platform.OS === "ios"
-            ? "App Store settings"
-            : "Google Play settings"}
-          .
-        </Text>
-
-        {/* Restore + secondary links */}
-        <View style={styles.footer}>
-          <Pressable
-            accessibilityRole="button"
-            disabled={isRestoring}
-            onPress={() => void handleRestore()}
+          <Text
+            style={[
+              styles.membershipCancelLink,
+              {
+                color: colors.primary,
+                borderBottomColor: colors.primaryFixed,
+              },
+            ]}
           >
-            <Text
-              style={[styles.footerLink, { color: colors.onSurfaceVariant }]}
-            >
-              {isRestoring ? "Restoring…" : "Restore purchases"}
-            </Text>
-          </Pressable>
-          <Text style={[styles.footerDot, { color: colors.onSurfaceVariant }]}>
-            ·
+            Cancel Subscription
           </Text>
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => Linking.openURL("https://theconservatory.app/terms")}
-          >
-            <Text
-              style={[styles.footerLink, { color: colors.onSurfaceVariant }]}
-            >
-              Terms
-            </Text>
-          </Pressable>
-          <Text style={[styles.footerDot, { color: colors.onSurfaceVariant }]}>
-            ·
+        </Pressable>
+        <View style={styles.membershipQuote}>
+          <Icon
+            family="MaterialCommunityIcons"
+            name="tree"
+            size={30}
+            color={colors.outlineVariant}
+          />
+          <Text style={[styles.membershipQuoteText, { color: colors.outline }]}>
+            &quot;To plant a garden is to believe{"\n"}in tomorrow.&quot;
           </Text>
-          <Pressable
-            accessibilityRole="link"
-            onPress={() =>
-              Linking.openURL("https://theconservatory.app/privacy")
-            }
-          >
-            <Text
-              style={[styles.footerLink, { color: colors.onSurfaceVariant }]}
-            >
-              Privacy
-            </Text>
-          </Pressable>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </ProfileScreenScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  scroll: { gap: 28 },
-  header: { flexDirection: "row", justifyContent: "flex-end", paddingTop: 8 },
-  closeButton: { padding: 8 },
-  hero: { alignItems: "center", gap: 8, paddingTop: 8 },
-  eyebrow: { fontFamily: "Manrope_700Bold", fontSize: 11, letterSpacing: 2.4 },
-  heroTitle: { fontFamily: "NotoSerif_700Bold", fontSize: 42, lineHeight: 50 },
-  heroSubtitle: {
+  membershipCard: {
+    borderRadius: 28,
+    padding: 24,
+    gap: 24,
+    overflow: "hidden",
+  },
+  membershipImagePanel: {
+    ...StyleSheet.absoluteFillObject,
+    left: "50%",
+    overflow: "hidden",
+  },
+  membershipCardImage: {
+    width: "125%",
+    height: "100%",
+    opacity: 0.38,
+    transform: [{ translateX: -24 }, { scale: 1.08 }],
+  },
+  membershipImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(24, 75, 51, 0.58)",
+  },
+  membershipCardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    right: "50%",
+    backgroundColor: "rgba(10, 47, 32, 0.42)",
+  },
+  membershipHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 16,
+  },
+  membershipTitleBlock: {
+    flex: 1,
+    gap: 8,
+  },
+  membershipTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 25,
+    lineHeight: 31,
+  },
+  membershipSince: {
     fontFamily: "Manrope_500Medium",
-    fontSize: 16,
-    lineHeight: 24,
-    textAlign: "center",
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.68,
+  },
+  membershipBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    opacity: 0.24,
+  },
+  membershipBadgeLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 13,
+    letterSpacing: 2,
+  },
+  membershipFooter: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 18,
+  },
+  membershipPrice: {
+    flex: 1,
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 34,
+    lineHeight: 40,
+  },
+  membershipRenewal: {
+    alignItems: "flex-end",
+    gap: 6,
+  },
+  membershipRenewalLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    lineHeight: 13,
+    letterSpacing: 1.8,
+    opacity: 0.65,
+  },
+  membershipRenewalDate: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 17,
+    lineHeight: 22,
+    fontStyle: "italic",
+  },
+  sectionHeader: {
+    gap: 10,
+  },
+  section: {
+    gap: 16,
+  },
+  sectionEyebrow: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 1.8,
+  },
+  sectionTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 30,
+    lineHeight: 38,
   },
   featureList: { borderRadius: 28, padding: 20, gap: 20 },
   featureRow: { flexDirection: "row", alignItems: "flex-start", gap: 16 },
@@ -487,87 +377,43 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
   },
-  plans: { gap: 12 },
-  plansLabel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 11,
-    letterSpacing: 2.1,
-    paddingHorizontal: 4,
+  membershipActions: {
+    alignItems: "center",
+    gap: 20,
   },
-  planCard: { borderRadius: 20, borderWidth: 1.5, padding: 20, gap: 6 },
-  planCardBadge: { alignItems: "flex-start" },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  badgeLabel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 10,
-    letterSpacing: 1.5,
-  },
-  planTitle: { fontFamily: "NotoSerif_700Bold", fontSize: 20, lineHeight: 26 },
-  planPrice: { fontFamily: "NotoSerif_700Bold", fontSize: 28, lineHeight: 34 },
-  planPeriod: { fontFamily: "Manrope_500Medium", fontSize: 16 },
-  planPerMonth: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  planTrial: {
-    fontFamily: "Manrope_600SemiBold",
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  errorText: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 14,
-    textAlign: "center",
-  },
-  statusText: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: "center",
-  },
-  ctaButton: {
-    height: 58,
+  membershipActionButton: {
+    width: "100%",
+    minHeight: 58,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
-  ctaLabel: { fontFamily: "Manrope_700Bold", fontSize: 16, letterSpacing: 0.6 },
-  trialDisclosure: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: "center",
+  membershipActionButtonLabel: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 17,
+    lineHeight: 22,
   },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
+  membershipCancelLinkWrap: {
+    paddingVertical: 2,
+  },
+  membershipCancelLink: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 17,
+    lineHeight: 22,
+    borderBottomWidth: 2,
+  },
+  membershipQuote: {
     alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
+    gap: 20,
+    paddingTop: 40,
   },
-  footerLink: { fontFamily: "Manrope_500Medium", fontSize: 13 },
-  footerDot: { fontSize: 13 },
-  offeringsEmptyCard: { borderRadius: 20, padding: 20, gap: 12 },
-  offeringsEmptyTitle: {
+  membershipQuoteText: {
     fontFamily: "NotoSerif_700Bold",
-    fontSize: 20,
-    lineHeight: 26,
-  },
-  offeringsEmptyBody: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  retryButton: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 999,
-  },
-  retryLabel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 13,
-    letterSpacing: 0.6,
+    fontSize: 22,
+    lineHeight: 34,
+    fontStyle: "italic",
+    textAlign: "center",
   },
 });

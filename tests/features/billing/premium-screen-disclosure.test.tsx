@@ -1,16 +1,19 @@
 import React from "react";
 
-import { screen } from "@testing-library/react-native";
+import { fireEvent, screen } from "@testing-library/react-native";
 
 import PremiumScreen from "@/app/premium";
+import SubscriptionPlansScreen from "@/app/subscription-plans";
 import { renderWithProviders } from "@/tests/utils/renderWithProviders";
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 const mockRefreshOfferings = jest.fn();
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     back: mockBack,
+    push: mockPush,
   }),
 }));
 
@@ -56,17 +59,25 @@ jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
-describe("PremiumScreen disclosures", () => {
+describe("Premium subscription screens", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("shows renewal and cancellation terms even when the package has no trial", () => {
+  it("opens the dedicated plan selector from the membership card", () => {
     renderWithProviders(<PremiumScreen />);
 
+    fireEvent.press(screen.getByText("Change Plan"));
+
+    expect(mockPush).toHaveBeenCalledWith("/subscription-plans");
+  });
+
+  it("shows renewal and cancellation terms on the dedicated plan screen", () => {
+    renderWithProviders(<SubscriptionPlansScreen />);
+
     expect(
-      screen.getByText(/renew automatically until cancelled/i),
-    ).toBeTruthy();
+      screen.getAllByText(/renew automatically until cancelled/i).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText(/Cancel anytime in/i)).toBeTruthy();
     expect(screen.getByText("Restore purchases")).toBeTruthy();
     expect(screen.getByText("Terms")).toBeTruthy();
