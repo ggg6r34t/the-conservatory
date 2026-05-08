@@ -16,7 +16,7 @@ export const FEATURE_REQUIRES_PREMIUM: Record<GatedFeature, boolean> = {
   ai_dashboard_editorial: true,
   ai_archive_curation: true,
   ai_species_identification: false,
-  smart_reminder_optimization: true,
+  smart_reminder_optimization: false,
   specimen_tag_create: true,
   advanced_library_filters: true,
   premium_export: true,
