@@ -307,7 +307,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 18,
     paddingVertical: 10,
-    opacity: 0.24,
   },
   membershipBadgeLabel: {
     fontFamily: "Manrope_700Bold",
