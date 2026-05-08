@@ -9,6 +9,7 @@ export interface EntitlementCacheEntry {
   expiresAt: string | null;
   period: SubscriptionPeriod | null;
   lastVerifiedAt: string;
+  subscribedAt?: string | null;
 }
 
 export async function readEntitlementCache(): Promise<EntitlementCacheEntry | null> {

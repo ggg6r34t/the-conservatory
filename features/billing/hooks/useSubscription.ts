@@ -21,6 +21,7 @@ async function propagateEntitlementState(
     expiresAt: state.expiresAt,
     period: state.period,
     lastVerifiedAt: new Date().toISOString(),
+    subscribedAt: state.subscribedAt ?? null,
   });
 
   if (isPremium && userId) {
@@ -107,6 +108,7 @@ export function useSubscription() {
     error: store.error,
     offerings: store.offerings,
     lastVerifiedAt: store.lastVerifiedAt ?? null,
+    subscribedAt: store.subscribedAt ?? null,
     entitlementUnavailable: store.entitlementUnavailable ?? false,
     purchase,
     restore,

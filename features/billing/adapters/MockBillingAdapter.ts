@@ -38,6 +38,7 @@ export class MockBillingAdapter implements BillingAdapter {
       tier: this.tier,
       expiresAt: this.tier === 'premium' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null,
       period: this.tier === 'premium' ? 'annual' : null,
+      subscribedAt: this.tier === 'premium' ? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() : null,
     };
   }
 

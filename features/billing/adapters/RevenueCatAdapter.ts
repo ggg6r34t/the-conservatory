@@ -76,6 +76,7 @@ function mapCustomerInfoToSubscriptionState(
     tier: 'premium',
     expiresAt: entitlement.expirationDate ?? null,
     period: inferPeriodFromProductIdentifier(productIdentifier),
+    subscribedAt: entitlement.originalPurchaseDate ?? null,
   };
 }
 

@@ -9,6 +9,7 @@ export interface SubscriptionState {
   period: SubscriptionPeriod | null;
   error: string | null;
   lastVerifiedAt?: string | null;
+  subscribedAt?: string | null;
   entitlementUnavailable?: boolean;
 }
 

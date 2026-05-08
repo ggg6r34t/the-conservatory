@@ -18,6 +18,7 @@ export const useBillingStore = create<BillingStoreState>((set) => ({
   period: null,
   error: null,
   lastVerifiedAt: null,
+  subscribedAt: null,
   entitlementUnavailable: false,
   offerings: null,
   setSubscriptionState: (partial) => set((prev) => ({ ...prev, ...partial })),

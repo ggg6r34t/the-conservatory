@@ -59,7 +59,7 @@ const PREMIUM_FEATURES = [
 export default function PremiumScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { isPremium, offerings, lastVerifiedAt, refreshOfferings } =
+  const { isPremium, offerings, lastVerifiedAt, subscribedAt, refreshOfferings } =
     useSubscription();
 
   useEffect(() => {
@@ -113,7 +113,9 @@ export default function PremiumScreen() {
             <Text
               style={[styles.membershipSince, { color: colors.surfaceBright }]}
             >
-              {isPremium ? "Active subscription" : "No active subscription"}
+              {isPremium
+                ? `Active since ${new Date(subscribedAt ?? lastVerifiedAt ?? Date.now()).toLocaleDateString(undefined, { month: "long", year: "numeric" })}`
+                : "No active subscription"}
             </Text>
           </View>
           <View
