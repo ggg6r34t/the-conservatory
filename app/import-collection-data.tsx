@@ -4,6 +4,7 @@ import { StyleSheet, Text, TextInput, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import {
   previewCollectionImport,
   restoreCollectionImport,
@@ -17,6 +18,7 @@ import { useSnackbar } from "@/hooks/useSnackbar";
 export default function ImportCollectionDataScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { isPremium } = useSubscription();
   const alert = useAlert();
   const snackbar = useSnackbar();
   const [rawPayload, setRawPayload] = useState("");
@@ -86,7 +88,7 @@ export default function ImportCollectionDataScreen() {
           onPress={() => {
             if (!payload || !user?.id) return;
             setIsImporting(true);
-            restoreCollectionImport({ userId: user.id, payload })
+            restoreCollectionImport({ userId: user.id, payload, isPremium })
               .then((result) => {
                 const total =
                   result.summary.plants +

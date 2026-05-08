@@ -2,6 +2,7 @@ import {
   replaceCareLogTagsInTransaction,
   serializeCareLogTags,
 } from "@/features/care-logs/services/careLogTagsService";
+import { FREE_PLANT_LIMIT } from "@/features/billing/constants";
 import { downloadRemotePhotoAsset } from "@/features/plants/services/photoStorageService";
 import { getDatabase } from "@/services/database/sqlite";
 import { insertSyncOutboxOperationInTransaction } from "@/services/database/syncOutbox";
@@ -43,7 +44,7 @@ export function validateCollectionImportPayload(
 
   const payload = value as Partial<CollectionImportPayload>;
   if (
-    payload.exportVersion !== 1 ||
+    (payload.exportVersion !== 1 && payload.exportVersion !== 2) ||
     payload.format !== "json" ||
     !Array.isArray(payload.plants) ||
     !Array.isArray(payload.careLogs) ||
@@ -78,12 +79,38 @@ function requireString(value: unknown, field: string) {
 export async function restoreCollectionImport(input: {
   userId: string;
   payload: CollectionImportPayload;
+  isPremium?: boolean;
 }) {
   validateCollectionImportPayload(input.payload);
   const database = await getDatabase();
   const now = new Date().toISOString();
   const importRunId = createId("import");
   const summary = previewCollectionImport(input.payload);
+
+  if (!input.isPremium) {
+    const activePlantsInImport = input.payload.plants.filter(
+      (p) => !p.status || p.status === "active",
+    );
+    if (activePlantsInImport.length > 0) {
+      const row = await database.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM plants WHERE user_id = ? AND status = 'active'`,
+        [input.userId],
+      );
+      const currentCount = row?.count ?? 0;
+      if (currentCount >= FREE_PLANT_LIMIT) {
+        throw Object.assign(
+          new Error(
+            `Plant limit reached. Free accounts can hold up to ${FREE_PLANT_LIMIT} plants. Upgrade to Premium to import your full collection.`,
+          ),
+          {
+            code: "PLANT_LIMIT_REACHED" as const,
+            limit: FREE_PLANT_LIMIT,
+            current: currentCount,
+          },
+        );
+      }
+    }
+  }
 
   await database.withTransactionAsync(async () => {
     await database.runAsync(
