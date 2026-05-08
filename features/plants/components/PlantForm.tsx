@@ -1,8 +1,12 @@
+import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   LayoutChangeEvent,
+  Modal,
   PanResponder,
   Pressable,
   StyleSheet,
@@ -10,8 +14,10 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { SpeciesSuggestionBanner } from "@/features/ai/components/SpeciesSuggestionBanner";
@@ -32,7 +38,10 @@ import {
   getPlantDraft,
   setPlantDraft,
 } from "@/features/plants/services/plantDraftStorage";
-import { pickPlantImage } from "@/features/plants/services/photoService";
+import {
+  capturePlantImage,
+  pickPlantImage,
+} from "@/features/plants/services/photoService";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 
@@ -149,6 +158,7 @@ function NotificationToggle({
 export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const alert = useAlert();
   const snackbar = useSnackbar();
   const addPlant = useAddPlant();
@@ -157,6 +167,9 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   const updateSettings = useUpdateSettings();
   const mutation = mode === "create" ? addPlant : updatePlant;
   const [draftLoaded, setDraftLoaded] = useState(mode === "edit");
+  const [photoPickerVisible, setPhotoPickerVisible] = useState(false);
+  const sheetOpacity = useRef(new Animated.Value(0)).current;
+  const sheetTranslateY = useRef(new Animated.Value(24)).current;
   const [locationOpen, setLocationOpen] = useState(false);
   const [sliderWidth, setSliderWidth] = useState(0);
   const lastHydratedEditPlantId = useRef<string | undefined>(undefined);
@@ -246,6 +259,29 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   }, [dismissedSuggestionUri, values.photoUri]);
 
   useEffect(() => {
+    if (!photoPickerVisible) {
+      sheetOpacity.setValue(0);
+      sheetTranslateY.setValue(24);
+      return;
+    }
+
+    Animated.parallel([
+      Animated.timing(sheetOpacity, {
+        toValue: 1,
+        duration: 180,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
+      }),
+      Animated.timing(sheetTranslateY, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [photoPickerVisible, sheetOpacity, sheetTranslateY]);
+
+  useEffect(() => {
     if (mode !== "edit" || !plantId || lastHydratedEditPlantId.current === plantId) {
       return;
     }
@@ -307,21 +343,38 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
     });
   }, [careDefaults.wateringIntervalDays, hasManualWateringOverride]);
 
-  const handlePickImage = async () => {
+  const applyPhotoAsset = (asset: Awaited<ReturnType<typeof pickPlantImage>>) => {
+    if (!asset) return;
+    setValues((current) => ({
+      ...current,
+      photoUri: asset.uri,
+      photoCapturedAt: asset.capturedAt ?? undefined,
+      photoMimeType: asset.mimeType ?? undefined,
+      photoWidth: asset.width ?? undefined,
+      photoHeight: asset.height ?? undefined,
+    }));
+  };
+
+  const handleCapturePhoto = async () => {
+    setPhotoPickerVisible(false);
+    try {
+      const asset = await capturePlantImage();
+      applyPhotoAsset(asset);
+    } catch (error) {
+      void alert.show({
+        variant: "error",
+        title: "Unable to open camera",
+        message: error instanceof Error ? error.message : "Try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+      });
+    }
+  };
+
+  const handlePickFromLibrary = async () => {
+    setPhotoPickerVisible(false);
     try {
       const asset = await pickPlantImage();
-      if (!asset) {
-        return;
-      }
-
-      setValues((current) => ({
-        ...current,
-        photoUri: asset.uri,
-        photoCapturedAt: asset.capturedAt ?? undefined,
-        photoMimeType: asset.mimeType ?? undefined,
-        photoWidth: asset.width ?? undefined,
-        photoHeight: asset.height ?? undefined,
-      }));
+      applyPhotoAsset(asset);
     } catch (error) {
       void alert.show({
         variant: "error",
@@ -441,10 +494,11 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   };
 
   return (
+    <>
     <View style={styles.container}>
       <Pressable
         accessibilityRole="button"
-        onPress={handlePickImage}
+        onPress={() => setPhotoPickerVisible(true)}
         style={[
           styles.imagePicker,
           {
@@ -802,6 +856,100 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
         </Pressable>
       ) : null}
     </View>
+
+    <Modal
+      animationType="none"
+      transparent
+      visible={photoPickerVisible}
+      onRequestClose={() => setPhotoPickerVisible(false)}
+    >
+      <View style={styles.pickerOverlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setPhotoPickerVisible(false)} />
+        <BlurView intensity={42} tint="dark" style={StyleSheet.absoluteFill}>
+          <View style={[styles.pickerOverlayTint, { backgroundColor: colors.backdrop }]} />
+        </BlurView>
+        <Animated.View
+          style={[
+            styles.pickerSheet,
+            {
+              backgroundColor: colors.surfaceContainerLowest,
+              paddingBottom: Math.max(20, insets.bottom + 8),
+              opacity: sheetOpacity,
+              transform: [{ translateY: sheetTranslateY }],
+            },
+          ]}
+        >
+          <View style={[styles.pickerHandle, { backgroundColor: colors.surfaceContainerHigh }]} />
+
+          <View style={styles.pickerHeader}>
+            <Text style={[styles.pickerTitle, { color: colors.primary }]}>
+              Specimen Portrait
+            </Text>
+            <Text style={[styles.pickerBody, { color: colors.onSurfaceVariant }]}>
+              Set the visual identity for this specimen. A clear photo helps the botanical engine track health changes over time.
+            </Text>
+          </View>
+
+          <View style={styles.pickerActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => { void handleCapturePhoto(); }}
+              style={({ pressed }) => [
+                styles.pickerActionCard,
+                {
+                  backgroundColor: colors.surfaceContainerLow,
+                  borderColor: colors.surfaceContainerHigh,
+                  opacity: pressed ? 0.92 : 1,
+                  transform: [{ scale: pressed ? 0.992 : 1 }],
+                },
+              ]}
+            >
+              <View style={[styles.pickerActionIconTile, { backgroundColor: colors.secondaryContainer }]}>
+                <Icon family="MaterialIcons" name="photo-camera" size={22} color={colors.secondary} />
+              </View>
+              <View style={styles.pickerActionText}>
+                <Text style={[styles.pickerActionTitle, { color: colors.onSurface }]}>Take Photo</Text>
+                <Text style={[styles.pickerActionBody, { color: colors.onSurfaceVariant }]}>
+                  Photograph the specimen now.
+                </Text>
+              </View>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => { void handlePickFromLibrary(); }}
+              style={({ pressed }) => [
+                styles.pickerActionCard,
+                {
+                  backgroundColor: colors.surfaceContainerLow,
+                  borderColor: colors.surfaceContainerHigh,
+                  opacity: pressed ? 0.92 : 1,
+                  transform: [{ scale: pressed ? 0.992 : 1 }],
+                },
+              ]}
+            >
+              <View style={[styles.pickerActionIconTile, { backgroundColor: colors.primaryFixed }]}>
+                <Icon family="MaterialIcons" name="photo-library" size={22} color={colors.primary} />
+              </View>
+              <View style={styles.pickerActionText}>
+                <Text style={[styles.pickerActionTitle, { color: colors.onSurface }]}>Photo Library</Text>
+                <Text style={[styles.pickerActionBody, { color: colors.onSurfaceVariant }]}>
+                  Import an existing photo from your camera roll.
+                </Text>
+              </View>
+            </Pressable>
+          </View>
+
+          <SecondaryButton
+            label="Cancel"
+            fullWidth
+            variant="surface"
+            onPress={() => setPhotoPickerVisible(false)}
+          />
+        </Animated.View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -1122,5 +1270,75 @@ const styles = StyleSheet.create({
     width: 28,
     height: 3,
     borderRadius: 999,
+  },
+  pickerOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  pickerOverlayTint: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.72,
+  },
+  pickerSheet: {
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    gap: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.72)",
+  },
+  pickerHandle: {
+    width: 64,
+    height: 6,
+    borderRadius: 999,
+    alignSelf: "center",
+  },
+  pickerHeader: {
+    gap: 6,
+  },
+  pickerTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 24,
+    lineHeight: 30,
+  },
+  pickerBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  pickerActions: {
+    gap: 12,
+  },
+  pickerActionCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  pickerActionIconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  pickerActionText: {
+    flex: 1,
+    gap: 3,
+  },
+  pickerActionTitle: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  pickerActionBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

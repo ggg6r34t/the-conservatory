@@ -149,14 +149,16 @@ export function AddProgressPhotoSheet({
                   color={colors.secondary}
                 />
               </View>
-              <Text style={[styles.actionTitle, { color: colors.onSurface }]}>
-                Take Photo
-              </Text>
-              <Text
-                style={[styles.actionBody, { color: colors.onSurfaceVariant }]}
-              >
-                Open the camera and capture today&apos;s growth.
-              </Text>
+              <View style={styles.actionText}>
+                <Text style={[styles.actionTitle, { color: colors.onSurface }]}>
+                  Take Photo
+                </Text>
+                <Text
+                  style={[styles.actionBody, { color: colors.onSurfaceVariant }]}
+                >
+                  Open the camera and capture today&apos;s growth.
+                </Text>
+              </View>
             </Pressable>
 
             <Pressable
@@ -185,14 +187,16 @@ export function AddProgressPhotoSheet({
                   color={colors.primary}
                 />
               </View>
-              <Text style={[styles.actionTitle, { color: colors.onSurface }]}>
-                Photo Library
-              </Text>
-              <Text
-                style={[styles.actionBody, { color: colors.onSurfaceVariant }]}
-              >
-                Choose an existing image from your camera roll.
-              </Text>
+              <View style={styles.actionText}>
+                <Text style={[styles.actionTitle, { color: colors.onSurface }]}>
+                  Photo Library
+                </Text>
+                <Text
+                  style={[styles.actionBody, { color: colors.onSurfaceVariant }]}
+                >
+                  Choose an existing image from your camera roll.
+                </Text>
+              </View>
             </Pressable>
           </View>
 
@@ -260,8 +264,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     paddingHorizontal: 18,
-    paddingVertical: 18,
-    gap: 12,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
     ...shadowScale.subtleSurface,
   },
   actionIconTile: {
@@ -270,15 +276,20 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
+  },
+  actionText: {
+    flex: 1,
+    gap: 3,
   },
   actionTitle: {
     fontFamily: "Manrope_700Bold",
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 16,
+    lineHeight: 22,
   },
   actionBody: {
     fontFamily: "Manrope_500Medium",
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });
