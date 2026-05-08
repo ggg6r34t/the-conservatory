@@ -1,16 +1,13 @@
-import { Platform } from 'react-native';
-import Purchases, {
-  LOG_LEVEL,
-  PACKAGE_TYPE,
-} from 'react-native-purchases';
+import { Platform } from "react-native";
 import type {
-  PurchasesPackage,
   CustomerInfo,
   CustomerInfoUpdateListener,
-} from 'react-native-purchases';
+  PurchasesPackage,
+} from "react-native-purchases";
+import Purchases, { LOG_LEVEL, PACKAGE_TYPE } from "react-native-purchases";
 
-import { billingConfig, validateBillingConfig } from '../config';
-import { PREMIUM_ENTITLEMENT_ID } from '../constants';
+import { billingConfig, validateBillingConfig } from "../config";
+import { PREMIUM_ENTITLEMENT_ID } from "../constants";
 import type {
   BillingAdapter,
   BillingOffering,
@@ -18,13 +15,13 @@ import type {
   PurchaseResult,
   SubscriptionPeriod,
   SubscriptionState,
-} from '../types';
+} from "../types";
 
-function mapPackageType(rcType: string): SubscriptionPeriod | 'unknown' {
-  if (rcType === PACKAGE_TYPE.ANNUAL) return 'annual';
-  if (rcType === PACKAGE_TYPE.MONTHLY) return 'monthly';
-  if (rcType === PACKAGE_TYPE.LIFETIME) return 'lifetime';
-  return 'unknown';
+function mapPackageType(rcType: string): SubscriptionPeriod | "unknown" {
+  if (rcType === PACKAGE_TYPE.ANNUAL) return "annual";
+  if (rcType === PACKAGE_TYPE.MONTHLY) return "monthly";
+  if (rcType === PACKAGE_TYPE.LIFETIME) return "lifetime";
+  return "unknown";
 }
 
 function mapRcPackage(pkg: PurchasesPackage): BillingPackage {
@@ -46,34 +43,34 @@ function isPremiumFromCustomerInfo(info: CustomerInfo): boolean {
 function inferPeriodFromProductIdentifier(
   productIdentifier: string | null | undefined,
 ): SubscriptionPeriod | null {
-  const normalized = productIdentifier?.toLowerCase() ?? '';
-  if (normalized.includes('annual') || normalized.includes('year')) {
-    return 'annual';
+  const normalized = productIdentifier?.toLowerCase() ?? "";
+  if (normalized.includes("annual") || normalized.includes("year")) {
+    return "annual";
   }
-  if (normalized.includes('month')) {
-    return 'monthly';
+  if (normalized.includes("month")) {
+    return "monthly";
   }
-  if (normalized.includes('lifetime')) {
-    return 'lifetime';
+  if (normalized.includes("lifetime")) {
+    return "lifetime";
   }
   return null;
 }
 
 function mapCustomerInfoToSubscriptionState(
   info: CustomerInfo,
-): Omit<SubscriptionState, 'isLoading' | 'isRestoring' | 'error'> {
+): Omit<SubscriptionState, "isLoading" | "isRestoring" | "error"> {
   const entitlement = info.entitlements.active[PREMIUM_ENTITLEMENT_ID];
   if (!entitlement) {
-    return { tier: 'free', expiresAt: null, period: null };
+    return { tier: "free", expiresAt: null, period: null };
   }
 
   const productIdentifier =
-    'productIdentifier' in entitlement
+    "productIdentifier" in entitlement
       ? (entitlement.productIdentifier as string | null | undefined)
       : null;
 
   return {
-    tier: 'premium',
+    tier: "premium",
     expiresAt: entitlement.expirationDate ?? null,
     period: inferPeriodFromProductIdentifier(productIdentifier),
     subscribedAt: entitlement.originalPurchaseDate ?? null,
@@ -82,13 +79,16 @@ function mapCustomerInfoToSubscriptionState(
 
 export class RevenueCatAdapter implements BillingAdapter {
   private initialized = false;
+  private configuredUserId: string | null = null;
   private customerInfoUpdateListener: CustomerInfoUpdateListener | null = null;
 
   async initialize(userId: string): Promise<void> {
+    if (this.configuredUserId === userId) return;
+
     const { valid, missing } = validateBillingConfig();
     if (!valid) {
       console.warn(
-        `[Billing] Missing RevenueCat config: ${missing.join(', ')}. Billing disabled.`,
+        `[Billing] Missing RevenueCat config: ${missing.join(", ")}. Billing disabled.`,
       );
       return;
     }
@@ -98,20 +98,21 @@ export class RevenueCatAdapter implements BillingAdapter {
     }
 
     const apiKey =
-      Platform.OS === 'ios'
+      Platform.OS === "ios"
         ? billingConfig.revenueCatApiKeyIos
         : billingConfig.revenueCatApiKeyAndroid;
 
     // configure() is synchronous in react-native-purchases 10.x
     Purchases.configure({ apiKey, appUserID: userId });
     this.initialized = true;
+    this.configuredUserId = userId;
   }
 
   async getSubscriptionState(): Promise<
-    Omit<SubscriptionState, 'isLoading' | 'isRestoring' | 'error'>
+    Omit<SubscriptionState, "isLoading" | "isRestoring" | "error">
   > {
     if (!this.initialized) {
-      return { tier: 'free', expiresAt: null, period: null };
+      return { tier: "free", expiresAt: null, period: null };
     }
 
     try {
@@ -119,7 +120,7 @@ export class RevenueCatAdapter implements BillingAdapter {
       return mapCustomerInfoToSubscriptionState(info);
     } catch (err: unknown) {
       if (__DEV__) {
-        console.warn('[Billing] getSubscriptionState error:', err);
+        console.warn("[Billing] getSubscriptionState error:", err);
       }
       throw err;
     }
@@ -152,7 +153,7 @@ export class RevenueCatAdapter implements BillingAdapter {
 
   async purchasePackage(packageIdentifier: string): Promise<PurchaseResult> {
     if (!this.initialized) {
-      return { success: false, tier: 'free', error: 'Billing not initialized' };
+      return { success: false, tier: "free", error: "Billing not initialized" };
     }
 
     try {
@@ -163,53 +164,55 @@ export class RevenueCatAdapter implements BillingAdapter {
       );
 
       if (!pkg) {
-        return { success: false, tier: 'free', error: 'Package not found' };
+        return { success: false, tier: "free", error: "Package not found" };
       }
 
       const { customerInfo } = await Purchases.purchasePackage(pkg);
       const isPremium = isPremiumFromCustomerInfo(customerInfo);
 
-      return { success: isPremium, tier: isPremium ? 'premium' : 'free' };
+      return { success: isPremium, tier: isPremium ? "premium" : "free" };
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Purchase failed';
+      const message = err instanceof Error ? err.message : "Purchase failed";
       const userCancelled =
-        typeof err === 'object' &&
+        typeof err === "object" &&
         err !== null &&
-        'userCancelled' in err &&
+        "userCancelled" in err &&
         (err as { userCancelled: boolean }).userCancelled === true;
 
       if (userCancelled) {
-        return { success: false, tier: 'free', userCancelled: true };
+        return { success: false, tier: "free", userCancelled: true };
       }
-      return { success: false, tier: 'free', error: message };
+      return { success: false, tier: "free", error: message };
     }
   }
 
   async restorePurchases(): Promise<PurchaseResult> {
     if (!this.initialized) {
-      return { success: false, tier: 'free', error: 'Billing not initialized' };
+      return { success: false, tier: "free", error: "Billing not initialized" };
     }
 
     try {
       // In RC 10.x, restorePurchases() returns CustomerInfo directly
       const customerInfo = await Purchases.restorePurchases();
       const isPremium = isPremiumFromCustomerInfo(customerInfo);
-      return { success: true, tier: isPremium ? 'premium' : 'free' };
+      return { success: true, tier: isPremium ? "premium" : "free" };
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Restore failed';
-      return { success: false, tier: 'free', error: message };
+      const message = err instanceof Error ? err.message : "Restore failed";
+      return { success: false, tier: "free", error: message };
     }
   }
 
   setSubscriptionStateListener(
     listener: (
-      state: Omit<SubscriptionState, 'isLoading' | 'isRestoring' | 'error'>,
+      state: Omit<SubscriptionState, "isLoading" | "isRestoring" | "error">,
     ) => void,
   ): () => void {
     if (!this.initialized) return () => {};
 
     if (this.customerInfoUpdateListener) {
-      Purchases.removeCustomerInfoUpdateListener(this.customerInfoUpdateListener);
+      Purchases.removeCustomerInfoUpdateListener(
+        this.customerInfoUpdateListener,
+      );
     }
 
     const revenueCatListener: CustomerInfoUpdateListener = (info) => {
@@ -231,12 +234,17 @@ export class RevenueCatAdapter implements BillingAdapter {
     if (!this.initialized) return;
     try {
       if (this.customerInfoUpdateListener) {
-        Purchases.removeCustomerInfoUpdateListener(this.customerInfoUpdateListener);
+        Purchases.removeCustomerInfoUpdateListener(
+          this.customerInfoUpdateListener,
+        );
         this.customerInfoUpdateListener = null;
       }
       await Purchases.logOut();
     } catch {
       // ignore
+    } finally {
+      this.initialized = false;
+      this.configuredUserId = null;
     }
   }
 }
