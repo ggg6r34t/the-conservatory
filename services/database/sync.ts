@@ -1,6 +1,7 @@
 import { env } from "@/config/env";
 import { processSyncQueueItemWithSupabase } from "@/services/database/supabaseSyncAdapter";
 import { getDatabase } from "@/services/database/sqlite";
+import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { createId } from "@/utils/id";
 import { logger } from "@/utils/logger";
 
@@ -359,6 +360,12 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
               entity: item.entity,
               entityId: item.entityId,
               attemptCount: newAttemptCount,
+            });
+            trackMonetizationEvent("sync_item_abandoned", {
+              entity: item.entity,
+              entityId: item.entityId,
+              attemptCount: newAttemptCount,
+              lastError: errorMessage,
             });
           } else {
             const nextRetryAt = computeRetryAt(newAttemptCount, nowIso);

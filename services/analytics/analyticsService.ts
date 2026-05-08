@@ -60,7 +60,8 @@ export function trackMonetizationEvent(
     | 'offerings_load_failed'
     | 'entitlement_refresh'
     | 'sync_photo_deferred'
-    | 'premium_deferred_photo_retry',
+    | 'premium_deferred_photo_retry'
+    | 'sync_item_abandoned',
   properties?: Record<string, string | number | boolean | null>,
 ): void {
   trackEvent(name, properties);
