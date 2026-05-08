@@ -50,3 +50,6 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Claude Code local settings (machine-specific session paths)
+.claude/settings.local.json
