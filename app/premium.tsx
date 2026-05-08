@@ -87,9 +87,9 @@ export default function PremiumScreen() {
 
   return (
     <ProfileScreenScaffold
-      title="Membership Editorial"
+      title="Subscription Editorial"
       subtitle="Account Stewardship"
-      description="Refine your botanical journey. Your membership nurtures both your collection and the curated knowledge of the Digital Conservatory."
+      description="Refine your botanical journey. Your subscription nurtures both your collection and the curated knowledge of the Digital Conservatory."
     >
       <View
         style={[styles.membershipCard, { backgroundColor: colors.primary }]}
@@ -108,12 +108,12 @@ export default function PremiumScreen() {
             <Text
               style={[styles.membershipTitle, { color: colors.surfaceBright }]}
             >
-              The Heirloom{"\n"}Tier
+              The Heirloom{"\n"}Subscription
             </Text>
             <Text
               style={[styles.membershipSince, { color: colors.surfaceBright }]}
             >
-              {isPremium ? "Active membership" : "Ready when you are"}
+              {isPremium ? "Active subscription" : "Ready when you are"}
             </Text>
           </View>
           <View
@@ -160,7 +160,7 @@ export default function PremiumScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionEyebrow, { color: colors.secondary }]}>
-            MEMBERSHIP BENEFITS
+            SUBSCRIPTION BENEFITS
           </Text>
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>
             Your Curated Perks

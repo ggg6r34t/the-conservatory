@@ -91,9 +91,9 @@ export default function SubscriptionPlansScreen() {
 
   return (
     <ProfileScreenScaffold
-      title="Membership Plans"
-      subtitle="Membership Editorial"
-      description="Choose the membership rhythm that fits your collection. All subscriptions renew automatically until cancelled."
+      title="Subscription Plans"
+      subtitle="Subscription Editorial"
+      description="Choose the subscription that fits your collection. All plans renew automatically until cancelled."
     >
       <View style={styles.section}>
         {packages.length > 0 ? (
