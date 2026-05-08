@@ -383,33 +383,35 @@ export default function ProfileScreen() {
                   </View>
                 ) : null}
               </View>
-              <Text
-                style={[
-                  styles.subscriptionCardBody,
-                  { color: colors.primaryFixed },
-                ]}
-              >
-                {isPremium
-                  ? "Your subscription is active. Enjoy unlimited AI insights, full cloud backup, and all premium features."
-                  : "Upgrade for unlimited AI insights, full cloud backup, and tools built for serious plant collectors."}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push("/premium")}
-                style={[
-                  styles.subscriptionButton,
-                  { backgroundColor: colors.secondaryContainer },
-                ]}
-              >
+              <View style={styles.subscriptionCardBody}>
                 <Text
                   style={[
-                    styles.subscriptionButtonLabel,
-                    { color: colors.onSecondaryContainer },
+                    styles.subscriptionCardBodyText,
+                    { color: colors.primaryFixed },
                   ]}
                 >
-                  Manage Plan
+                  {isPremium
+                    ? "Your subscription is active. Enjoy unlimited AI insights, full cloud backup, and all premium features."
+                    : "Upgrade for unlimited AI insights, full cloud backup, and tools built for serious plant collectors."}
                 </Text>
-              </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push("/premium")}
+                  style={[
+                    styles.subscriptionButton,
+                    { backgroundColor: colors.secondaryContainer },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.subscriptionButtonLabel,
+                      { color: colors.onSecondaryContainer },
+                    ]}
+                  >
+                    Manage Plan
+                  </Text>
+                </Pressable>
+              </View>
             </View>
 
             <Image
@@ -778,7 +780,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   subscriptionCardContent: {
-    maxWidth: 236,
     gap: 10,
     zIndex: 1,
   },
@@ -794,6 +795,10 @@ const styles = StyleSheet.create({
     lineHeight: 37,
   },
   subscriptionCardBody: {
+    maxWidth: 236,
+    gap: 10,
+  },
+  subscriptionCardBodyText: {
     fontFamily: "Manrope_500Medium",
     fontSize: 15,
     lineHeight: 23,
