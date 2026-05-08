@@ -29,6 +29,7 @@ export function useAddPlantProgressPhoto(plantId: string) {
       return addPlantProgressPhoto({
         userId: user!.id,
         plantId,
+        isPremium,
         photoUri: photo.uri,
         capturedAt: photo.capturedAt ?? null,
         mimeType: photo.mimeType ?? null,
