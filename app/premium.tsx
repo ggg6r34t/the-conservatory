@@ -113,7 +113,7 @@ export default function PremiumScreen() {
             <Text
               style={[styles.membershipSince, { color: colors.surfaceBright }]}
             >
-              {isPremium ? "Active subscription" : "Ready when you are"}
+              {isPremium ? "Active subscription" : "No active subscription"}
             </Text>
           </View>
           <View
@@ -136,24 +136,26 @@ export default function PremiumScreen() {
           >
             {displayPrice}
           </Text>
-          <View style={styles.membershipRenewal}>
-            <Text
-              style={[
-                styles.membershipRenewalLabel,
-                { color: colors.surfaceBright },
-              ]}
-            >
-              {isPremium ? "LAST VERIFIED" : "STARTS"}
-            </Text>
-            <Text
-              style={[
-                styles.membershipRenewalDate,
-                { color: colors.surfaceBright },
-              ]}
-            >
-              {isPremium ? verifiedDate : "Today"}
-            </Text>
-          </View>
+          {isPremium ? (
+            <View style={styles.membershipRenewal}>
+              <Text
+                style={[
+                  styles.membershipRenewalLabel,
+                  { color: colors.surfaceBright },
+                ]}
+              >
+                LAST VERIFIED
+              </Text>
+              <Text
+                style={[
+                  styles.membershipRenewalDate,
+                  { color: colors.surfaceBright },
+                ]}
+              >
+                {verifiedDate}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
