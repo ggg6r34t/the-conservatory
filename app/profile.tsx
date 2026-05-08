@@ -783,10 +783,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   statBlock: {
-    flexDirection: "row",
     alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
+    gap: 8,
   },
   subscriptionCardTitle: {
     fontFamily: "NotoSerif_700Bold",
