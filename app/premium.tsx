@@ -108,7 +108,7 @@ export default function PremiumScreen() {
             <Text
               style={[styles.membershipTitle, { color: colors.surfaceBright }]}
             >
-              The Heirloom{"\n"}Subscription
+              The Heirloom
             </Text>
             <Text
               style={[styles.membershipSince, { color: colors.surfaceBright }]}
