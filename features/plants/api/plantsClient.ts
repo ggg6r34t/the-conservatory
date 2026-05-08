@@ -886,8 +886,8 @@ export async function addPlantProgressPhoto(input: {
 
   if (!input.isPremium) {
     const photoCountRow = await database.getFirstAsync<{ count: number }>(
-      `SELECT COUNT(*) as count FROM photos WHERE plant_id = ? AND photo_role = 'progress'`,
-      [input.plantId],
+      `SELECT COUNT(*) as count FROM photos WHERE plant_id = ? AND user_id = ? AND photo_role = 'progress'`,
+      [input.plantId, input.userId],
     );
     const currentCount = photoCountRow?.count ?? 0;
     if (currentCount >= FREE_PROGRESS_PHOTOS_PER_PLANT) {
