@@ -284,6 +284,8 @@ export default function LibraryScreen() {
         </ScrollView>
       </View>
     ),
+    // router is intentionally omitted: useRouter() returns a stable singleton
+    // reference in Expo Router so it never triggers a re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [colors, filter, isPremium, query, setFilter, setQuery],
   );

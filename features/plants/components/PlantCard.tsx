@@ -25,6 +25,7 @@ export const PlantCard = memo(function PlantCard({ plant }: PlantCardProps) {
             source={{ uri: plant.primaryPhotoUri }}
             style={styles.image}
             contentFit="cover"
+            cachePolicy="memory-disk"
           />
         ) : (
           <View

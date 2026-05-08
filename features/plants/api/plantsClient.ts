@@ -438,15 +438,33 @@ export async function listPlants(input: {
     `SELECT * FROM care_logs
      WHERE plant_id IN (${placeholders})
      ORDER BY logged_at DESC
-     LIMIT 500;`,
+     LIMIT 500;`, /* 500 total across all plants — not per-plant; safe because
+       derivePlantStatus() only needs the most-recent water log, which is always
+       within the first 500 rows when ordered DESC. plant.last_watered_at is
+       also updated atomically as a fallback so truncation is harmless. */
     ...plantIds,
   );
 
-  // Build photo map directly from raw rows — no async URL hydration.
-  // resolveRenderablePhotoUri falls back to localUri when remoteUrl is absent,
-  // which is correct for list display (signed URLs are generated lazily on
-  // detail/timeline screens via hydratePhotosForDisplay).
-  const photoByPlantId = buildPhotoByPlantIdMap(photos);
+  // For photos that have neither a stored remote_url nor a local_uri but do
+  // have a storage_path, generate a signed URL now. This is the edge case of
+  // a photo that exists only in cloud storage on this device (e.g. synced from
+  // another device). We scope to just those rows so the common case (remote_url
+  // or localUri already present) avoids any network calls.
+  const photosNeedingUrl = photos.filter(
+    (p) => !p.remote_url && !p.local_uri && Boolean(p.storage_path),
+  );
+  const resolvedPhotos =
+    photosNeedingUrl.length > 0
+      ? await (async () => {
+          const hydrated = await hydratePhotosForDisplay(photosNeedingUrl);
+          const urlById = new Map(hydrated.map((p) => [p.id, p.remoteUrl]));
+          return photos.map((p) =>
+            urlById.has(p.id) ? { ...p, remote_url: urlById.get(p.id) ?? null } : p,
+          );
+        })()
+      : photos;
+
+  const photoByPlantId = buildPhotoByPlantIdMap(resolvedPhotos);
   const remindersByPlantId = new Map<string, CareReminder[]>();
   for (const reminder of reminders.map(toReminder)) {
     const existing = remindersByPlantId.get(reminder.plantId) ?? [];

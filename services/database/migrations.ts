@@ -707,8 +707,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_feature_usage_unique ON feature_usage(user
 CREATE INDEX IF NOT EXISTS idx_feature_usage_user_period ON feature_usage(user_id, period);
 `);
 
-  // Performance indexes: cover the common user_id-based scans that were doing
-  // full table scans before. All IF NOT EXISTS so they're safe to run repeatedly.
+  // Covering indexes on user_id for queries that filter by user rather than by
+  // plant_id — used by graveyard, profile, sync hydration, and any future
+  // cross-plant aggregates. plant_id indexes already exist for the hot list paths.
+  // All IF NOT EXISTS so safe to run repeatedly on every app open.
   await database.execAsync(`
 CREATE INDEX IF NOT EXISTS idx_care_logs_user_id ON care_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_photos_user_id ON photos(user_id);
