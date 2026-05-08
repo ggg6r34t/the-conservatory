@@ -191,7 +191,6 @@ function RootNavigator({
       <Stack.Screen name="license" options={drillInScreenOptions} />
       <Stack.Screen name="premium" options={drillInScreenOptions} />
       <Stack.Screen name="subscription-plans" options={drillInScreenOptions} />
-      <Stack.Screen name="privavcy" options={drillInScreenOptions} />
       <Stack.Screen name="data-backup" options={drillInScreenOptions} />
       <Stack.Screen name="interface-theme" options={drillInScreenOptions} />
       <Stack.Screen name="plant/add" options={drillInScreenOptions} />
