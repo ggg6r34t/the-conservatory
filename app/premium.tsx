@@ -248,6 +248,23 @@ export default function PremiumScreen() {
             Cancel Subscription
           </Text>
         </Pressable>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push("/downgrade")}
+          style={styles.membershipCancelLinkWrap}
+        >
+          <Text
+            style={[
+              styles.membershipCancelLink,
+              {
+                color: colors.onSurfaceVariant,
+                borderBottomColor: colors.surfaceContainerHigh,
+              },
+            ]}
+          >
+            After Premium
+          </Text>
+        </Pressable>
         <View style={styles.membershipQuote}>
           <Icon
             family="MaterialCommunityIcons"
