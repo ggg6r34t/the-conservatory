@@ -163,7 +163,7 @@ export default function PremiumScreen() {
             SUBSCRIPTION BENEFITS
           </Text>
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>
-            Your Curated Perks
+            What&apos;s Included
           </Text>
         </View>
 
