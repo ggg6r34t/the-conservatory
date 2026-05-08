@@ -78,10 +78,7 @@ export default function PremiumScreen() {
       : displayPackage?.packageType === "monthly"
         ? "month"
         : null;
-  const displayPrice =
-    displayPackage && periodLabel
-      ? `${displayPackage.priceString}/${periodLabel}`
-      : (displayPackage?.priceString ?? "Plans");
+  const displayPriceString = displayPackage?.priceString ?? "Plans";
   const verifiedDate = lastVerifiedAt
     ? new Date(lastVerifiedAt).toLocaleDateString(undefined, {
         month: "short",
@@ -141,7 +138,17 @@ export default function PremiumScreen() {
           <Text
             style={[styles.membershipPrice, { color: colors.surfaceBright }]}
           >
-            {displayPrice}
+            {displayPriceString}
+            {periodLabel ? (
+              <Text
+                style={[
+                  styles.membershipPeriod,
+                  { color: colors.surfaceBright },
+                ]}
+              >
+                /{periodLabel}
+              </Text>
+            ) : null}
           </Text>
           {isPremium ? (
             <View style={styles.membershipRenewal}>
@@ -351,6 +358,10 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSerif_700Bold",
     fontSize: 34,
     lineHeight: 40,
+  },
+  membershipPeriod: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 17,
   },
   membershipRenewal: {
     alignItems: "flex-end",
