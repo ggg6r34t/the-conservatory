@@ -23,9 +23,9 @@ export default function CareLogRoute() {
   const insets = useSafeAreaInsets();
   const plantQuery = usePlant(id ?? "");
   const plant = plantQuery.data?.plant;
-  const primaryPhoto = plantQuery.data?.photos.find(
-    (photo) => photo.isPrimary === 1,
-  );
+  const primaryPhoto =
+    plantQuery.data?.photos.find((photo) => photo.isPrimary === 1) ??
+    plantQuery.data?.photos[0];
   const plantImageUri =
     primaryPhoto?.localUri ?? primaryPhoto?.remoteUrl ?? undefined;
   const translateY = useRef(new Animated.Value(0)).current;
@@ -120,6 +120,7 @@ export default function CareLogRoute() {
                     source={{ uri: plantImageUri }}
                     style={styles.plantImage}
                     contentFit="cover"
+                    cachePolicy="memory-disk"
                   />
                 ) : (
                   <View
