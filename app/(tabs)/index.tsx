@@ -89,7 +89,9 @@ export default function HomeScreen() {
     activeReminders: activeReminderCount,
   });
   const plantIds = dashboard.plants.map((plant) => plant.id);
-  const logsQuery = useCareLogsForPlantIds(plantIds, "dashboard");
+  const logsQuery = useCareLogsForPlantIds(plantIds, "dashboard", {
+    isPremium,
+  });
   const logs = logsQuery.data ?? [];
   const { currentStreak: currentStreakDays } = useCollectionStreak();
   const insightQuery = useDashboardInsight({

@@ -241,7 +241,9 @@ export default function LibraryScreen() {
   const plants = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
   const remindersQuery = useReminders();
   const plantIds = useMemo(() => plants.map((p) => p.id), [plants]);
-  const logsQuery = useCareLogsForPlantIds(plantIds, "library");
+  const logsQuery = useCareLogsForPlantIds(plantIds, "library", {
+    isPremium,
+  });
   const plantStatusMap = useMemo(
     () =>
       buildPlantStatusMap({

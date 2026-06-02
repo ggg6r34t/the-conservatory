@@ -269,6 +269,7 @@ describe("export service", () => {
       expect.objectContaining({
         photos: "count-only",
         premiumSections: false,
+        careLogHistoryLimitDays: 60,
       }),
     );
     expect(payload.photos).toEqual([]);
@@ -297,5 +298,79 @@ describe("export service", () => {
       ),
     ).rejects.toThrow(/premium/i);
     expect(mockGetDatabase).not.toHaveBeenCalled();
+  });
+
+  it("limits basic export care logs to the free history window at query time", async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-06-02T12:00:00.000Z"));
+
+    const getFirstAsync = jest.fn().mockImplementation(async (sql: string) => {
+      if (sql.includes("COUNT(*) AS total FROM plants")) return { total: 1 };
+      if (sql.includes("COUNT(*) AS total FROM care_logs")) return { total: 0 };
+      if (sql.includes("COUNT(*) AS total FROM photos")) return { total: 0 };
+      if (sql.includes("COUNT(*) AS total FROM care_reminders")) return { total: 0 };
+      if (sql.includes("COUNT(*) AS total FROM graveyard_plants")) {
+        return { total: 0 };
+      }
+      if (sql.includes("FROM user_preferences")) return null;
+      return { total: 0 };
+    });
+    const getAllAsync = jest.fn().mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM care_logs") && sql.includes("logged_at >=")) {
+        return [];
+      }
+      if (sql.includes("FROM plants")) {
+        return [
+          {
+            id: "plant-1",
+            user_id: "user-1",
+            name: "Aster",
+            species_name: null,
+            nickname: null,
+            status: "active",
+            location: null,
+            watering_interval_days: 7,
+            last_watered_at: null,
+            next_water_due_at: null,
+            notes: null,
+            created_at: "2026-03-01T10:00:00.000Z",
+            updated_at: "2026-03-20T10:00:00.000Z",
+            updated_by: "user-1",
+            pending: 0,
+            synced_at: null,
+            sync_error: null,
+          },
+        ];
+      }
+      return [];
+    });
+    mockGetDatabase.mockResolvedValue({ getFirstAsync, getAllAsync });
+
+    const {
+      exportCollectionData,
+    } = require("@/features/export/services/exportService");
+
+    const result = await exportCollectionData(
+      {
+        id: "user-1",
+        email: "test@example.com",
+        displayName: "Test User",
+        role: "user",
+        createdAt: "2026-03-01T10:00:00.000Z",
+        updatedAt: "2026-03-24T10:00:00.000Z",
+      },
+      { mode: "basic" },
+    );
+
+    expect(result.summary.careLogs).toBe(0);
+
+    const careLogQueries = getAllAsync.mock.calls
+      .map(([sql]) => sql as string)
+      .filter((sql) => sql.includes("FROM care_logs"));
+    expect(careLogQueries.some((sql) => sql.includes("logged_at >="))).toBe(
+      true,
+    );
+
+    jest.useRealTimers();
   });
 });

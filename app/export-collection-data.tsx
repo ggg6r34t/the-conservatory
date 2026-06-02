@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { UpgradePrompt } from "@/features/billing/components/UpgradePrompt";
+import { FREE_CARE_LOG_HISTORY_DAYS } from "@/features/billing/constants";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useExportCollectionData } from "@/features/export/hooks/useExportCollectionData";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
@@ -131,7 +132,11 @@ export default function ExportCollectionDataScreen() {
           />
           <IncludedRow
             label="Care logs"
-            detail="Logged actions, condition history, and written observations."
+            detail={
+              isPremium
+                ? "Logged actions, condition history, and written observations."
+                : `Basic export includes care logs from the last ${FREE_CARE_LOG_HISTORY_DAYS} days.`
+            }
             value={String(summary?.careLogs ?? 0)}
           />
           <IncludedRow

@@ -1,7 +1,12 @@
 import { Directory, File, Paths } from "expo-file-system";
 
 import { getDatabase } from "@/services/database/sqlite";
-import { getEntitlementState } from "@/services/entitlementState";
+import {
+  getCareLogHistorySinceForMode,
+  getExportCareLogHistoryLimitDays,
+  resolveExportMode,
+  type ExportMode,
+} from "@/features/export/services/exportAccessPolicy";
 import type {
   AppUser,
   CareLog,
@@ -31,8 +36,6 @@ interface ExportResult {
   mode: ExportMode;
 }
 
-type ExportMode = "basic" | "premium";
-
 interface ExportPayload {
   exportVersion: 2;
   exportMode: ExportMode;
@@ -45,6 +48,7 @@ interface ExportPayload {
     photos: "count-only" | "metadata-and-uris";
     authenticationData: "excluded";
     premiumSections: boolean;
+    careLogHistoryLimitDays: number | null;
   };
   preferences: UserPreferences | null;
   plants: Plant[];
@@ -318,15 +322,18 @@ async function loadSharingModule() {
 async function countQuery(
   database: Awaited<ReturnType<typeof getDatabase>>,
   sql: string,
-  userId: string,
+  ...params: string[]
 ) {
-  const row = await database.getFirstAsync<CountRow>(sql, userId);
+  const row = await database.getFirstAsync<CountRow>(sql, ...params);
   return row?.total ?? 0;
 }
 
 export async function getExportCollectionSummary(
   userId: string,
+  options: { mode?: ExportMode } = {},
 ): Promise<ExportSummary> {
+  const mode = resolveExportMode(options.mode);
+  const careLogSince = getCareLogHistorySinceForMode(mode);
   const database = await getDatabase();
   const [
     plants,
@@ -342,11 +349,18 @@ export async function getExportCollectionSummary(
       "SELECT COUNT(*) AS total FROM plants WHERE user_id = ?;",
       userId,
     ),
-    countQuery(
-      database,
-      "SELECT COUNT(*) AS total FROM care_logs WHERE user_id = ?;",
-      userId,
-    ),
+    careLogSince
+      ? countQuery(
+          database,
+          "SELECT COUNT(*) AS total FROM care_logs WHERE user_id = ? AND logged_at >= ?;",
+          userId,
+          careLogSince,
+        )
+      : countQuery(
+          database,
+          "SELECT COUNT(*) AS total FROM care_logs WHERE user_id = ?;",
+          userId,
+        ),
     countQuery(
       database,
       "SELECT COUNT(*) AS total FROM photos WHERE user_id = ?;",
@@ -367,11 +381,18 @@ export async function getExportCollectionSummary(
       "SELECT COUNT(*) AS total FROM plants WHERE user_id = ? AND notes IS NOT NULL AND TRIM(notes) != '';",
       userId,
     ),
-    countQuery(
-      database,
-      "SELECT COUNT(*) AS total FROM care_logs WHERE user_id = ? AND notes IS NOT NULL AND TRIM(notes) != '';",
-      userId,
-    ),
+    careLogSince
+      ? countQuery(
+          database,
+          "SELECT COUNT(*) AS total FROM care_logs WHERE user_id = ? AND logged_at >= ? AND notes IS NOT NULL AND TRIM(notes) != '';",
+          userId,
+          careLogSince,
+        )
+      : countQuery(
+          database,
+          "SELECT COUNT(*) AS total FROM care_logs WHERE user_id = ? AND notes IS NOT NULL AND TRIM(notes) != '';",
+          userId,
+        ),
   ]);
 
   return {
@@ -388,7 +409,13 @@ async function buildExportPayload(
   user: AppUser,
   mode: ExportMode,
 ): Promise<{ payload: ExportPayload; summary: ExportSummary }> {
+  const premium = mode === "premium";
+  const careLogSince = getCareLogHistorySinceForMode(mode);
   const database = await getDatabase();
+  const careLogSql = careLogSince
+    ? "SELECT * FROM care_logs WHERE user_id = ? AND logged_at >= ? ORDER BY logged_at DESC;"
+    : "SELECT * FROM care_logs WHERE user_id = ? ORDER BY logged_at DESC;";
+  const careLogParams = careLogSince ? [user.id, careLogSince] : [user.id];
   const [
     summary,
     preferencesRow,
@@ -401,7 +428,7 @@ async function buildExportPayload(
     specimenTagRows,
     archiveOverrideRows,
   ] = await Promise.all([
-    getExportCollectionSummary(user.id),
+    getExportCollectionSummary(user.id, { mode }),
     database.getFirstAsync<PreferencesRow>(
       "SELECT * FROM user_preferences WHERE user_id = ? LIMIT 1;",
       user.id,
@@ -410,10 +437,7 @@ async function buildExportPayload(
       "SELECT * FROM plants WHERE user_id = ? ORDER BY updated_at DESC;",
       user.id,
     ),
-    database.getAllAsync<CareLogRow>(
-      "SELECT * FROM care_logs WHERE user_id = ? ORDER BY logged_at DESC;",
-      user.id,
-    ),
+    database.getAllAsync<CareLogRow>(careLogSql, ...careLogParams),
     database.getAllAsync<PhotoRow>(
       "SELECT * FROM photos WHERE user_id = ? ORDER BY updated_at DESC, created_at DESC;",
       user.id,
@@ -440,7 +464,6 @@ async function buildExportPayload(
     ),
   ]);
 
-  const premium = mode === "premium";
   const careLogs = careLogRows.map(mapCareLog).map((log) =>
     premium
       ? log
@@ -464,6 +487,7 @@ async function buildExportPayload(
         photos: premium ? "metadata-and-uris" : "count-only",
         authenticationData: "excluded",
         premiumSections: premium,
+        careLogHistoryLimitDays: getExportCareLogHistoryLimitDays(mode),
       },
       preferences: preferencesRow ? mapPreferences(preferencesRow) : null,
       plants: plantRows.map(mapPlant),
@@ -501,10 +525,7 @@ export async function exportCollectionData(
   user: AppUser,
   options: { mode?: ExportMode } = {},
 ): Promise<ExportResult> {
-  const mode = options.mode ?? (getEntitlementState() ? "premium" : "basic");
-  if (mode === "premium" && !getEntitlementState()) {
-    throw new Error("Premium is required for enhanced collection export.");
-  }
+  const mode = resolveExportMode(options.mode);
 
   const { payload, summary } = await buildExportPayload(user, mode);
   const totalRecords =

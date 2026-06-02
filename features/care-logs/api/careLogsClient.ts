@@ -120,13 +120,16 @@ function isReminderCareLogType(
 
 export async function listCareLogs(
   plantId: string,
-  options?: { limit?: number; offset?: number },
+  options?: { limit?: number; offset?: number; sinceLoggedAt?: string },
 ) {
   const database = await getDatabase();
 
-  let sql =
-    "SELECT * FROM care_logs WHERE plant_id = ? ORDER BY logged_at DESC";
-  const params: (string | number)[] = [plantId];
+  let sql = options?.sinceLoggedAt
+    ? "SELECT * FROM care_logs WHERE plant_id = ? AND logged_at >= ? ORDER BY logged_at DESC"
+    : "SELECT * FROM care_logs WHERE plant_id = ? ORDER BY logged_at DESC";
+  const params: (string | number)[] = options?.sinceLoggedAt
+    ? [plantId, options.sinceLoggedAt]
+    : [plantId];
 
   // Default to 50 rows. Pass limit: 0 explicitly to skip the LIMIT clause
   // and retrieve all rows (use sparingly — unbounded reads can be expensive).
@@ -160,7 +163,10 @@ export async function listCareLogs(
   return mergeNormalizedCareLogTags(database, rows.map(mapCareLog));
 }
 
-export async function listCareLogsForPlants(plantIds: string[]) {
+export async function listCareLogsForPlants(
+  plantIds: string[],
+  options?: { sinceLoggedAt?: string },
+) {
   const uniquePlantIds = Array.from(new Set(plantIds.filter(Boolean)));
   if (!uniquePlantIds.length) {
     return [];
@@ -168,6 +174,10 @@ export async function listCareLogsForPlants(plantIds: string[]) {
 
   const database = await getDatabase();
   const placeholders = uniquePlantIds.map(() => "?").join(", ");
+  const sinceClause = options?.sinceLoggedAt ? " AND logged_at >= ?" : "";
+  const queryParams = options?.sinceLoggedAt
+    ? [...uniquePlantIds, options.sinceLoggedAt]
+    : uniquePlantIds;
   const rows = await database.getAllAsync<{
     id: string;
     user_id: string;
@@ -184,8 +194,8 @@ export async function listCareLogsForPlants(plantIds: string[]) {
     synced_at: string | null;
     sync_error: string | null;
   }>(
-    `SELECT * FROM care_logs WHERE plant_id IN (${placeholders}) ORDER BY logged_at DESC;`,
-    ...uniquePlantIds,
+    `SELECT * FROM care_logs WHERE plant_id IN (${placeholders})${sinceClause} ORDER BY logged_at DESC;`,
+    ...queryParams,
   );
 
   return mergeNormalizedCareLogTags(database, rows.map(mapCareLog));

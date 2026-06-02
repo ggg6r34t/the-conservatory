@@ -198,7 +198,7 @@ export default function JournalScreen() {
   const fabBottomOffset = getFloatingActionBottomOffset(insets.bottom);
 
   const plantIds = plants.map((plant) => plant.id);
-  const logsQuery = useCareLogsForPlantIds(plantIds, "journal");
+  const logsQuery = useCareLogsForPlantIds(plantIds, "journal", { isPremium });
   const plantsById = new Map(
     plants.map((plant) => [
       plant.id,
