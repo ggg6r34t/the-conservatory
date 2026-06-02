@@ -29,12 +29,14 @@ export function SpeciesSuggestionBanner({
   const { colors } = useTheme();
   const qualifier =
     suggestion.source === "local"
-      ? "Pattern match"
+      ? "On-device pattern match"
       : confidenceQualifier(suggestion.confidence);
   const confidenceText =
     suggestion.source === "local"
-      ? "Pattern match"
-      : `Confidence: ${Math.round(suggestion.confidence * 100)}%`;
+      ? "On-device pattern match only — not a vision model result."
+      : suggestion.confidenceExplanation
+        ? `${confidenceQualifier(suggestion.confidence)} (${Math.round(suggestion.confidence * 100)}%). ${suggestion.confidenceExplanation}`
+        : `Model confidence: ${Math.round(suggestion.confidence * 100)}%`;
 
   return (
     <View

@@ -26,6 +26,16 @@ jest.mock("expo-router", () => ({
 
 jest.mock("@tanstack/react-query", () => ({
   useQuery: () => ({ data: [] }),
+  useQueryClient: () => ({
+    invalidateQueries: jest.fn(),
+  }),
+}));
+
+jest.mock("@/features/plants/hooks/useCollectionStreak", () => ({
+  useCollectionStreak: () => ({
+    currentStreakDays: 0,
+    isLoading: false,
+  }),
 }));
 
 jest.mock("@/features/billing/hooks/useSubscription", () => ({

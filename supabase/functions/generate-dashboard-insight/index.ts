@@ -3,6 +3,10 @@ import type {
   GenerateDashboardInsightResponse,
 } from "../../../features/ai/types/ai.ts";
 
+import { buildDashboardAiRequest } from "../_shared/aiPromptBuilders.ts";
+import { runAiJsonCompletion } from "../_shared/aiProvider.ts";
+import { recordAiObservability, assertAiProvidersConfigured } from "../_shared/aiObservability.ts";
+import { attachAiMeta } from "../_shared/aiResponses.ts";
 import { validateAiRequest, validateAiResponse } from "../_shared/aiSchemas.ts";
 import {
   assertAiUsageQuota,
@@ -28,6 +32,7 @@ Deno.serve(async (request) => {
     if (entitlementError) {
       return entitlementError;
     }
+    assertAiProvidersConfigured();
     const body = validateAiRequest<GenerateDashboardInsightRequest>(
       FUNCTION_NAME,
       await readJsonWithLimit(request),
@@ -36,11 +41,32 @@ Deno.serve(async (request) => {
       isPremium: true,
     });
 
-    const response = validateAiResponse<GenerateDashboardInsightResponse>(
+    const prompt = buildDashboardAiRequest(body);
+    const { data, meta } = await runAiJsonCompletion<{
+      insight: {
+        title: string;
+        body: string;
+        plantId?: string | null;
+      };
+    }>({
+      feature: "ai_dashboard_editorial",
+      system: prompt.system,
+      user: prompt.user,
+    });
+
+    const response = validateAiResponse(
       FUNCTION_NAME,
-      { insight: body.fallback },
+      attachAiMeta({ insight: data.insight }, meta),
     );
-    logEdgeEvent(context, "request_success", { status: 200 });
+    await recordAiObservability(context, {
+      feature: "ai_dashboard_editorial",
+      meta,
+      success: true,
+    });
+    logEdgeEvent(context, "request_success", {
+      status: 200,
+      provider: meta.provider,
+    });
     return jsonResponse(response);
   } catch (error) {
     return safeErrorResponse(error, context);

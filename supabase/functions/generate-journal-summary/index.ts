@@ -3,6 +3,10 @@ import type {
   GenerateJournalSummaryResponse,
 } from "../../../features/ai/types/ai.ts";
 
+import { buildJournalAiRequest } from "../_shared/aiPromptBuilders.ts";
+import { runAiJsonCompletion } from "../_shared/aiProvider.ts";
+import { recordAiObservability, assertAiProvidersConfigured } from "../_shared/aiObservability.ts";
+import { attachAiMeta } from "../_shared/aiResponses.ts";
 import { validateAiRequest, validateAiResponse } from "../_shared/aiSchemas.ts";
 import {
   assertAiUsageQuota,
@@ -28,6 +32,7 @@ Deno.serve(async (request) => {
     if (entitlementError) {
       return entitlementError;
     }
+    assertAiProvidersConfigured();
     const body = validateAiRequest<GenerateJournalSummaryRequest>(
       FUNCTION_NAME,
       await readJsonWithLimit(request),
@@ -36,11 +41,25 @@ Deno.serve(async (request) => {
       isPremium: true,
     });
 
-    const response = validateAiResponse<GenerateJournalSummaryResponse>(
+    const prompt = buildJournalAiRequest(body);
+    const { data, meta } = await runAiJsonCompletion<{
+      summary: { title: string; body: string };
+    }>({
+      feature: "ai_journal_narrative",
+      system: prompt.system,
+      user: prompt.user,
+    });
+
+    const response = validateAiResponse(
       FUNCTION_NAME,
-      { summary: body.fallback },
+      attachAiMeta({ summary: data.summary }, meta),
     );
-    logEdgeEvent(context, "request_success", { status: 200 });
+    await recordAiObservability(context, {
+      feature: "ai_journal_narrative",
+      meta,
+      success: true,
+    });
+    logEdgeEvent(context, "request_success", { status: 200, provider: meta.provider });
     return jsonResponse(response);
   } catch (error) {
     return safeErrorResponse(error, context);

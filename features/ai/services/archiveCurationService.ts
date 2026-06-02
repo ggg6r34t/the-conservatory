@@ -1,5 +1,6 @@
 import { pickArchiveBeforeAfterPhotos } from "@/features/ai/services/archivePhotoOrdering";
 import { requestArchiveCuration } from "@/features/ai/api/aiClient";
+import { hasVerifiedModelGeneration } from "@/features/ai/schemas/aiGenerationMeta";
 import { withCuratedArchivePairSource } from "@/features/ai/schemas/aiMappers";
 import { parseArchiveCurationResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
@@ -109,9 +110,11 @@ export async function getArchiveCuration(items: ArchiveCurationItem[], cloudAllo
     })),
   });
 
-  const parsedCloud = parseArchiveCurationResponse(cloud).map((pair) =>
-    withCuratedArchivePairSource(pair, "cloud"),
-  );
+  const parsedCloud = hasVerifiedModelGeneration(cloud)
+    ? parseArchiveCurationResponse(cloud).map((pair) =>
+        withCuratedArchivePairSource(pair, "cloud"),
+      )
+    : [];
   const result = parsedCloud.length ? parsedCloud : fallback;
 
   await setCachedValue(cacheKey, result, ARCHIVE_CACHE_TTL_MS);

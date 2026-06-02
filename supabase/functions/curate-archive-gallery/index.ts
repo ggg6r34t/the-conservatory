@@ -3,6 +3,10 @@ import type {
   CurateArchiveGalleryResponse,
 } from "../../../features/ai/types/ai.ts";
 
+import { buildArchiveAiRequest } from "../_shared/aiPromptBuilders.ts";
+import { runAiJsonCompletion } from "../_shared/aiProvider.ts";
+import { recordAiObservability, assertAiProvidersConfigured } from "../_shared/aiObservability.ts";
+import { attachAiMeta } from "../_shared/aiResponses.ts";
 import { validateAiRequest, validateAiResponse } from "../_shared/aiSchemas.ts";
 import {
   assertAiUsageQuota,
@@ -29,6 +33,7 @@ Deno.serve(async (request) => {
     if (entitlementError) {
       return entitlementError;
     }
+    assertAiProvidersConfigured();
     const body = validateAiRequest<CurateArchiveGalleryRequest>(
       FUNCTION_NAME,
       await readJsonWithLimit(request),
@@ -41,11 +46,38 @@ Deno.serve(async (request) => {
       isPremium: true,
     });
 
-    const response = validateAiResponse<CurateArchiveGalleryResponse>(
+    const prompt = buildArchiveAiRequest(body);
+    const { data, meta } = await runAiJsonCompletion<{
+      pairs: Array<{
+        plantId: string;
+        plantName: string;
+        beforePhotoId?: string;
+        afterPhotoId?: string;
+        beforeUri: string;
+        afterUri: string;
+        caption: string;
+      }>;
+    }>({
+      feature: "ai_archive_curation",
+      system: prompt.system,
+      user: prompt.user,
+    });
+
+    const pairs = Array.isArray(data.pairs) ? data.pairs.slice(0, 3) : [];
+    const response = validateAiResponse(
       FUNCTION_NAME,
-      { pairs: body.items.length > 0 ? [] : [] },
+      attachAiMeta({ pairs }, meta),
     );
-    logEdgeEvent(context, "request_success", { status: 200 });
+    await recordAiObservability(context, {
+      feature: "ai_archive_curation",
+      meta,
+      success: true,
+    });
+    logEdgeEvent(context, "request_success", {
+      status: 200,
+      pairCount: pairs.length,
+      provider: meta.provider,
+    });
     return jsonResponse(response);
   } catch (error) {
     return safeErrorResponse(error, context);

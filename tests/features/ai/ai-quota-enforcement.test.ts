@@ -20,6 +20,13 @@ jest.mock("@/features/ai/services/healthInsightSafetyService", () => ({
   enforceHealthInsightSafety: jest.fn(({ insight }) => insight),
 }));
 
+jest.mock("@/features/ai/services/imageEncodingService", () => ({
+  encodeLocalImageForAi: jest.fn(async () => ({
+    imageBase64: "aGVsbG8=",
+    mimeType: "image/jpeg",
+  })),
+}));
+
 jest.mock("@/features/ai/services/healthSignalAnalysisService", () => ({
   buildHealthSignalAnalysis: jest.fn(() => ({
     localInsight: {
@@ -68,6 +75,13 @@ const cloudHealthApiResponse = {
     body: "Cloud analysis differs from local.",
     confidence: 0.9,
     classification: "stable",
+  },
+  meta: {
+    provider: "openai",
+    model: "gpt-4o-mini",
+    latencyMs: 900,
+    inputTokens: 120,
+    outputTokens: 60,
   },
 };
 
@@ -141,7 +155,17 @@ describe("AI quota enforcement — species identification", () => {
 
   it("increments usage when cloud returns a parsed species result", async () => {
     mockRequestPlantIdentification.mockResolvedValue({
-      suggestion: { species: "Monstera Deliciosa", confidence: 0.95, careProfileHint: "Bright indirect light." },
+      suggestion: {
+        species: "Monstera Deliciosa",
+        confidence: 0.95,
+        careProfileHint: "Bright indirect light.",
+        confidenceExplanation: "Split leaves and fenestrations visible.",
+      },
+      meta: {
+        provider: "openai",
+        model: "gpt-4o-mini",
+        latencyMs: 800,
+      },
     });
 
     await getSpeciesSuggestion({
@@ -195,6 +219,7 @@ describe("AI quota enforcement — species identification", () => {
   it("does not increment when no userId is provided", async () => {
     mockRequestPlantIdentification.mockResolvedValue({
       suggestion: { species: "Pothos", confidence: 0.88 },
+      meta: { provider: "openai", model: "gpt-4o-mini", latencyMs: 700 },
     });
 
     await getSpeciesSuggestion({

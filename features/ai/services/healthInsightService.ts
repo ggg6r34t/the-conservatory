@@ -1,4 +1,5 @@
 import { requestHealthInsight } from "@/features/ai/api/aiClient";
+import { hasVerifiedModelGeneration } from "@/features/ai/schemas/aiGenerationMeta";
 import { withHealthInsightSource } from "@/features/ai/schemas/aiMappers";
 import { parseHealthInsightResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
@@ -28,18 +29,6 @@ export function buildHealthInsightRevision(data: PlantWithRelations) {
   ].join(":");
 }
 
-function isFallbackEquivalent(
-  cloud: Omit<HealthInsight, "source"> | null,
-  fallback: Omit<HealthInsight, "source">,
-) {
-  return (
-    Boolean(cloud) &&
-    cloud!.title === fallback.title &&
-    cloud!.body === fallback.body &&
-    cloud!.confidence === fallback.confidence &&
-    (cloud!.classification ?? null) === (fallback.classification ?? null)
-  );
-}
 
 export function buildLocalHealthInsight(
   data: PlantWithRelations,
@@ -128,9 +117,7 @@ export async function getHealthInsight(input: {
 
   const insight = withHealthInsightSource(
     chosen,
-    safeCloud && safeFallback && !isFallbackEquivalent(safeCloud, safeFallback)
-      ? "cloud"
-      : "local",
+    safeCloud && hasVerifiedModelGeneration(cloud) ? "cloud" : "local",
   );
 
   if (insight.source === "cloud" && input.userId) {

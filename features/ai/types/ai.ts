@@ -1,16 +1,31 @@
 export type AiSource = "local" | "cloud";
 
+export type AiProviderId = "openai" | "anthropic" | "google";
+
+export interface AiGenerationMeta {
+  provider: AiProviderId;
+  model: string;
+  latencyMs: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  estimatedCostUsd?: number;
+}
+
 export type LightCondition = "low" | "indirect" | "direct";
 
 export interface SpeciesSuggestion {
   species: string;
   confidence: number;
   careProfileHint?: string;
+  confidenceExplanation?: string;
   source: AiSource;
+  generation?: AiGenerationMeta;
 }
 
 export interface IdentifyPlantRequest {
   imageUri: string;
+  imageBase64?: string;
+  mimeType?: string;
 }
 
 export interface IdentifyPlantResponse {
@@ -68,6 +83,7 @@ export interface GenerateDashboardInsightRequest {
 
 export interface GenerateDashboardInsightResponse {
   insight: Omit<DashboardInsight, "source"> | null;
+  meta?: AiGenerationMeta;
 }
 
 export interface JournalMonthlySummary {
@@ -119,6 +135,7 @@ export interface GenerateHealthInsightRequest {
 
 export interface GenerateHealthInsightResponse {
   insight: Omit<HealthInsight, "source"> | null;
+  meta?: AiGenerationMeta;
 }
 
 export type ObservationTag =
@@ -170,6 +187,7 @@ export interface CurateArchiveGalleryRequest {
 
 export interface CurateArchiveGalleryResponse {
   pairs: Omit<ArchiveCuratedPair, "source">[];
+  meta?: AiGenerationMeta;
 }
 
 export interface StreakRecoveryNudge {
@@ -205,4 +223,5 @@ export interface GenerateJournalSummaryRequest {
 
 export interface GenerateJournalSummaryResponse {
   summary: Omit<JournalMonthlySummary, "monthKey" | "source"> | null;
+  meta?: AiGenerationMeta;
 }

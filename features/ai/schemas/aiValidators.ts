@@ -25,6 +25,7 @@ const speciesSuggestionSchema = z.object({
   species: z.string().min(1).transform(normalizeSpeciesLabel),
   confidence: z.number().transform(clampConfidence),
   careProfileHint: z.string().trim().min(1).optional(),
+  confidenceExplanation: z.string().trim().min(1).max(280).optional(),
 });
 
 const dashboardInsightSchema = z.object({

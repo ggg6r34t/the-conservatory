@@ -21,6 +21,10 @@ jest.mock("@/services/auth/sessionManager", () => ({
   writeSession: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock("@/features/product-feedback/services/featureRequestCacheService", () => ({
+  clearFeatureRequestCache: jest.fn().mockResolvedValue(undefined),
+}));
+
 // Stub out modules that authClient imports but are not relevant to deleteAccount
 jest.mock("@/config/env", () => ({
   env: {

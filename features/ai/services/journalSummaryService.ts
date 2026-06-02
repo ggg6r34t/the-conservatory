@@ -1,4 +1,5 @@
 import { requestJournalSummary } from "@/features/ai/api/aiClient";
+import { hasVerifiedModelGeneration } from "@/features/ai/schemas/aiGenerationMeta";
 import {
   buildMonthKey,
   withSummarySource,
@@ -116,17 +117,6 @@ export function buildLocalMonthlySummary(input: {
   };
 }
 
-function isFallbackEquivalent(
-  cloud: Omit<JournalMonthlySummary, "monthKey" | "source"> | null,
-  fallback: Omit<JournalMonthlySummary, "monthKey" | "source">,
-) {
-  return (
-    Boolean(cloud) &&
-    cloud!.title === fallback.title &&
-    cloud!.body === fallback.body
-  );
-}
-
 export async function getJournalMonthlySummary(input: {
   userId: string;
   logs: CareLog[];
@@ -190,7 +180,7 @@ export async function getJournalMonthlySummary(input: {
   });
   const parsedCloud = parseJournalSummaryResponse(cloud);
   const summary =
-    parsedCloud && !isFallbackEquivalent(parsedCloud, fallback)
+    parsedCloud && hasVerifiedModelGeneration(cloud)
       ? withSummarySource(parsedCloud, monthKey, "cloud")
       : withSummarySource(fallback, monthKey, "local");
 

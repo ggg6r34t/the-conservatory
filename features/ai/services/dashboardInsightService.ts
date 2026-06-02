@@ -1,4 +1,5 @@
 import { requestDashboardInsight } from "@/features/ai/api/aiClient";
+import { hasVerifiedModelGeneration } from "@/features/ai/schemas/aiGenerationMeta";
 import {
   buildDayKey,
   withInsightSource,
@@ -158,17 +159,6 @@ export function buildLocalInsight(input: {
   };
 }
 
-function isFallbackEquivalent(
-  cloud: Omit<DashboardInsight, "source"> | null,
-  fallback: Omit<DashboardInsight, "source">,
-) {
-  return (
-    Boolean(cloud) &&
-    cloud!.title === fallback.title &&
-    cloud!.body === fallback.body &&
-    (cloud!.plantId ?? null) === (fallback.plantId ?? null)
-  );
-}
 
 export async function getDashboardInsight(input: {
   userId: string;
@@ -213,7 +203,7 @@ export async function getDashboardInsight(input: {
   });
   const parsedCloud = parseDashboardInsightResponse(cloud);
   const insight =
-    parsedCloud && !isFallbackEquivalent(parsedCloud, fallback)
+    parsedCloud && hasVerifiedModelGeneration(cloud)
       ? withInsightSource(parsedCloud, "cloud")
       : withInsightSource(fallback, "local");
 

@@ -153,7 +153,15 @@ function validateHealthRequest(value: unknown) {
 
 function validateIdentifyRequest(value: unknown) {
   const input = object(value, "request");
-  string(input.imageUri, "imageUri", 1000);
+  optionalString(input.imageUri, "imageUri", 1000);
+  const imageBase64 = optionalString(input.imageBase64, "imageBase64", 8_000_000);
+  const mimeType = optionalString(input.mimeType, "mimeType", 80);
+  if (!imageBase64) {
+    fail("imageBase64 is required for cloud species identification.");
+  }
+  if (!mimeType || !mimeType.startsWith("image/")) {
+    fail("mimeType must be an image/* type.");
+  }
   return input;
 }
 

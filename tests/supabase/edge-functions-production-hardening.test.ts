@@ -40,6 +40,25 @@ describe("Supabase Edge Function production hardening", () => {
     expect(source).not.toContain("console.log(body");
   });
 
+  it("implements production AI provider infrastructure with failover and observability", () => {
+    const provider = read("supabase/functions/_shared/aiProvider.ts");
+    const observability = read("supabase/functions/_shared/aiObservability.ts");
+    const migration = read(
+      "supabase/migrations/20260602140000_edge_ai_observability.sql",
+    );
+
+    expect(provider).toContain("runAiCompletion");
+    expect(provider).toContain("runAiJsonCompletion");
+    expect(provider).toContain("openai");
+    expect(provider).toContain("anthropic");
+    expect(provider).toContain("google");
+    expect(provider).toContain("AI_REQUEST_TIMEOUT_MS");
+    expect(provider).toContain("AI_MAX_RETRIES");
+    expect(provider).toContain("circuitByProvider");
+    expect(observability).toContain("record_edge_ai_request");
+    expect(migration).toContain("edge_ai_request_log");
+  });
+
   it("defines request and response validators for every AI function", () => {
     const source = read("supabase/functions/_shared/aiSchemas.ts");
 
@@ -53,8 +72,12 @@ describe("Supabase Edge Function production hardening", () => {
     expect(source).toContain("maxLength");
   });
 
-  it.each(AI_FUNCTIONS)(
-    "authenticates, validates, rate-limits, and response-validates %s",
+  const MODEL_BACKED_FUNCTIONS = AI_FUNCTIONS.filter(
+    (name) => name !== "optimize-reminders",
+  );
+
+  it.each(MODEL_BACKED_FUNCTIONS)(
+    "authenticates, validates, rate-limits, and invokes model providers for %s",
     (functionName) => {
       const source = read(`supabase/functions/${functionName}/index.ts`);
 
@@ -64,6 +87,10 @@ describe("Supabase Edge Function production hardening", () => {
       expect(source).toContain("assertAiUsageQuota");
       expect(source).toContain("validateAiResponse");
       expect(source).toContain("safeErrorResponse");
+      expect(source).toContain("runAiJsonCompletion");
+      expect(source).toContain("attachAiMeta");
+      expect(source).toContain("recordAiObservability");
+      expect(source).not.toContain("body.fallback");
       expect(source.indexOf("context = await createEdgeContext")).toBeLessThan(
         source.indexOf("validateAiRequest<"),
       );
@@ -72,6 +99,13 @@ describe("Supabase Edge Function production hardening", () => {
       ).toBeLessThan(source.lastIndexOf("jsonResponse"));
     },
   );
+
+  it("keeps optimize-reminders as deterministic scheduling without model fallback echo", () => {
+    const source = read("supabase/functions/optimize-reminders/index.ts");
+    expect(source).toContain("optimizeLocally");
+    expect(source).not.toContain("runAiJsonCompletion");
+    expect(source).not.toContain("body.fallback");
+  });
 
   it.each(PREMIUM_FUNCTIONS)(
     "keeps server-side premium guard for %s before quota consumption",
@@ -114,6 +148,10 @@ describe("Supabase Edge Function production hardening", () => {
     expect(env).toContain("REVENUECAT_SECRET_API_KEY");
     expect(env).toContain("EDGE_AI_DAILY_LIMIT_FREE");
     expect(env).toContain("EDGE_AI_DAILY_LIMIT_PREMIUM");
+    expect(env).toContain("OPENAI_API_KEY");
+    expect(env).toContain("ANTHROPIC_API_KEY");
+    expect(env).toContain("GOOGLE_AI_API_KEY");
+    expect(env).toContain("AI_PROVIDER_ORDER");
   });
 
   it("teaches the client wrapper to handle typed Edge Function denials safely", () => {

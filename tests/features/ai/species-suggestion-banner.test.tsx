@@ -20,9 +20,9 @@ describe("SpeciesSuggestionBanner", () => {
       />,
     );
 
-    getByText("Likely Monstera deliciosa · Pattern match");
+    getByText("Likely Monstera deliciosa · On-device pattern match");
     getByText("Bright indirect light keeps growth even.");
-    getByText("Pattern match");
+    getByText("On-device pattern match only — not a vision model result.");
 
     fireEvent.press(getByText("USE SUGGESTION"));
     fireEvent.press(getByText("NOT NOW"));
@@ -45,8 +45,8 @@ describe("SpeciesSuggestionBanner", () => {
       />,
     );
 
-    getByText("Likely Ficus elastica · Pattern match");
+    getByText("Likely Ficus elastica · On-device pattern match");
     getByText("Use it as a starting point only.");
-    getByText("Pattern match");
+    getByText("On-device pattern match only — not a vision model result.");
   });
 });

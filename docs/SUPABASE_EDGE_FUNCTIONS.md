@@ -14,7 +14,15 @@ supabase secrets set EDGE_AI_DAILY_LIMIT_FREE=10
 supabase secrets set EDGE_AI_DAILY_LIMIT_PREMIUM=100
 supabase secrets set EDGE_AI_MONTHLY_LIMIT_FREE=30
 supabase secrets set EDGE_AI_MONTHLY_LIMIT_PREMIUM=1000
+supabase secrets set OPENAI_API_KEY=...
+supabase secrets set ANTHROPIC_API_KEY=...
+supabase secrets set GOOGLE_AI_API_KEY=...
+supabase secrets set AI_PROVIDER_ORDER=openai,anthropic,google
+supabase secrets set AI_REQUEST_TIMEOUT_MS=28000
+supabase secrets set AI_MAX_RETRIES=2
 ```
+
+Configure at least one model provider API key before enabling AI functions. Species identification requires `imageBase64` in the request body; the mobile client encodes local photos before invoking `identify-plant`.
 
 `REVENUECAT_PREMIUM_ENTITLEMENT_ID` must match the RevenueCat entitlement configured for the app. The app currently uses the Supabase user id as the RevenueCat app user id; change the shared entitlement guard if that identity mapping changes.
 
@@ -58,7 +66,8 @@ supabase functions deploy delete-account
 - Premium-only functions also verify RevenueCat server-side.
 - AI functions reject oversized payloads before parsing.
 - Logs are structured and redact notes, prompts, names, photo URIs, and URLs.
-- Client fallbacks remain authoritative when a function returns validation, quota, entitlement, or network errors.
+- Client local fallbacks remain authoritative when a function returns validation, quota, entitlement, provider outage, or network errors.
+- Model-backed responses include a `meta` object (`provider`, `model`, token counts, latency). The app labels insights as cloud-generated only when `meta` is present.
 - Free health insight and plant identification remain quota-limited server-side.
 - Premium AI remains rate-limited server-side to control runaway cost.
 

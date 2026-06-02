@@ -30,6 +30,10 @@ jest.mock("@/features/onboarding/services/onboardingStorage", () => ({
   syncOnboardingStatusToAccount: jest.fn().mockResolvedValue("pending"),
 }));
 
+jest.mock("@/features/product-feedback/services/featureRequestCacheService", () => ({
+  clearFeatureRequestCache: jest.fn().mockResolvedValue(undefined),
+}));
+
 describe("auth client release readiness", () => {
   beforeEach(() => {
     jest.resetModules();

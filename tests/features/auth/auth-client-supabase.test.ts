@@ -48,6 +48,10 @@ jest.mock("@/features/onboarding/services/onboardingStorage", () => ({
     mockSyncOnboardingStatusToAccount(...args),
 }));
 
+jest.mock("@/features/product-feedback/services/featureRequestCacheService", () => ({
+  clearFeatureRequestCache: jest.fn().mockResolvedValue(undefined),
+}));
+
 describe("auth client supabase mapping", () => {
   beforeEach(() => {
     resetSupabaseMocks();

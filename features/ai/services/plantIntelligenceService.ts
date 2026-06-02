@@ -4,8 +4,10 @@ import {
   normalizeSpeciesLabel,
   withSpeciesSource,
 } from "@/features/ai/schemas/aiMappers";
+import { hasVerifiedModelGeneration } from "@/features/ai/schemas/aiGenerationMeta";
 import { parseSpeciesSuggestionResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
+import { encodeLocalImageForAi } from "@/features/ai/services/imageEncodingService";
 import { incrementUsage } from "@/features/billing/services/usageClient";
 import { getDatabase } from "@/services/database/sqlite";
 import type {
@@ -91,13 +93,25 @@ export async function getSpeciesSuggestion(input: { imageUri: string; cloudAllow
     return localSuggestion;
   }
 
-  const remote = await requestPlantIdentification({ imageUri: input.imageUri });
+  const encoded = await encodeLocalImageForAi(input.imageUri);
+  if (!encoded) {
+    return localSuggestion;
+  }
+
+  const remote = await requestPlantIdentification({
+    imageUri: input.imageUri,
+    imageBase64: encoded.imageBase64,
+    mimeType: encoded.mimeType,
+  });
   const parsedRemote = parseSpeciesSuggestionResponse(
     remote as IdentifyPlantResponse | null,
   );
 
-  if (parsedRemote) {
-    const suggestion = withSpeciesSource(parsedRemote, "cloud");
+  if (parsedRemote && hasVerifiedModelGeneration(remote)) {
+    const suggestion: SpeciesSuggestion = {
+      ...withSpeciesSource(parsedRemote, "cloud"),
+      confidenceExplanation: parsedRemote.confidenceExplanation,
+    };
     await setCachedValue(cacheKey, suggestion, SPECIES_CACHE_TTL_MS);
     if (input.userId) {
       const db = await getDatabase();
