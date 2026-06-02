@@ -135,14 +135,14 @@ export default function ProfileScreen() {
   const graveyard = graveyardQuery.data ?? [];
   const remindersEnabled = settingsQuery.data?.remindersEnabled ?? true;
   const themeLabel = formatThemeLabel(settingsQuery.data?.preferredTheme);
-  const { currentStreak: streakDays, refetch: refetchStreak } =
+  const { currentStreak: streakDays, refreshIfStale } =
     useCollectionStreak();
   useProductFeedbackNotifications();
 
   useFocusEffect(
     useCallback(() => {
-      void refetchStreak();
-    }, [refetchStreak]),
+      void refreshIfStale();
+    }, [refreshIfStale]),
   );
 
   const displayName = getProfileDisplayName(user?.displayName);

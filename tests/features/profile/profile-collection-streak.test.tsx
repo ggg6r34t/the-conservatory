@@ -104,14 +104,14 @@ jest.mock("@/features/settings/hooks/useUpdateSettings", () => ({
   }),
 }));
 
-const mockRefetchStreak = jest.fn();
+const mockRefreshIfStale = jest.fn();
 
 jest.mock("@/features/plants/hooks/useCollectionStreak", () => ({
   useCollectionStreak: () => ({
     currentStreak: 5,
     longestStreak: 8,
     isLoading: false,
-    refetch: mockRefetchStreak,
+    refreshIfStale: mockRefreshIfStale,
   }),
 }));
 
@@ -125,6 +125,7 @@ describe("profile collection streak", () => {
     expect(source).toContain("useCollectionStreak");
     expect(source).toContain("<StreakBadge streak={streakDays}");
     expect(source).toContain("useFocusEffect");
+    expect(source).toContain("refreshIfStale");
     expect(source).not.toContain("computeCareStreak");
   });
 
@@ -133,6 +134,6 @@ describe("profile collection streak", () => {
 
     expect(screen.getByLabelText("5 day streak")).toBeTruthy();
     expect(screen.getByText("DAYS STREAK")).toBeTruthy();
-    expect(mockRefetchStreak).toHaveBeenCalled();
+    expect(mockRefreshIfStale).toHaveBeenCalled();
   });
 });

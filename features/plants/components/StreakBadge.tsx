@@ -13,10 +13,11 @@ export function StreakBadge({ streak, variant = "default" }: StreakBadgeProps) {
 
   return (
     <View
-      style={[
-        compact ? styles.compactContainer : styles.container,
-        { backgroundColor: colors.surfaceContainerLow },
-      ]}
+      style={
+        compact
+          ? styles.compactContainer
+          : [styles.container, { backgroundColor: colors.surfaceContainerLow }]
+      }
       accessibilityRole="text"
       accessibilityLabel={`${streak} day streak`}
     >

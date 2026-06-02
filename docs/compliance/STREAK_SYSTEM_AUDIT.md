@@ -48,7 +48,7 @@ Evidence standard: **code + tests**. Claims without both are unresolved.
 | 2 | Profile inline `computeCareStreak` | Fully Resolved | **Fully Resolved** | Removed from `app/profile.tsx`; `profile-collection-streak.test.tsx` |
 | 3 | UTC day keys in nudge service | Partially Resolved | **Fully Resolved** | `toLocalDayKeyFromDate` in `streakNudgeService.ts` + `useStreakRecoveryNudge.ts` |
 | 4 | Qualifying log type filter | Fully Resolved | **Fully Resolved** | `QUALIFYING_STREAK_LOG_TYPES`; analytics ignores `note` |
-| 5 | Profile refetch on focus | Fully Resolved | **Fully Resolved** | `useFocusEffect` → `refetchStreak()` |
+| 5 | Profile refetch on focus | Fully Resolved | **Fully Resolved** | `useFocusEffect` → `refreshIfStale()` (respects 30s stale window) |
 | 6 | Care log query invalidation | Fully Resolved | **Fully Resolved** | `invalidateCareLogQueries` in `useRecordCareEvent` |
 | 7 | Analytics `streak_started/extended/maintained` | Partially Resolved | **Fully Resolved** | `streakAnalyticsService.ts` + `streak-analytics-service.test.ts` |
 | 8 | Analytics `streak_broken` | Still Open | **Fully Resolved** | `trackStreakBrokenOnSession` in `useCollectionStreak.ts` |
@@ -64,10 +64,23 @@ Evidence standard: **code + tests**. Claims without both are unresolved.
 | 18 | Longest streak in Profile UI | Deferred | **Deferred** | Computed; product chose current streak only |
 | 19 | Onboarding “watering streaks” copy | Deferred | **Deferred** | Marketing copy; no functional impact |
 
+## Round 3 — Profile Streak Flicker (June 2, 2026)
+
+| # | Finding | Round 3 | Evidence |
+|---|---------|---------|----------|
+| 20 | Streak drops to 0 when `careLogsQuery.data` is undefined during refetch | **Fully Resolved** | `resolveDisplayStreak()` + `lastStableStreakRef` in `useCollectionStreak.ts`; `collection-streak-service.test.ts` |
+| 21 | Unsorted plant IDs in care-log batch query key | **Fully Resolved** | `careLogsBatchQueryKey()` sorts IDs; `use-care-logs-for-plant-ids.test.ts` |
+| 22 | No placeholder data during care-log refetch | **Fully Resolved** | `placeholderData: (previousData) => previousData` in `useCareLogsForPlantIds.ts` |
+| 23 | Focus refetch bypassed stale window and forced redundant fetches | **Fully Resolved** | `refreshIfStale()` + 30s `staleTime` for `collection-streak` scope; `streak-flicker-remediation.test.ts` |
+| 24 | Compact `StreakBadge` blended into stats card background | **Fully Resolved** | Compact variant uses transparent container; `StreakBadge.tsx` |
+| 25 | Flicker regression test coverage | **Fully Resolved** | `streak-flicker-remediation.test.ts`, `resolveDisplayStreak` unit tests |
+
+**Round 3 verdict:** **PASS** — 0 Still Open · 0 Partial
+
 ## Verification Commands
 
 ```bash
-npm test -- --runInBand --testPathPattern="collection-streak|streak-analytics|streak-nudge|streak-service|profile-collection-streak"
+npm test -- --runInBand --testPathPattern="collection-streak|streak-analytics|streak-nudge|streak-service|profile-collection-streak|streak-flicker|use-care-logs"
 npm run typecheck
 ```
 

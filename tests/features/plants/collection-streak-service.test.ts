@@ -3,6 +3,7 @@ import {
   isQualifyingStreakLogType,
   nextLocalDayKey,
   previousLocalDayKey,
+  resolveDisplayStreak,
   toLocalDayKey,
   toLocalDayKeyFromDate,
 } from "@/features/plants/services/collectionStreakService";
@@ -183,5 +184,16 @@ describe("collectionStreakService", () => {
   it("identifies qualifying log types", () => {
     expect(isQualifyingStreakLogType("water")).toBe(true);
     expect(isQualifyingStreakLogType("note")).toBe(false);
+  });
+});
+
+describe("resolveDisplayStreak", () => {
+  it("returns the computed streak when care logs are loaded", () => {
+    expect(resolveDisplayStreak(5, 3, [])).toBe(5);
+    expect(resolveDisplayStreak(0, 7, [{ id: "log-1" }])).toBe(0);
+  });
+
+  it("keeps the last stable streak while care logs are refetching", () => {
+    expect(resolveDisplayStreak(0, 7, undefined)).toBe(7);
   });
 });

@@ -166,3 +166,15 @@ export function computeCollectionStreak(
     streakStartDayKey,
   };
 }
+
+export function resolveDisplayStreak(
+  computedStreak: number,
+  lastStableStreak: number,
+  careLogsData: unknown[] | undefined,
+) {
+  if (careLogsData !== undefined) {
+    return computedStreak;
+  }
+
+  return lastStableStreak;
+}

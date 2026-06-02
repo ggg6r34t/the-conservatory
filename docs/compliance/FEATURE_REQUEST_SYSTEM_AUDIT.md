@@ -35,8 +35,11 @@ Evidence standard: **code + tests**. Claims without both are unresolved.
 | 24 | Test coverage 90%+ | Partially Resolved | **Partially Resolved** | 15 tests; core paths covered; full coverage % not measured on all modules |
 | 25 | Production migration deploy | Partially Resolved | **Partially Resolved** | SQL exists; requires Supabase deploy (ops step) |
 | 26 | Retention/premium correlation analytics | Deferred | **Deferred** | Requires PostHog dashboard configuration post-launch |
+| 27 | New request chip selected text color (plant + contact) | Still Open | **Fully Resolved** | `app/feature-requests/new.tsx` uses `onPrimary` when selected; `feature-request-new-screen.test.ts` |
 
 **Round 2 verdict:** **PASS** (client) — 0 Still Open · 1 Partial (ops deploy + coverage metric) · 2 Not Actionable/Deferred
+
+**Round 3 verdict:** **PASS** (client) — chip color consistency verified · 0 Still Open · 1 Partial (ops deploy + coverage metric) · 2 Not Actionable/Deferred
 
 ## Verification Commands
 

@@ -243,11 +243,18 @@ export default function NewFeatureRequestScreen() {
                     },
                   ]}
                 >
-                  <Text style={[styles.chipText, { color: colors.primary }]}>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      { color: !plantId ? colors.onPrimary : colors.primary },
+                    ]}
+                  >
                     None
                   </Text>
                 </Pressable>
-                {plants.map((plant) => (
+                {plants.map((plant) => {
+                  const selected = plantId === plant.id;
+                  return (
                   <Pressable
                     key={plant.id}
                     accessibilityRole="button"
@@ -255,18 +262,23 @@ export default function NewFeatureRequestScreen() {
                     style={[
                       styles.chip,
                       {
-                        backgroundColor:
-                          plantId === plant.id
+                        backgroundColor: selected
                             ? colors.primaryContainer
                             : colors.surfaceContainerHigh,
                       },
                     ]}
                   >
-                    <Text style={[styles.chipText, { color: colors.primary }]}>
+                    <Text
+                      style={[
+                        styles.chipText,
+                        { color: selected ? colors.onPrimary : colors.primary },
+                      ]}
+                    >
                       {plant.name}
                     </Text>
                   </Pressable>
-                ))}
+                  );
+                })}
               </View>
             </ScrollView>
           </>
@@ -276,7 +288,9 @@ export default function NewFeatureRequestScreen() {
           Contact preference
         </Text>
         <View style={styles.chipRow}>
-          {(["in_app", "email", "none"] as const).map((option) => (
+          {(["in_app", "email", "none"] as const).map((option) => {
+            const selected = contactPreference === option;
+            return (
             <Pressable
               key={option}
               accessibilityRole="button"
@@ -284,14 +298,18 @@ export default function NewFeatureRequestScreen() {
               style={[
                 styles.chip,
                 {
-                  backgroundColor:
-                    contactPreference === option
+                  backgroundColor: selected
                       ? colors.primaryContainer
                       : colors.surfaceContainerHigh,
                 },
               ]}
             >
-              <Text style={[styles.chipText, { color: colors.primary }]}>
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: selected ? colors.onPrimary : colors.primary },
+                ]}
+              >
                 {option === "in_app"
                   ? "In-app updates"
                   : option === "email"
@@ -299,7 +317,8 @@ export default function NewFeatureRequestScreen() {
                     : "No contact"}
               </Text>
             </Pressable>
-          ))}
+            );
+          })}
         </View>
 
         <Pressable
