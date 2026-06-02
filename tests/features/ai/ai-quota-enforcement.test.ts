@@ -229,4 +229,66 @@ describe("AI quota enforcement — species identification", () => {
 
     expect(mockIncrementUsage).not.toHaveBeenCalled();
   });
+
+  it("does not label cloud when the response lacks verified model meta", async () => {
+    mockRequestPlantIdentification.mockResolvedValue({
+      suggestion: {
+        species: "Monstera Deliciosa",
+        confidence: 0.91,
+        careProfileHint: "Bright indirect light.",
+        confidenceExplanation: "Fenestrated leaves visible.",
+      },
+    });
+
+    const result = await getSpeciesSuggestion({
+      imageUri: "file:///photo-unknown.jpg",
+      cloudAllowed: true,
+      userId: "user-1",
+    });
+
+    expect(result?.source).not.toBe("cloud");
+    expect(mockIncrementUsage).not.toHaveBeenCalled();
+  });
+
+  it("does not label cloud when confidenceExplanation is missing", async () => {
+    mockRequestPlantIdentification.mockResolvedValue({
+      suggestion: {
+        species: "Monstera Deliciosa",
+        confidence: 0.91,
+        careProfileHint: "Bright indirect light.",
+      },
+      meta: { provider: "openai", model: "gpt-4o-mini", latencyMs: 700 },
+    });
+
+    const result = await getSpeciesSuggestion({
+      imageUri: "file:///photo-unknown.jpg",
+      cloudAllowed: true,
+      userId: "user-1",
+    });
+
+    expect(result?.source).not.toBe("cloud");
+    expect(mockIncrementUsage).not.toHaveBeenCalled();
+  });
+
+  it("labels cloud only when meta and confidenceExplanation are present", async () => {
+    mockRequestPlantIdentification.mockResolvedValue({
+      suggestion: {
+        species: "Monstera Deliciosa",
+        confidence: 0.91,
+        careProfileHint: "Bright indirect light.",
+        confidenceExplanation: "Split leaves and fenestrations visible.",
+      },
+      meta: { provider: "openai", model: "gpt-4o-mini", latencyMs: 700 },
+    });
+
+    const result = await getSpeciesSuggestion({
+      imageUri: "file:///photo-unknown.jpg",
+      cloudAllowed: true,
+      userId: "user-1",
+    });
+
+    expect(result?.source).toBe("cloud");
+    expect(result?.confidenceExplanation).toContain("fenestrations");
+    expect(mockIncrementUsage).toHaveBeenCalled();
+  });
 });

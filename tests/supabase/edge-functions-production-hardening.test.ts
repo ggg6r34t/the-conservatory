@@ -100,6 +100,17 @@ describe("Supabase Edge Function production hardening", () => {
     },
   );
 
+  it("passes encoded plant photos into identify-plant vision completion", () => {
+    const source = read("supabase/functions/identify-plant/index.ts");
+    const prompts = read("supabase/functions/_shared/aiPromptBuilders.ts");
+
+    expect(source).toContain("imageBase64");
+    expect(source).toContain("images:");
+    expect(source).toContain("buildIdentifyAiRequest");
+    expect(prompts).toContain("confidenceExplanation");
+    expect(prompts).toContain("identify houseplant species from photos for a botanical");
+  });
+
   it("keeps optimize-reminders as deterministic scheduling without model fallback echo", () => {
     const source = read("supabase/functions/optimize-reminders/index.ts");
     expect(source).toContain("optimizeLocally");

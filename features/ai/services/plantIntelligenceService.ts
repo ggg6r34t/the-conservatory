@@ -107,10 +107,11 @@ export async function getSpeciesSuggestion(input: { imageUri: string; cloudAllow
     remote as IdentifyPlantResponse | null,
   );
 
-  if (parsedRemote && hasVerifiedModelGeneration(remote)) {
+  const cloudExplanation = parsedRemote?.confidenceExplanation?.trim();
+  if (parsedRemote && hasVerifiedModelGeneration(remote) && cloudExplanation) {
     const suggestion: SpeciesSuggestion = {
       ...withSpeciesSource(parsedRemote, "cloud"),
-      confidenceExplanation: parsedRemote.confidenceExplanation,
+      confidenceExplanation: cloudExplanation,
     };
     await setCachedValue(cacheKey, suggestion, SPECIES_CACHE_TTL_MS);
     if (input.userId) {

@@ -49,4 +49,25 @@ describe("SpeciesSuggestionBanner", () => {
     getByText("Use it as a starting point only.");
     getByText("On-device pattern match only — not a vision model result.");
   });
+
+  it("shows model confidence explanation for cloud vision results", () => {
+    const { getByText } = render(
+      <SpeciesSuggestionBanner
+        suggestion={{
+          species: "Monstera deliciosa",
+          confidence: 0.82,
+          careProfileHint: "Bright indirect light keeps growth even.",
+          confidenceExplanation: "Split leaves and fenestrations are visible.",
+          source: "cloud",
+        }}
+        onAccept={() => undefined}
+        onDismiss={() => undefined}
+      />,
+    );
+
+    getByText("Likely Monstera deliciosa · High confidence");
+    getByText(
+      /High confidence \(82%\)\. Split leaves and fenestrations are visible\./,
+    );
+  });
 });
