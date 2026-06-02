@@ -6,12 +6,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { FREE_CARE_LOG_HISTORY_DAYS } from "@/features/billing/constants";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import { useDeleteCareLog } from "@/features/care-logs/hooks/useDeleteCareLog";
 import { PlantActivityEmptyState } from "@/features/plants/components/PlantActivityEmptyState";
 import { PlantActivityHero } from "@/features/plants/components/PlantActivityHero";
 import { PlantActivitySection } from "@/features/plants/components/PlantActivitySection";
 import { usePlant } from "@/features/plants/hooks/usePlant";
+import { useAlert } from "@/hooks/useAlert";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import {
   buildPlantActivitySections,
   getPlantActivityHeroPhoto,
@@ -22,7 +25,10 @@ export default function PlantActivityRoute() {
   const router = useRouter();
   const { colors, spacing } = useTheme();
   const { isPremium } = useSubscription();
+  const alert = useAlert();
+  const snackbar = useSnackbar();
   const plantQuery = usePlant(id ?? "");
+  const deleteCareLog = useDeleteCareLog(id ?? "");
   const sections = useMemo(
     () => (plantQuery.data ? buildPlantActivitySections(plantQuery.data) : []),
     [plantQuery.data],
@@ -89,7 +95,41 @@ export default function PlantActivityRoute() {
             {sections.length > 0 ? (
               <View style={[styles.sections, { gap: spacing.xl }]}>
                 {sections.map((section) => (
-                  <PlantActivitySection key={section.key} section={section} />
+                  <PlantActivitySection
+                    key={section.key}
+                    section={section}
+                    onDeleteCareLog={(careLogId) => {
+                      void (async () => {
+                        const confirmed = await alert.confirm({
+                          variant: "destructive",
+                          title: "Delete care entry?",
+                          message:
+                            "This removes the log from your journal on this device and queues the deletion for backup sync.",
+                          primaryAction: { label: "Delete", tone: "danger" },
+                          secondaryAction: { label: "Cancel" },
+                        });
+
+                        if (!confirmed) {
+                          return;
+                        }
+
+                        try {
+                          await deleteCareLog.mutateAsync(careLogId);
+                          snackbar.success("Care entry deleted.");
+                        } catch (error) {
+                          await alert.show({
+                            variant: "error",
+                            title: "Unable to delete care entry",
+                            message:
+                              error instanceof Error
+                                ? error.message
+                                : "Try again in a moment.",
+                            primaryAction: { label: "Close", tone: "danger" },
+                          });
+                        }
+                      })();
+                    }}
+                  />
                 ))}
               </View>
             ) : (

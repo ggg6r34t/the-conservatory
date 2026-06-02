@@ -14,7 +14,10 @@ import { MemorialStatsCard } from "@/features/plants/components/MemorialStatsCar
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { useMemorialLayoutPreferences } from "@/features/plants/hooks/useMemorialLayoutPreferences";
 import { usePlant } from "@/features/plants/hooks/usePlant";
+import { useRestorePlant } from "@/features/plants/hooks/useRestorePlant";
 import { useUpdateGraveyardMemorial } from "@/features/plants/hooks/useUpdateGraveyardMemorial";
+import { FREE_PLANT_LIMIT } from "@/features/billing/constants";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
@@ -60,7 +63,9 @@ export default function MemorialDetailScreen() {
   const plantQuery = usePlant(memorial?.plantId ?? "");
   const photos = plantQuery.data?.photos ?? [];
 
+  const { isPremium } = useSubscription();
   const updateMemorial = useUpdateGraveyardMemorial();
+  const restorePlant = useRestorePlant(memorial?.plantId ?? "");
   const alert = useAlert();
   const snackbar = useSnackbar();
   const [editSheetOpen, setEditSheetOpen] = useState(false);
@@ -134,6 +139,58 @@ export default function MemorialDetailScreen() {
         {memorial ? (
           <MemorialFooter
             onEdit={() => setEditSheetOpen(true)}
+            onRestoreToCollection={() => {
+              void (async () => {
+                const confirmed = await alert.confirm({
+                  title: "Return to collection?",
+                  message:
+                    "This plant will leave the graveyard and appear in your active library again. Memorial notes stay in your care history.",
+                  primaryAction: { label: "Restore", tone: "primary" },
+                  secondaryAction: { label: "Cancel" },
+                });
+
+                if (!confirmed) {
+                  return;
+                }
+
+                try {
+                  await restorePlant.mutateAsync();
+                  snackbar.success("Plant restored to your collection.");
+                  router.replace(`/plant/${memorial.plantId}` as const);
+                } catch (error) {
+                  const message =
+                    error instanceof Error
+                      ? error.message
+                      : "This plant could not be restored.";
+                  const isLimit =
+                    typeof error === "object" &&
+                    error !== null &&
+                    "code" in error &&
+                    error.code === "PLANT_LIMIT_REACHED";
+
+                  await alert.show({
+                    variant: "error",
+                    title: isLimit
+                      ? "Plant limit reached"
+                      : "Unable to restore plant",
+                    message: isLimit
+                      ? isPremium
+                        ? `You already have ${FREE_PLANT_LIMIT} active plants in this archive.`
+                        : `Free accounts can hold up to ${FREE_PLANT_LIMIT} active plants. Upgrade to Premium for unlimited plants.`
+                      : message,
+                    primaryAction: {
+                      label: isLimit && !isPremium ? "View Premium" : "Close",
+                      tone: isLimit && !isPremium ? "primary" : "danger",
+                      onPress:
+                        isLimit && !isPremium
+                          ? () => router.push("/premium")
+                          : undefined,
+                    },
+                  });
+                }
+              })();
+            }}
+            restoreLoading={restorePlant.isPending}
             isFeatured={isFeatured}
             featureLoading={layoutPreferences.setFeaturedMemorial.isPending}
             onToggleFeatured={() => {

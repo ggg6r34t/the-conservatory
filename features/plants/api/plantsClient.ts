@@ -301,7 +301,7 @@ export async function listGraveyardPlants(userId: string) {
     `SELECT gp.*, p.name, p.species_name, p.nickname, p.notes
      FROM graveyard_plants gp
      INNER JOIN plants p ON p.id = gp.plant_id
-     WHERE gp.user_id = ?
+     WHERE gp.user_id = ? AND p.status = 'graveyard'
      ORDER BY gp.archived_at DESC;`,
     userId,
   );
@@ -1532,4 +1532,94 @@ export async function updateGraveyardMemorial(input: {
     syncedAt: updated!.synced_at,
     syncError: updated!.sync_error,
   } satisfies GraveyardPlant;
+}
+
+export async function restorePlantFromGraveyard(input: {
+  userId: string;
+  plantId: string;
+  isPremium: boolean;
+}) {
+  const database = await getDatabase();
+  const plant = await getPlantById(input.userId, input.plantId);
+  if (!plant) {
+    throw new Error("Plant not found.");
+  }
+
+  if (plant.plant.status !== "graveyard") {
+    throw new Error("Only archived plants can be restored to your collection.");
+  }
+
+  if (!input.isPremium) {
+    const row = await database.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM plants WHERE user_id = ? AND status = 'active'`,
+      [input.userId],
+    );
+    const current = row?.count ?? 0;
+    if (current >= FREE_PLANT_LIMIT) {
+      throw Object.assign(new Error("Plant limit reached"), {
+        code: "PLANT_LIMIT_REACHED" as const,
+        limit: FREE_PLANT_LIMIT,
+        current,
+      });
+    }
+  }
+
+  const graveyardRow = await database.getFirstAsync<{ id: string }>(
+    "SELECT id FROM graveyard_plants WHERE plant_id = ? AND user_id = ? LIMIT 1;",
+    input.plantId,
+    input.userId,
+  );
+
+  if (!graveyardRow) {
+    throw new Error("Memorial entry not found for this plant.");
+  }
+
+  const now = new Date().toISOString();
+
+  await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: now,
+    perform: async (transactionNowIso) => {
+      await database.runAsync(
+        `UPDATE plants
+         SET status = 'active', updated_at = ?, updated_by = ?, pending = 1
+         WHERE id = ? AND user_id = ?;`,
+        transactionNowIso,
+        input.userId,
+        input.plantId,
+        input.userId,
+      );
+
+      await database.runAsync(
+        "DELETE FROM graveyard_plants WHERE id = ? AND user_id = ?;",
+        graveyardRow.id,
+        input.userId,
+      );
+
+      return {
+        result: input.plantId,
+        operations: [
+          {
+            entity: "plants",
+            entityId: input.plantId,
+            operation: "update" as const,
+            payload: {
+              userId: input.userId,
+              status: "active",
+            },
+          },
+          {
+            entity: "graveyard_plants",
+            entityId: graveyardRow.id,
+            operation: "delete" as const,
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+            },
+          },
+        ],
+      };
+    },
+  });
+
+  return input.plantId;
 }

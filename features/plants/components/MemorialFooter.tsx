@@ -6,6 +6,8 @@ import { useTheme } from "@/components/design-system/useTheme";
 
 interface MemorialFooterProps {
   onEdit: () => void;
+  onRestoreToCollection?: () => void;
+  restoreLoading?: boolean;
   onToggleFeatured?: () => void;
   isFeatured?: boolean;
   featureLoading?: boolean;
@@ -13,6 +15,8 @@ interface MemorialFooterProps {
 
 export function MemorialFooter({
   onEdit,
+  onRestoreToCollection,
+  restoreLoading = false,
   onToggleFeatured,
   isFeatured = false,
   featureLoading = false,
@@ -40,8 +44,16 @@ export function MemorialFooter({
           Gently Remembered
         </Text>
       </View>
+      {onRestoreToCollection ? (
+        <SecondaryButton
+          label={restoreLoading ? "Restoring..." : "Return to Collection"}
+          backgroundColor={colors.surfaceContainerLow}
+          textColor={colors.primary}
+          onPress={restoreLoading ? undefined : onRestoreToCollection}
+        />
+      ) : null}
       <SecondaryButton
-        label="Restore Journal"
+        label="Edit Memorial"
         backgroundColor={colors.surfaceContainerLow}
         textColor={colors.primary}
         onPress={onEdit}

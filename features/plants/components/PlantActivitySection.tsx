@@ -6,9 +6,13 @@ import type { PlantActivitySection as PlantActivitySectionView } from "@/feature
 
 interface PlantActivitySectionProps {
   section: PlantActivitySectionView;
+  onDeleteCareLog?: (careLogId: string) => void;
 }
 
-export function PlantActivitySection({ section }: PlantActivitySectionProps) {
+export function PlantActivitySection({
+  section,
+  onDeleteCareLog,
+}: PlantActivitySectionProps) {
   const { colors, spacing } = useTheme();
 
   return (
@@ -19,7 +23,11 @@ export function PlantActivitySection({ section }: PlantActivitySectionProps) {
 
       <View style={[styles.items, { gap: spacing.lg }]}>
         {section.items.map((item) => (
-          <PlantActivityRow key={item.id} item={item} />
+          <PlantActivityRow
+            key={item.id}
+            item={item}
+            onDelete={onDeleteCareLog}
+          />
         ))}
       </View>
     </View>

@@ -54,6 +54,25 @@ jest.mock("@/features/plants/hooks/usePlant", () => ({
   usePlant: (id: string) => mockUsePlant(id),
 }));
 
+jest.mock("@/features/care-logs/hooks/useDeleteCareLog", () => ({
+  useDeleteCareLog: () => ({
+    mutateAsync: jest.fn(),
+    isPending: false,
+  }),
+}));
+
+jest.mock("@/hooks/useAlert", () => ({
+  useAlert: () => ({
+    show: jest.fn(),
+    confirm: jest.fn().mockResolvedValue(false),
+    dismiss: jest.fn(),
+  }),
+}));
+
+jest.mock("@/hooks/useSnackbar", () => ({
+  useSnackbar: () => ({ success: jest.fn(), error: jest.fn() }),
+}));
+
 describe("PlantActivityRoute", () => {
   beforeEach(() => {
     jest.clearAllMocks();

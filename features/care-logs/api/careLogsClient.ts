@@ -596,3 +596,73 @@ export async function updateCareLogNote(input: {
 
   return { careLog };
 }
+
+export async function deleteCareLog(input: {
+  userId: string;
+  plantId: string;
+  careLogId: string;
+}) {
+  const database = await getDatabase();
+  const now = new Date().toISOString();
+
+  await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: now,
+    perform: async () => {
+      const existing = await database.getFirstAsync<{ id: string }>(
+        "SELECT id FROM care_logs WHERE id = ? AND user_id = ? AND plant_id = ? LIMIT 1;",
+        input.careLogId,
+        input.userId,
+        input.plantId,
+      );
+
+      if (!existing) {
+        throw new Error("Care log not found.");
+      }
+
+      const tagRows = await database.getAllAsync<{ id: string }>(
+        "SELECT id FROM care_log_tags WHERE care_log_id = ? AND user_id = ?;",
+        input.careLogId,
+        input.userId,
+      );
+
+      await database.runAsync(
+        "DELETE FROM care_log_tags WHERE care_log_id = ? AND user_id = ?;",
+        input.careLogId,
+        input.userId,
+      );
+      await database.runAsync(
+        "DELETE FROM care_logs WHERE id = ? AND user_id = ? AND plant_id = ?;",
+        input.careLogId,
+        input.userId,
+        input.plantId,
+      );
+
+      return {
+        result: { careLogId: input.careLogId },
+        operations: [
+          ...tagRows.map((tagRow) => ({
+            entity: "care_log_tags" as const,
+            entityId: tagRow.id,
+            operation: "delete" as const,
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+              careLogId: input.careLogId,
+            },
+          })),
+          {
+            entity: "care_logs" as const,
+            entityId: input.careLogId,
+            operation: "delete" as const,
+            payload: {
+              userId: input.userId,
+              plantId: input.plantId,
+            },
+          },
+        ],
+      };
+    },
+  });
+
+  return { careLogId: input.careLogId };
+}

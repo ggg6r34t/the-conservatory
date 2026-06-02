@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
@@ -6,6 +6,7 @@ import type { PlantActivityItem } from "@/features/plants/services/plantActivity
 
 interface PlantActivityRowProps {
   item: PlantActivityItem;
+  onDelete?: (careLogId: string) => void;
 }
 
 function getIconTone(
@@ -41,12 +42,24 @@ function getIconTone(
   }
 }
 
-export function PlantActivityRow({ item }: PlantActivityRowProps) {
+export function PlantActivityRow({ item, onDelete }: PlantActivityRowProps) {
   const { colors, spacing } = useTheme();
   const tone = getIconTone(item.logType, colors);
 
   return (
-    <View style={[styles.row, { gap: spacing.sm }]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${item.title}. ${onDelete ? "Long press to delete." : ""}`}
+      disabled={!onDelete}
+      onLongPress={
+        onDelete
+          ? () => {
+              onDelete(item.id);
+            }
+          : undefined
+      }
+      style={[styles.row, { gap: spacing.sm }]}
+    >
       <View
         style={[
           styles.iconWrap,
@@ -75,8 +88,13 @@ export function PlantActivityRow({ item }: PlantActivityRowProps) {
         <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
           {item.body}
         </Text>
+        {onDelete ? (
+          <Text style={[styles.deleteHint, { color: colors.onSurfaceVariant }]}>
+            Long press to delete this entry
+          </Text>
+        ) : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -116,5 +134,12 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 15,
     lineHeight: 24,
+  },
+  deleteHint: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 11,
+    lineHeight: 16,
+    letterSpacing: 0.2,
+    marginTop: 4,
   },
 });
