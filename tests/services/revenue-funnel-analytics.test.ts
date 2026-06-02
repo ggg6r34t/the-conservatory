@@ -29,6 +29,10 @@ describe("revenue funnel analytics wiring", () => {
     );
     expect(read("app/premium.tsx")).toContain('premium_screen_viewed');
     expect(read("app/subscription-plans.tsx")).toContain("purchase_completed");
+    expect(read("app/subscription-plans.tsx")).toContain("purchase_failed");
+    expect(read("features/billing/hooks/useSubscription.ts")).toContain(
+      "purchase_failed",
+    );
   });
 
   it("tracks species quota exhaustion in the species hook", () => {

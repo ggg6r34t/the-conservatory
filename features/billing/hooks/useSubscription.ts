@@ -49,6 +49,9 @@ export function useSubscription() {
         await propagateEntitlementState(user?.id, state);
       } else if (!result.userCancelled) {
         store.setSubscriptionState({ isLoading: false, error: result.error ?? null });
+        trackMonetizationEvent("purchase_failed", {
+          reason: result.error ?? "unknown",
+        });
       } else {
         store.setSubscriptionState({ isLoading: false });
       }

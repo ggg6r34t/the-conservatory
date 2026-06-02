@@ -64,6 +64,11 @@ export default function SubscriptionPlansScreen() {
       });
     } else if (result.userCancelled) {
       trackMonetizationEvent("purchase_cancelled");
+    } else {
+      trackMonetizationEvent("purchase_failed", {
+        reason: result.error ?? "unknown",
+        packageType: selectedPackage.packageType,
+      });
     }
   }
 

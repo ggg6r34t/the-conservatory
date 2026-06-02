@@ -6,7 +6,7 @@
 
 ## Executive Verdict
 
-**LAUNCH READY (repository)** — All critical launch blockers and Phases 01–06 certification work **PASS** in code and tests. Store submission and production operations still require **external checklist items** (secrets, counsel, website policy parity, sandbox IAP smoke) documented below.
+**CONDITIONALLY CERTIFIED FOR LAUNCH (repository)** — Independent re-verification ([POST_IMPLEMENTATION_VERIFICATION_AUDIT.md](./POST_IMPLEMENTATION_VERIFICATION_AUDIT.md)) confirms all **code-verifiable** Critical and High original findings are **FULLY RESOLVED**. Store submission still requires deployment checklist items (secrets, migration deploy, sandbox IAP, external legal).
 
 ---
 
@@ -110,4 +110,6 @@ Remediation landed as sequential commits on `main` from Blocker 01 through Phase
 | Compliance | **CONDITIONAL** — in-app policies complete; external review pending |
 | GTM | **PASS** — event catalog wired; dashboards in PostHog |
 
-**Final engineering recommendation:** Proceed to store submission preparation after checklist items 1–8.
+**Release decision:** **CONDITIONALLY CERTIFIED FOR LAUNCH** (not unconditional — see open Medium items M1–M4 in post-implementation audit).
+
+**Final engineering recommendation:** Proceed to store submission preparation after checklist items 1–8 and post-implementation audit Medium backlog review.
