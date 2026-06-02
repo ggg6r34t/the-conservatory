@@ -14,6 +14,7 @@ import {
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import { LegalFooterLinks } from "@/features/legal/components/LegalFooterLinks";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 
 const HEIRLOOM_CARD_IMAGE = require("@/assets/images/intricate-vintage-botanical-illustration-of-fern-leaves.png");
@@ -66,6 +67,8 @@ export default function PremiumScreen() {
     lastVerifiedAt,
     subscribedAt,
     refreshOfferings,
+    restore,
+    isRestoring,
   } = useSubscription();
 
   useEffect(() => {
@@ -350,6 +353,11 @@ export default function PremiumScreen() {
             </Text>
           </Pressable>
         )}
+        <LegalFooterLinks
+          showRestore={!isPremium}
+          isRestoring={isRestoring}
+          onRestore={() => void restore()}
+        />
         <View style={styles.membershipQuote}>
           <Icon
             family="MaterialCommunityIcons"

@@ -539,6 +539,11 @@ export default function ProfileScreen() {
               onPress={() => router.push("/privacy")}
             />
             <ProfileRow
+              icon="robot-outline"
+              label="AI Disclosure Policy"
+              onPress={() => router.push("/ai-disclosure")}
+            />
+            <ProfileRow
               icon="puzzle-outline"
               label="Third-Party Licenses"
               onPress={() => router.push("/license")}

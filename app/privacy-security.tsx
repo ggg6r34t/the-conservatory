@@ -1,11 +1,12 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { deleteAccount } from "@/features/auth/api/authClient";
+import { LEGAL_ROUTES } from "@/features/legal/constants";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
@@ -50,7 +51,7 @@ export default function PrivacySecurityScreen() {
     <ProfileScreenScaffold
       title="Privacy & Security"
       subtitle="Account safety"
-      description="Your botanical journey is a private one. We ensure your data is as protected as a rare orchid in a climate-controlled conservatory."
+      description="Manage your data rights, review privacy policies, export your collection, or permanently delete your account."
     >
       <View
         style={[
@@ -61,21 +62,19 @@ export default function PrivacySecurityScreen() {
       >
         <View style={styles.archiveCopy}>
           <Text style={[styles.cardTitle, { color: colors.primary }]}>
-            Your Botanical Archive
+            Export Your Collection
           </Text>
           <Text
             style={[styles.archiveBody, { color: colors.onSurfaceVariant }]}
           >
-            Download a comprehensive record of your plant care history, photos,
-            and personal journals in a portable format.
+            Download a portable JSON copy of your plants, care logs, reminders,
+            and related records from your device.
           </Text>
         </View>
 
         <Pressable
           accessibilityRole="button"
-          onPress={() => {
-            void Linking.openURL("https://theconservatory.app/privacy");
-          }}
+          onPress={() => router.push(LEGAL_ROUTES.exportCollection)}
           style={styles.archiveLinkWrap}
         >
           <View
@@ -86,10 +85,10 @@ export default function PrivacySecurityScreen() {
           />
           <View style={styles.archiveLinkRow}>
             <Text style={[styles.archiveLink, { color: colors.primary }]}>
-              Privacy & Data Rights
+              Export Collection Data
             </Text>
             <Icon
-              name="open-in-new"
+              name="chevron-right"
               family="MaterialIcons"
               size={18}
               color={colors.primary}
@@ -105,23 +104,27 @@ export default function PrivacySecurityScreen() {
           { backgroundColor: colors.surfaceContainerLowest },
         ]}
       >
-        <Pressable
-          accessibilityRole="button"
-          onPress={() =>
-            void Linking.openURL("https://theconservatory.app/privacy")
-          }
-          style={styles.policyRow}
-        >
-          <Text style={[styles.policyLabel, { color: colors.primary }]}>
-            Privacy Policy
-          </Text>
-          <Icon
-            name="open-in-new"
-            family="MaterialIcons"
-            size={18}
-            color={colors.onSurfaceVariant}
-          />
-        </Pressable>
+        {[
+          { label: "Privacy Policy", route: LEGAL_ROUTES.privacy },
+          { label: "AI Disclosure Policy", route: LEGAL_ROUTES.aiDisclosure },
+        ].map((item) => (
+          <Pressable
+            key={item.route}
+            accessibilityRole="button"
+            onPress={() => router.push(item.route)}
+            style={styles.policyRow}
+          >
+            <Text style={[styles.policyLabel, { color: colors.primary }]}>
+              {item.label}
+            </Text>
+            <Icon
+              name="chevron-right"
+              family="MaterialIcons"
+              size={18}
+              color={colors.onSurfaceVariant}
+            />
+          </Pressable>
+        ))}
       </View>
 
       <View style={styles.dangerSection}>
@@ -139,9 +142,9 @@ export default function PrivacySecurityScreen() {
             End of the Season
           </Text>
           <Text style={[styles.dangerBody, { color: colors.onSurfaceVariant }]}>
-            Deleting your account will permanently remove all your plant
-            collections, growth journals, and care history. This action cannot
-            be undone.
+            Deleting your account permanently removes your cloud account (when
+            signed in), clears local collection data on this device, and signs
+            you out. This cannot be undone from the app.
           </Text>
 
           <PrimaryButton
@@ -155,8 +158,18 @@ export default function PrivacySecurityScreen() {
           />
 
           <Text style={[styles.dangerNote, { color: colors.outline }]}>
-            Once deleted, your data will be purged from our soil within 30 days.
+            Cloud provider backups may retain deleted data for up to
+            approximately 30 days. Cancelling Premium is separate—manage
+            billing in your App Store or Google Play settings.
           </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push(LEGAL_ROUTES.privacy)}
+          >
+            <Text style={[styles.policyInlineLink, { color: colors.primary }]}>
+              Read account deletion details in Privacy Policy
+            </Text>
+          </Pressable>
         </View>
       </View>
     </ProfileScreenScaffold>
@@ -262,9 +275,16 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 12,
     lineHeight: 18,
-    fontStyle: "italic",
     textAlign: "center",
-    maxWidth: 280,
+    maxWidth: 320,
     marginTop: 8,
+  },
+  policyInlineLink: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+    textDecorationLine: "underline",
+    marginTop: 4,
   },
 });

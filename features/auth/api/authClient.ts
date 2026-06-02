@@ -823,13 +823,20 @@ export async function logout() {
 async function clearAllLocalUserData() {
   const database = await getDatabase();
   await database.execAsync(`
+    DELETE FROM care_log_tags;
     DELETE FROM care_logs;
     DELETE FROM care_reminders;
     DELETE FROM photos;
     DELETE FROM plants;
     DELETE FROM graveyard_plants;
+    DELETE FROM plant_status_snapshots;
+    DELETE FROM specimen_tags;
+    DELETE FROM archive_curation_overrides;
+    DELETE FROM import_runs;
+    DELETE FROM feature_usage;
     DELETE FROM sync_queue;
     DELETE FROM user_preferences;
+    DELETE FROM local_auth_credentials;
     DELETE FROM users;
   `);
 }

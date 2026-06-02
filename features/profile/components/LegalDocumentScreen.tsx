@@ -18,7 +18,8 @@ interface LegalDocumentScreenProps {
   prefaceTitle: string;
   prefaceBody: string;
   sections: LegalSection[];
-  closingNote?: string;
+  lastUpdated?: string;
+  contactEmail?: string;
 }
 
 export function LegalDocumentScreen({
@@ -29,7 +30,8 @@ export function LegalDocumentScreen({
   prefaceTitle,
   prefaceBody,
   sections,
-  closingNote,
+  lastUpdated,
+  contactEmail,
 }: LegalDocumentScreenProps) {
   const { colors } = useTheme();
 
@@ -76,9 +78,9 @@ export function LegalDocumentScreen({
             {section.title}
           </Text>
           <View style={styles.sectionBodyWrap}>
-            {section.paragraphs.map((paragraph) => (
+            {section.paragraphs.map((paragraph, paragraphIndex) => (
               <Text
-                key={paragraph}
+                key={`${section.title}-${paragraphIndex}`}
                 style={[styles.sectionBody, { color: colors.onSurfaceVariant }]}
               >
                 {paragraph}
@@ -88,10 +90,17 @@ export function LegalDocumentScreen({
         </View>
       ))}
 
-      {closingNote ? (
-        <Text style={[styles.closingNote, { color: colors.outline }]}>
-          {closingNote}
-        </Text>
+      {lastUpdated ? (
+        <View style={styles.metaWrap}>
+          <Text style={[styles.metaText, { color: colors.outline }]}>
+            Last updated: {lastUpdated}
+          </Text>
+          {contactEmail ? (
+            <Text style={[styles.metaText, { color: colors.outline }]}>
+              Contact: {contactEmail}
+            </Text>
+          ) : null}
+        </View>
       ) : null}
     </ProfileScreenScaffold>
   );
@@ -143,12 +152,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 24,
   },
-  closingNote: {
+  metaWrap: {
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  metaText: {
     fontFamily: "Manrope_500Medium",
     fontSize: 12,
     lineHeight: 18,
-    fontStyle: "italic",
     textAlign: "center",
-    paddingHorizontal: 12,
   },
 });

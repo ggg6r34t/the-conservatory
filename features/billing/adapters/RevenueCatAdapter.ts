@@ -24,6 +24,38 @@ function mapPackageType(rcType: string): SubscriptionPeriod | "unknown" {
   return "unknown";
 }
 
+function formatIntroductoryOffer(
+  introPrice:
+    | {
+        priceString?: string;
+        periodNumberOfUnits?: number;
+        periodUnit?: string;
+      }
+    | null
+    | undefined,
+): string | null {
+  if (!introPrice) {
+    return null;
+  }
+
+  const units = introPrice.periodNumberOfUnits;
+  const rawUnit = introPrice.periodUnit?.toLowerCase();
+
+  if (units && rawUnit) {
+    const singular = rawUnit.replace(/s$/, "");
+    return `${units}-${singular} free trial`;
+  }
+
+  if (
+    introPrice.priceString === "$0.00" ||
+    introPrice.priceString?.toLowerCase() === "free"
+  ) {
+    return "Free trial";
+  }
+
+  return introPrice.priceString ?? null;
+}
+
 function mapRcPackage(pkg: PurchasesPackage): BillingPackage {
   const product = pkg.product;
   return {
@@ -32,7 +64,7 @@ function mapRcPackage(pkg: PurchasesPackage): BillingPackage {
     priceString: product.priceString,
     pricePerMonthString: product.pricePerMonthString ?? product.priceString,
     productIdentifier: product.identifier,
-    introductoryPrice: product.introPrice?.priceString ?? null,
+    introductoryPrice: formatIntroductoryOffer(product.introPrice),
   };
 }
 

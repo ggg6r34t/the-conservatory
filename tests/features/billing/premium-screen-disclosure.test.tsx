@@ -78,7 +78,7 @@ describe("Premium subscription screens", () => {
     expect(
       screen.getAllByText(/renew automatically until cancelled/i).length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText(/Cancel anytime in/i)).toBeTruthy();
+    expect(screen.getByText(/Cancel at least 24 hours before/i)).toBeTruthy();
     expect(screen.getByText("Restore purchases")).toBeTruthy();
     expect(screen.getByText("Terms")).toBeTruthy();
     expect(screen.getByText("Privacy")).toBeTruthy();

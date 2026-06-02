@@ -6,6 +6,7 @@ import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useSignup } from "@/features/auth/hooks/useSignup";
 import { signupSchema } from "@/features/auth/schemas/authValidation";
+import { SignupLegalAcknowledgment } from "@/features/legal/components/SignupLegalAcknowledgment";
 import { useAlert } from "@/hooks/useAlert";
 import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 
@@ -134,6 +135,7 @@ export function SignupForm() {
           {submitError}
         </Text>
       ) : null}
+      <SignupLegalAcknowledgment />
       <PrimaryButton
         label="Create Account"
         onPress={handleSubmit}

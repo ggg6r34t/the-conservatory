@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 
 import {
   ActivityIndicator,
-  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
 } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { LegalFooterLinks } from "@/features/legal/components/LegalFooterLinks";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
@@ -155,7 +155,7 @@ export default function SubscriptionPlansScreen() {
               </Text>
               {annualPkg.introductoryPrice ? (
                 <Text style={[styles.planTrial, { color: colors.secondary }]}>
-                  {annualPkg.introductoryPrice} free trial
+                  {annualPkg.introductoryPrice}
                 </Text>
               ) : null}
             </Pressable>
@@ -196,6 +196,11 @@ export default function SubscriptionPlansScreen() {
                   /month
                 </Text>
               </Text>
+              {monthlyPkg.introductoryPrice ? (
+                <Text style={[styles.planTrial, { color: colors.secondary }]}>
+                  {monthlyPkg.introductoryPrice}
+                </Text>
+              ) : null}
             </Pressable>
           ) : null}
           </View>
@@ -278,63 +283,29 @@ export default function SubscriptionPlansScreen() {
           style={[styles.trialDisclosure, { color: colors.onSurfaceVariant }]}
         >
           {selectedPackage?.introductoryPrice
-            ? `${selectedPackage.introductoryPrice} free, then `
+            ? `${selectedPackage.introductoryPrice}, then `
             : ""}
           {selectedPackage
             ? `${selectedPackage.priceString}${
                 selectedPackage.packageType === "annual" ? "/year" : "/month"
               }`
             : "Subscriptions"}{" "}
-          renew automatically until cancelled. Payment is charged to your{" "}
-          {Platform.OS === "ios" ? "App Store" : "Google Play"} account. Cancel
-          anytime in{" "}
+          renew automatically until cancelled. Cancel at least 24 hours before
+          the end of the current period to avoid the next charge. Payment is
+          charged to your{" "}
+          {Platform.OS === "ios" ? "App Store" : "Google Play"} account. Manage
+          or cancel anytime in{" "}
           {Platform.OS === "ios"
-            ? "App Store settings"
-            : "Google Play settings"}
+            ? "App Store subscription settings"
+            : "Google Play subscription settings"}
           .
         </Text>
 
-        <View style={styles.footer}>
-          <Pressable
-            accessibilityRole="button"
-            disabled={isRestoring}
-            onPress={() => void handleRestore()}
-          >
-            <Text
-              style={[styles.footerLink, { color: colors.onSurfaceVariant }]}
-            >
-              {isRestoring ? "Restoring..." : "Restore purchases"}
-            </Text>
-          </Pressable>
-          <Text style={[styles.footerDot, { color: colors.onSurfaceVariant }]}>
-            -
-          </Text>
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => Linking.openURL("https://theconservatory.app/terms")}
-          >
-            <Text
-              style={[styles.footerLink, { color: colors.onSurfaceVariant }]}
-            >
-              Terms
-            </Text>
-          </Pressable>
-          <Text style={[styles.footerDot, { color: colors.onSurfaceVariant }]}>
-            -
-          </Text>
-          <Pressable
-            accessibilityRole="link"
-            onPress={() =>
-              Linking.openURL("https://theconservatory.app/privacy")
-            }
-          >
-            <Text
-              style={[styles.footerLink, { color: colors.onSurfaceVariant }]}
-            >
-              Privacy
-            </Text>
-          </Pressable>
-        </View>
+        <LegalFooterLinks
+          showRestore
+          isRestoring={isRestoring}
+          onRestore={() => void handleRestore()}
+        />
       </View>
     </ProfileScreenScaffold>
   );

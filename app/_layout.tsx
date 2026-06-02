@@ -189,6 +189,18 @@ function RootNavigator({
       <Stack.Screen name="terms" options={drillInScreenOptions} />
       <Stack.Screen name="privacy" options={drillInScreenOptions} />
       <Stack.Screen name="license" options={drillInScreenOptions} />
+      <Stack.Screen name="subscription-terms" options={drillInScreenOptions} />
+      <Stack.Screen name="ai-disclosure" options={drillInScreenOptions} />
+      <Stack.Screen
+        name="privacy-security-statement"
+        options={drillInScreenOptions}
+      />
+      <Stack.Screen name="data-retention" options={drillInScreenOptions} />
+      <Stack.Screen name="data-export-policy" options={drillInScreenOptions} />
+      <Stack.Screen
+        name="account-deletion-policy"
+        options={drillInScreenOptions}
+      />
       <Stack.Screen name="premium" options={drillInScreenOptions} />
       <Stack.Screen name="subscription-plans" options={drillInScreenOptions} />
       <Stack.Screen name="data-backup" options={drillInScreenOptions} />
