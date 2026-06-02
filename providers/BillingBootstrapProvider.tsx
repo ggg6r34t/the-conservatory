@@ -1,4 +1,4 @@
-import { type PropsWithChildren, useEffect } from 'react';
+import { type PropsWithChildren, useEffect, useRef } from 'react';
 
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { billingClient } from '@/features/billing/services/billingClient';
@@ -10,7 +10,12 @@ import {
 } from '@/features/billing/services/entitlementCache';
 import { useBillingStore } from '@/features/billing/stores/useBillingStore';
 import type { SubscriptionState } from '@/features/billing/types';
-import { initializeAnalytics, resetAnalyticsUser, trackMonetizationEvent } from '@/services/analytics/analyticsService';
+import {
+  initializeAnalytics,
+  resetAnalyticsUser,
+  trackGtmEvent,
+  trackMonetizationEvent,
+} from '@/services/analytics/analyticsService';
 import {
   clearCrashReportingUser,
   setCrashReportingUser,
@@ -23,13 +28,30 @@ type ResolvedSubscriptionState = Omit<
   'isLoading' | 'isRestoring' | 'error'
 >;
 
+function reportSubscriptionTierTransition(
+  previousTier: 'free' | 'premium' | null,
+  nextTier: 'free' | 'premium',
+): 'free' | 'premium' {
+  if (previousTier !== null && previousTier !== nextTier) {
+    trackGtmEvent(
+      nextTier === 'premium' ? 'subscription_activated' : 'subscription_downgraded',
+      { previous_tier: previousTier, tier: nextTier },
+    );
+  }
+  return nextTier;
+}
+
 export function BillingBootstrapProvider({ children }: PropsWithChildren) {
   const { user, isAuthenticated } = useAuth();
   const setSubscriptionState = useBillingStore((s) => s.setSubscriptionState);
   const setOfferings = useBillingStore((s) => s.setOfferings);
+  const previousTierRef = useRef<'free' | 'premium' | null>(null);
+  const sessionTrackedRef = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated || !user?.id) {
+      previousTierRef.current = null;
+      sessionTrackedRef.current = false;
       setSubscriptionState({
         tier: 'free',
         isLoading: false,
@@ -61,6 +83,10 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
         entitlementUnavailable: false,
       });
       setEntitlementState(state.tier === 'premium');
+      previousTierRef.current = reportSubscriptionTierTransition(
+        previousTierRef.current,
+        state.tier,
+      );
       if (state.tier === 'premium') {
         void retryDeferredPremiumPhotoBackups(user!.id);
       }
@@ -115,6 +141,10 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
         await applyResolvedSubscriptionState(state, false);
         initializeAnalytics(user!.id);
         setCrashReportingUser({ id: user!.id, email: user!.email ?? null });
+        if (!sessionTrackedRef.current) {
+          sessionTrackedRef.current = true;
+          trackGtmEvent('app_session_started', { tier: state.tier });
+        }
       } catch (err) {
         if (cancelled) return;
         const cachedOnFailure = await readEntitlementCache();

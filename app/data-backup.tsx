@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
@@ -15,6 +16,7 @@ import {
 } from "@/features/profile/services/backupSyncMessaging";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { trackGtmEvent } from "@/services/analytics/analyticsService";
 
 export default function DataBackupScreen() {
   const { colors } = useTheme();
@@ -38,9 +40,15 @@ export default function DataBackupScreen() {
     hasPending,
   } = useBackupStatus();
 
+  useEffect(() => {
+    trackGtmEvent("backup_screen_viewed");
+  }, []);
+
   const handleSync = () => {
+    trackGtmEvent("backup_sync_started");
     syncMutation.mutate(undefined, {
       onSuccess: () => {
+        trackGtmEvent("backup_sync_completed");
         snackbar.success(
           getBackupSyncSuccessMessage({
             remoteCanSync: remoteAvailability.canSync,
@@ -50,6 +58,9 @@ export default function DataBackupScreen() {
         );
       },
       onError: (error) => {
+        trackGtmEvent("backup_sync_failed", {
+          reason: error instanceof Error ? error.message : "unknown",
+        });
         void alert.show({
           variant: "error",
           title: "Backup update failed",
@@ -61,8 +72,12 @@ export default function DataBackupScreen() {
   };
 
   const handleToggleAutoSync = () => {
+    const enabling = !autoSyncEnabled;
     autoSyncMutation.mutate(!autoSyncEnabled, {
       onSuccess: () => {
+        trackGtmEvent(
+          enabling ? "backup_auto_sync_enabled" : "backup_auto_sync_disabled",
+        );
         snackbar.success(
           !autoSyncEnabled
             ? "Auto sync is now enabled for this conservatory."

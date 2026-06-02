@@ -99,6 +99,29 @@ export function trackAiFeatureUsed(
   });
 }
 
+/** Product lifecycle events for GTM dashboards (PostHog funnels). */
+export function trackGtmEvent(
+  name:
+    | 'user_signed_up'
+    | 'user_logged_in'
+    | 'app_session_started'
+    | 'activation_first_plant_created'
+    | 'subscription_activated'
+    | 'subscription_downgraded'
+    | 'backup_screen_viewed'
+    | 'backup_sync_started'
+    | 'backup_sync_completed'
+    | 'backup_sync_failed'
+    | 'backup_auto_sync_enabled'
+    | 'backup_auto_sync_disabled'
+    | 'import_collection_started'
+    | 'import_collection_completed'
+    | 'import_collection_failed',
+  properties?: Record<string, string | number | boolean | null>,
+): void {
+  trackEvent(name, properties);
+}
+
 export function resetAnalyticsUser(): void {
   posthog?.reset();
 }

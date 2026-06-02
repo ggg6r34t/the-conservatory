@@ -30,7 +30,10 @@ import {
   resolvePlantLibraryFilter,
 } from "@/features/plants/services/plantLibraryFilterService";
 import { createId } from "@/utils/id";
-import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
+import {
+  trackGtmEvent,
+  trackMonetizationEvent,
+} from "@/services/analytics/analyticsService";
 import { logger } from "@/utils/logger";
 
 import { persistPhotoAsset } from "../services/photoStorageService";
@@ -720,18 +723,19 @@ export async function createPlant(input: {
   photoWidth?: number | null;
   photoHeight?: number | null;
 }) {
+  const db = await getDatabase();
+  const countRow = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM plants WHERE user_id = ? AND status = 'active'`,
+    [input.userId],
+  );
+  const activePlantCount = countRow?.count ?? 0;
+
   if (!input.isPremium) {
-    const db = await getDatabase();
-    const row = await db.getFirstAsync<{ count: number }>(
-      `SELECT COUNT(*) as count FROM plants WHERE user_id = ? AND status = 'active'`,
-      [input.userId],
-    );
-    const current = row?.count ?? 0;
-    if (current >= FREE_PLANT_LIMIT) {
+    if (activePlantCount >= FREE_PLANT_LIMIT) {
       throw Object.assign(new Error('Plant limit reached'), {
         code: 'PLANT_LIMIT_REACHED' as const,
         limit: FREE_PLANT_LIMIT,
-        current,
+        current: activePlantCount,
       });
     }
   }
@@ -900,6 +904,11 @@ export async function createPlant(input: {
       );
     }
   }
+
+  if (activePlantCount === 0) {
+    trackGtmEvent("activation_first_plant_created");
+  }
+
   return created!;
 }
 

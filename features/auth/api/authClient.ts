@@ -11,6 +11,7 @@ import { getDatabase } from "@/services/database/sqlite";
 import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 import type { AuthResult } from "@/types/api";
 import type { AppUser } from "@/types/models";
+import { trackGtmEvent } from "@/services/analytics/analyticsService";
 import { logger } from "@/utils/logger";
 
 interface LocalUserRow {
@@ -560,6 +561,7 @@ export async function login(
     );
     const syncedProfile = await syncRemoteProfile(user);
     await finalizeAuthenticatedUser(syncedProfile);
+    trackGtmEvent("user_logged_in", { provider: "supabase" });
     return { user: syncedProfile, requiresEmailVerification: false };
   }
 
@@ -632,6 +634,7 @@ export async function signup(
     const syncedProfile = await syncRemoteProfile(user);
     if (data.session) {
       await finalizeAuthenticatedUser(syncedProfile);
+      trackGtmEvent("user_signed_up", { provider: "supabase" });
     }
     return { user: syncedProfile, requiresEmailVerification: !data.session };
   }
@@ -648,6 +651,7 @@ export async function signup(
   const user = createLocalUser(normalizedEmail, normalizedDisplayName);
   await createLocalUserAccount(user, password);
   await finalizeAuthenticatedUser(user);
+  trackGtmEvent("user_signed_up", { provider: "local" });
   return { user, requiresEmailVerification: false };
 }
 

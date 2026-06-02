@@ -14,6 +14,7 @@ import {
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { trackGtmEvent } from "@/services/analytics/analyticsService";
 
 export default function ImportCollectionDataScreen() {
   const { colors } = useTheme();
@@ -88,8 +89,15 @@ export default function ImportCollectionDataScreen() {
           onPress={() => {
             if (!payload || !user?.id) return;
             setIsImporting(true);
+            trackGtmEvent("import_collection_started", {
+              plants: preview?.plants ?? 0,
+            });
             restoreCollectionImport({ userId: user.id, payload, isPremium })
               .then((result) => {
+                trackGtmEvent("import_collection_completed", {
+                  plants: result.summary.plants,
+                  care_logs: result.summary.careLogs,
+                });
                 const total =
                   result.summary.plants +
                   result.summary.careLogs +
@@ -99,6 +107,9 @@ export default function ImportCollectionDataScreen() {
                 snackbar.success(`${total} records restored locally.`);
               })
               .catch((error) => {
+                trackGtmEvent("import_collection_failed", {
+                  reason: error instanceof Error ? error.message : "unknown",
+                });
                 void alert.show({
                   variant: "error",
                   title: "Restore failed",

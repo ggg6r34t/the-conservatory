@@ -67,6 +67,7 @@ jest.mock("@/services/analytics/analyticsService", () => ({
   resetAnalyticsUser: (...args: unknown[]) => mockResetAnalyticsUser(...args),
   trackMonetizationEvent: (...args: unknown[]) =>
     mockTrackMonetizationEvent(...args),
+  trackGtmEvent: jest.fn(),
 }));
 
 const premiumState = {
