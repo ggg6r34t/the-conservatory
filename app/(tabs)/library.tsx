@@ -354,17 +354,13 @@ export default function LibraryScreen() {
                   ]}
                 >
                   {option.label}
+                  {!isPremium ? (
+                    <Text style={[styles.chipPremiumIcon, { color: colors.primary }]}>
+                      {" "}
+                      ✦
+                    </Text>
+                  ) : null}
                 </Text>
-                {!isPremium ? (
-                  <Text
-                    style={[
-                      styles.chipLabel,
-                      { color: colors.primary, marginLeft: 4 },
-                    ]}
-                  >
-                    ✦
-                  </Text>
-                ) : null}
               </Pressable>
             );
           })}
@@ -465,6 +461,9 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 999,
@@ -472,6 +471,12 @@ const styles = StyleSheet.create({
   chipLabel: {
     fontFamily: "Manrope_700Bold",
     fontSize: 14,
+    lineHeight: 18,
+  },
+  chipPremiumIcon: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 14,
+    lineHeight: 18,
   },
   sectionTitle: {
     fontFamily: "NotoSerif_700Bold",

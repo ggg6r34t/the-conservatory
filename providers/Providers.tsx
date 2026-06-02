@@ -23,6 +23,7 @@ import { SnackbarProvider } from "@/providers/SnackbarProvider";
 import { BillingBootstrapProvider } from "@/providers/BillingBootstrapProvider";
 import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
 import {
+  getDatabaseBootstrapState,
   markDatabaseBootstrapFailed,
   markDatabaseBootstrapLoading,
   markDatabaseBootstrapReady,
@@ -40,16 +41,31 @@ export function Providers({ children }: PropsWithChildren) {
   });
 
   useEffect(() => {
-    if (loaded) {
-      markDatabaseBootstrapLoading();
-      initializeDatabase()
-        .then(() => {
-          markDatabaseBootstrapReady();
-        })
-        .catch((error) => {
-          markDatabaseBootstrapFailed(error);
-        });
+    if (!loaded) {
+      return;
     }
+
+    if (getDatabaseBootstrapState().status === "ready") {
+      return;
+    }
+
+    let cancelled = false;
+    markDatabaseBootstrapLoading();
+    initializeDatabase()
+      .then(() => {
+        if (!cancelled) {
+          markDatabaseBootstrapReady();
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          markDatabaseBootstrapFailed(error);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [loaded]);
 
   if (!loaded) {

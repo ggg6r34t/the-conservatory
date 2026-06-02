@@ -163,7 +163,7 @@ describe("LibraryScreen advanced filters", () => {
     mockIsPremium = false;
     renderWithProviders(<LibraryScreen />);
 
-    fireEvent.press(screen.getByText("By Species"));
+    fireEvent.press(screen.getByText(/By Species/));
 
     expect(mockSetFilter).not.toHaveBeenCalled();
     expect(mockPush).toHaveBeenCalledWith("/premium");

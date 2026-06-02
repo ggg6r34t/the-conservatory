@@ -26,6 +26,13 @@ export function subscribeToDatabaseBootstrapState(
 }
 
 export function markDatabaseBootstrapLoading() {
+  if (
+    bootstrapState.status === "ready" ||
+    bootstrapState.status === "loading"
+  ) {
+    return;
+  }
+
   bootstrapState = { status: "loading" };
   emitState();
 }

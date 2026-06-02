@@ -24,11 +24,11 @@ export function DatabaseBootstrapGate({
 
   useEffect(() => subscribeToDatabaseBootstrapState(setState), []);
 
-  if (state.status === "ready" || state.status === "idle") {
+  if (state.status === "ready") {
     return children;
   }
 
-  if (state.status === "loading") {
+  if (state.status === "loading" || state.status === "idle") {
     return (
       <View
         style={[styles.centered, { backgroundColor: colors.surfaceBright }]}
