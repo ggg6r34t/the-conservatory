@@ -62,6 +62,22 @@ describe("cloudSyncStatusService", () => {
     expect(result.statusValue).toBe("Unavailable");
   });
 
+  it("surfaces needs attention when abandoned queue items exist", () => {
+    const result = deriveCloudSyncStatus({
+      autoSyncEnabled: true,
+      remoteAvailability: available,
+      isOffline: false,
+      isSyncRunning: false,
+      hasIssues: true,
+      hasPending: false,
+      lastSuccessfulSyncAt: "2026-03-29T18:00:00.000Z",
+      isPremium: false,
+    });
+
+    expect(result.statusTitle).toBe("Needs attention");
+    expect(result.statusDetail).toMatch(/unrecoverable/i);
+  });
+
   it("states that premium online auto-sync includes photos", () => {
     const result = deriveCloudSyncStatus({
       autoSyncEnabled: true,

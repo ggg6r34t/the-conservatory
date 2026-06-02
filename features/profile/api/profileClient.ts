@@ -1,5 +1,13 @@
-import { getDatabase } from "@/services/database/sqlite";
+import {
+  countSyncQueue,
+  countUserFailedRecords,
+  countUserPendingRecords,
+  countUserRecords,
+  getUserLastObservedSyncAt,
+  getUserTableLastSyncedAt,
+} from "@/features/profile/services/backupSummaryQueries";
 import { runUserDataSync } from "@/services/database/userDataSync";
+import { getDatabase } from "@/services/database/sqlite";
 import { probeRemoteBackendAvailability } from "@/services/supabase/backendReadiness";
 
 export interface BackupSummary {
@@ -8,6 +16,11 @@ export interface BackupSummary {
   photos: number;
   careLogs: number;
   reminders: number;
+  careLogTags: number;
+  plantStatusSnapshots: number;
+  specimenTags: number;
+  archiveCurationOverrides: number;
+  featureUsageRecords: number;
   lastSuccessfulSyncAt: string | null;
   pendingSyncUser: number;
   failedSyncUser: number;
@@ -15,6 +28,8 @@ export interface BackupSummary {
   failedSyncQueueAccount: number;
   pendingSyncQueueDevice: number;
   failedSyncQueueDevice: number;
+  abandonedSyncQueueAccount: number;
+  abandonedSyncQueueDevice: number;
   processingSync: number;
   completedSync: number;
   syncEnabled: boolean;
@@ -25,15 +40,11 @@ export interface BackupSummary {
     careReminders: string | null;
     graveyardPlants: string | null;
     userPreferences: string | null;
+    careLogTags: string | null;
+    plantStatusSnapshots: string | null;
+    specimenTags: string | null;
+    archiveCurationOverrides: string | null;
   };
-}
-
-function sumCounts(
-  values: ({
-    count: number;
-  } | null)[],
-) {
-  return values.reduce((total, value) => total + (value?.count ?? 0), 0);
 }
 
 export async function getBackupSummary(userId: string): Promise<BackupSummary> {
@@ -45,6 +56,11 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     photos,
     careLogs,
     reminders,
+    careLogTags,
+    plantStatusSnapshots,
+    specimenTags,
+    archiveCurationOverrides,
+    featureUsageRecords,
     lastSuccessfulSyncAt,
     pendingPlants,
     pendingPhotos,
@@ -52,16 +68,26 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     pendingReminders,
     pendingMemorials,
     pendingPreferences,
+    pendingCareLogTags,
+    pendingStatusSnapshots,
+    pendingSpecimenTags,
+    pendingArchiveOverrides,
     failedPlants,
     failedPhotos,
     failedCareLogs,
     failedReminders,
     failedMemorials,
     failedPreferences,
+    failedCareLogTags,
+    failedStatusSnapshots,
+    failedSpecimenTags,
+    failedArchiveOverrides,
     pendingSyncQueueAccount,
     failedSyncQueueAccount,
     pendingSyncQueueDevice,
     failedSyncQueueDevice,
+    abandonedSyncQueueAccount,
+    abandonedSyncQueueDevice,
     processingSync,
     completedSync,
     userPreferences,
@@ -71,192 +97,124 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     remindersLastSynced,
     graveyardPlantsLastSynced,
     userPreferencesLastSynced,
+    careLogTagsLastSynced,
+    statusSnapshotsLastSynced,
+    specimenTagsLastSynced,
+    archiveOverridesLastSynced,
   ] = await Promise.all([
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM plants WHERE user_id = ? AND status = 'active';",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM graveyard_plants WHERE user_id = ?;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM photos WHERE user_id = ?;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM care_logs WHERE user_id = ?;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM care_reminders WHERE user_id = ?;",
-      userId,
-    ),
-    database.getFirstAsync<{ last_synced_at: string | null }>(
-      `SELECT MAX(synced_at) AS last_synced_at
-       FROM (
-         SELECT synced_at FROM plants WHERE user_id = ?
-         UNION ALL
-         SELECT synced_at FROM photos WHERE user_id = ?
-         UNION ALL
-         SELECT synced_at FROM care_logs WHERE user_id = ?
-         UNION ALL
-         SELECT synced_at FROM care_reminders WHERE user_id = ?
-         UNION ALL
-         SELECT synced_at FROM graveyard_plants WHERE user_id = ?
-         UNION ALL
-         SELECT synced_at FROM user_preferences WHERE user_id = ?
-       );`,
-      userId,
-      userId,
-      userId,
-      userId,
-      userId,
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM plants WHERE user_id = ? AND pending = 1;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM photos WHERE user_id = ? AND pending = 1;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM care_logs WHERE user_id = ? AND pending = 1;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM care_reminders WHERE user_id = ? AND pending = 1;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM graveyard_plants WHERE user_id = ? AND pending = 1;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM user_preferences WHERE user_id = ? AND pending = 1;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM plants WHERE user_id = ? AND sync_error IS NOT NULL;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM photos WHERE user_id = ? AND sync_error IS NOT NULL;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM care_logs WHERE user_id = ? AND sync_error IS NOT NULL;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM care_reminders WHERE user_id = ? AND sync_error IS NOT NULL;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM graveyard_plants WHERE user_id = ? AND sync_error IS NOT NULL;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM user_preferences WHERE user_id = ? AND sync_error IS NOT NULL;",
-      userId,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      `SELECT COUNT(*) AS count
-       FROM sync_queue
-       WHERE status = 'pending'
-         AND payload IS NOT NULL
-         AND payload LIKE ?;`,
-      `%"userId":"${userId}"%`,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      `SELECT COUNT(*) AS count
-       FROM sync_queue
-       WHERE status = 'failed'
-         AND payload IS NOT NULL
-         AND payload LIKE ?;`,
-      `%"userId":"${userId}"%`,
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM sync_queue WHERE status = 'pending';",
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM sync_queue WHERE status = 'failed';",
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM sync_queue WHERE status = 'processing';",
-    ),
-    database.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM sync_queue WHERE status = 'completed';",
-    ),
+    countUserRecords("plants", userId, "status = 'active'"),
+    countUserRecords("graveyard_plants", userId),
+    countUserRecords("photos", userId),
+    countUserRecords("care_logs", userId),
+    countUserRecords("care_reminders", userId),
+    countUserRecords("care_log_tags", userId),
+    countUserRecords("plant_status_snapshots", userId),
+    countUserRecords("specimen_tags", userId),
+    countUserRecords("archive_curation_overrides", userId),
+    countUserRecords("feature_usage", userId),
+    getUserLastObservedSyncAt(userId),
+    countUserPendingRecords("plants", userId),
+    countUserPendingRecords("photos", userId),
+    countUserPendingRecords("care_logs", userId),
+    countUserPendingRecords("care_reminders", userId),
+    countUserPendingRecords("graveyard_plants", userId),
+    countUserPendingRecords("user_preferences", userId),
+    countUserPendingRecords("care_log_tags", userId),
+    countUserPendingRecords("plant_status_snapshots", userId),
+    countUserPendingRecords("specimen_tags", userId),
+    countUserPendingRecords("archive_curation_overrides", userId),
+    countUserFailedRecords("plants", userId),
+    countUserFailedRecords("photos", userId),
+    countUserFailedRecords("care_logs", userId),
+    countUserFailedRecords("care_reminders", userId),
+    countUserFailedRecords("graveyard_plants", userId),
+    countUserFailedRecords("user_preferences", userId),
+    countUserFailedRecords("care_log_tags", userId),
+    countUserFailedRecords("plant_status_snapshots", userId),
+    countUserFailedRecords("specimen_tags", userId),
+    countUserFailedRecords("archive_curation_overrides", userId),
+    countSyncQueue("pending", userId),
+    countSyncQueue("failed", userId),
+    countSyncQueue("pending"),
+    countSyncQueue("failed"),
+    countSyncQueue("abandoned", userId),
+    countSyncQueue("abandoned"),
+    countSyncQueue("processing"),
+    countSyncQueue("completed"),
     database.getFirstAsync<{ auto_sync_enabled: number | null }>(
       "SELECT auto_sync_enabled FROM user_preferences WHERE user_id = ? LIMIT 1;",
       userId,
     ),
-    database.getFirstAsync<{ last_synced_at: string | null }>(
-      "SELECT MAX(synced_at) as last_synced_at FROM plants WHERE user_id = ? AND synced_at IS NOT NULL",
-      userId,
-    ),
-    database.getFirstAsync<{ last_synced_at: string | null }>(
-      "SELECT MAX(synced_at) as last_synced_at FROM care_logs WHERE user_id = ? AND synced_at IS NOT NULL",
-      userId,
-    ),
-    database.getFirstAsync<{ last_synced_at: string | null }>(
-      "SELECT MAX(synced_at) as last_synced_at FROM photos WHERE user_id = ? AND synced_at IS NOT NULL",
-      userId,
-    ),
-    database.getFirstAsync<{ last_synced_at: string | null }>(
-      "SELECT MAX(synced_at) as last_synced_at FROM care_reminders WHERE user_id = ? AND synced_at IS NOT NULL",
-      userId,
-    ),
-    database.getFirstAsync<{ last_synced_at: string | null }>(
-      "SELECT MAX(synced_at) as last_synced_at FROM graveyard_plants WHERE user_id = ? AND synced_at IS NOT NULL",
-      userId,
-    ),
-    database.getFirstAsync<{ last_synced_at: string | null }>(
-      "SELECT MAX(synced_at) as last_synced_at FROM user_preferences WHERE user_id = ? AND synced_at IS NOT NULL",
-      userId,
-    ),
+    getUserTableLastSyncedAt("plants", userId),
+    getUserTableLastSyncedAt("care_logs", userId),
+    getUserTableLastSyncedAt("photos", userId),
+    getUserTableLastSyncedAt("care_reminders", userId),
+    getUserTableLastSyncedAt("graveyard_plants", userId),
+    getUserTableLastSyncedAt("user_preferences", userId),
+    getUserTableLastSyncedAt("care_log_tags", userId),
+    getUserTableLastSyncedAt("plant_status_snapshots", userId),
+    getUserTableLastSyncedAt("specimen_tags", userId),
+    getUserTableLastSyncedAt("archive_curation_overrides", userId),
   ]);
 
+  const pendingSyncUser =
+    pendingPlants +
+    pendingPhotos +
+    pendingCareLogs +
+    pendingReminders +
+    pendingMemorials +
+    pendingPreferences +
+    pendingCareLogTags +
+    pendingStatusSnapshots +
+    pendingSpecimenTags +
+    pendingArchiveOverrides;
+
+  const failedSyncUser =
+    failedPlants +
+    failedPhotos +
+    failedCareLogs +
+    failedReminders +
+    failedMemorials +
+    failedPreferences +
+    failedCareLogTags +
+    failedStatusSnapshots +
+    failedSpecimenTags +
+    failedArchiveOverrides;
+
   return {
-    activePlants: activePlants?.count ?? 0,
-    archivedPlants: archivedPlants?.count ?? 0,
-    photos: photos?.count ?? 0,
-    careLogs: careLogs?.count ?? 0,
-    reminders: reminders?.count ?? 0,
-    lastSuccessfulSyncAt: lastSuccessfulSyncAt?.last_synced_at ?? null,
-    pendingSyncUser: sumCounts([
-      pendingPlants,
-      pendingPhotos,
-      pendingCareLogs,
-      pendingReminders,
-      pendingMemorials,
-      pendingPreferences,
-    ]),
-    failedSyncUser: sumCounts([
-      failedPlants,
-      failedPhotos,
-      failedCareLogs,
-      failedReminders,
-      failedMemorials,
-      failedPreferences,
-    ]),
-    pendingSyncQueueAccount: pendingSyncQueueAccount?.count ?? 0,
-    failedSyncQueueAccount: failedSyncQueueAccount?.count ?? 0,
-    pendingSyncQueueDevice: pendingSyncQueueDevice?.count ?? 0,
-    failedSyncQueueDevice: failedSyncQueueDevice?.count ?? 0,
-    processingSync: processingSync?.count ?? 0,
-    completedSync: completedSync?.count ?? 0,
+    activePlants,
+    archivedPlants,
+    photos,
+    careLogs,
+    reminders,
+    careLogTags,
+    plantStatusSnapshots,
+    specimenTags,
+    archiveCurationOverrides,
+    featureUsageRecords,
+    lastSuccessfulSyncAt,
+    pendingSyncUser,
+    failedSyncUser,
+    pendingSyncQueueAccount,
+    failedSyncQueueAccount,
+    pendingSyncQueueDevice,
+    failedSyncQueueDevice,
+    abandonedSyncQueueAccount,
+    abandonedSyncQueueDevice,
+    processingSync,
+    completedSync,
     syncEnabled: (userPreferences?.auto_sync_enabled ?? 1) !== 0,
     tableLastSyncedAt: {
-      plants: plantsLastSynced?.last_synced_at ?? null,
-      careLogs: careLogsLastSynced?.last_synced_at ?? null,
-      photos: photosLastSynced?.last_synced_at ?? null,
-      careReminders: remindersLastSynced?.last_synced_at ?? null,
-      graveyardPlants: graveyardPlantsLastSynced?.last_synced_at ?? null,
-      userPreferences: userPreferencesLastSynced?.last_synced_at ?? null,
+      plants: plantsLastSynced,
+      careLogs: careLogsLastSynced,
+      photos: photosLastSynced,
+      careReminders: remindersLastSynced,
+      graveyardPlants: graveyardPlantsLastSynced,
+      userPreferences: userPreferencesLastSynced,
+      careLogTags: careLogTagsLastSynced,
+      plantStatusSnapshots: statusSnapshotsLastSynced,
+      specimenTags: specimenTagsLastSynced,
+      archiveCurationOverrides: archiveOverridesLastSynced,
     },
   };
 }

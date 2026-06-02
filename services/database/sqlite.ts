@@ -5,6 +5,13 @@ import { runDatabaseMigrations } from "@/services/database/migrations";
 
 let databasePromise: Promise<SQLiteDatabase> | null = null;
 
+function createDatabasePromise() {
+  return openDatabase().catch((error) => {
+    databasePromise = null;
+    throw error;
+  });
+}
+
 async function openDatabase() {
   const database = await openDatabaseAsync(DATABASE_NAME);
   await database.execAsync(`
@@ -18,7 +25,7 @@ async function openDatabase() {
 
 export async function initializeDatabase() {
   if (!databasePromise) {
-    databasePromise = openDatabase();
+    databasePromise = createDatabasePromise();
   }
 
   await databasePromise;
@@ -26,7 +33,7 @@ export async function initializeDatabase() {
 
 export async function getDatabase() {
   if (!databasePromise) {
-    databasePromise = openDatabase();
+    databasePromise = createDatabasePromise();
   }
 
   return databasePromise;

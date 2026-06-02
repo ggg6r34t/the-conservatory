@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import {
   RefreshControl,
@@ -20,7 +19,7 @@ import { DashboardInsightCard } from "@/features/ai/components/DashboardInsightC
 import { useDashboardInsight } from "@/features/ai/hooks/useDashboardInsight";
 import { calculateCurrentStreakDays } from "@/features/ai/services/streakNudgeService";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
+import { useCareLogsForPlantIds } from "@/features/care-logs/hooks/useCareLogsForPlantIds";
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
 import { HydrationCard } from "@/features/dashboard/components/HydrationCard";
 import { SpeciesCounter } from "@/features/dashboard/components/SpeciesCounter";
@@ -90,11 +89,7 @@ export default function HomeScreen() {
     activeReminders: activeReminderCount,
   });
   const plantIds = dashboard.plants.map((plant) => plant.id);
-  const logsQuery = useQuery({
-    queryKey: ["care-logs", "batch", plantIds.join("|")],
-    queryFn: () => listCareLogsForPlants(plantIds),
-    enabled: plantIds.length > 0,
-  });
+  const logsQuery = useCareLogsForPlantIds(plantIds, "dashboard");
   const logs = logsQuery.data ?? [];
   const currentStreakDays = calculateCurrentStreakDays(logs);
   const insightQuery = useDashboardInsight({

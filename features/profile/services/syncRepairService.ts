@@ -51,7 +51,7 @@ export async function listSyncRepairItems() {
   }>(
     `SELECT id, entity, entity_id, operation, status, attempt_count, last_error, queued_at, updated_at
      FROM sync_queue
-     WHERE status IN ('failed', 'abandoned', 'processing')
+     WHERE status IN ('failed', 'abandoned', 'processing', 'deleted_before_sync', 'skipped')
      ORDER BY updated_at DESC, queued_at DESC;`,
   );
 

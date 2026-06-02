@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Link } from "expo-router";
 import {
@@ -24,7 +23,7 @@ import { useJournalSummary } from "@/features/ai/hooks/useJournalSummary";
 import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
-import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
+import { useCareLogsForPlantIds } from "@/features/care-logs/hooks/useCareLogsForPlantIds";
 import { useMonthlyHighlights } from "@/features/journal/hooks/useMonthlyHighlights";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
@@ -199,11 +198,7 @@ export default function JournalScreen() {
   const fabBottomOffset = getFloatingActionBottomOffset(insets.bottom);
 
   const plantIds = plants.map((plant) => plant.id);
-  const logsQuery = useQuery({
-    queryKey: ["care-logs", "batch", plantIds.join("|")],
-    queryFn: () => listCareLogsForPlants(plantIds),
-    enabled: plantIds.length > 0,
-  });
+  const logsQuery = useCareLogsForPlantIds(plantIds, "journal");
   const plantsById = new Map(
     plants.map((plant) => [
       plant.id,

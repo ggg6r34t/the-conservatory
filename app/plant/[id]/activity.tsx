@@ -6,6 +6,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import { FREE_CARE_LOG_HISTORY_DAYS } from "@/features/billing/constants";
 import { PlantActivityEmptyState } from "@/features/plants/components/PlantActivityEmptyState";
 import { PlantActivityHero } from "@/features/plants/components/PlantActivityHero";
 import { PlantActivitySection } from "@/features/plants/components/PlantActivitySection";
@@ -19,6 +21,7 @@ export default function PlantActivityRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors, spacing } = useTheme();
+  const { isPremium } = useSubscription();
   const plantQuery = usePlant(id ?? "");
   const sections = useMemo(
     () => (plantQuery.data ? buildPlantActivitySections(plantQuery.data) : []),
@@ -73,6 +76,15 @@ export default function PlantActivityRoute() {
               plant={plantQuery.data.plant}
               photo={heroPhoto}
             />
+
+            {!isPremium ? (
+              <Text
+                style={[styles.historyNotice, { color: colors.onSurfaceVariant }]}
+              >
+                Showing the last {FREE_CARE_LOG_HISTORY_DAYS} days of care
+                history. Premium unlocks your full journal.
+              </Text>
+            ) : null}
 
             {sections.length > 0 ? (
               <View style={[styles.sections, { gap: spacing.xl }]}>
@@ -144,5 +156,10 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 16,
     lineHeight: 25,
+  },
+  historyNotice: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 20,
   },
 });

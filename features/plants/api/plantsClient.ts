@@ -24,7 +24,13 @@ import type {
   PlantWithRelations,
 } from "@/types/models";
 import type { PlantLibraryFilter, PlantSortOption } from "@/types/ui";
+import {
+  comparePlantsForAdvancedFilter,
+  isPremiumLibraryFilter,
+  resolvePlantLibraryFilter,
+} from "@/features/plants/services/plantLibraryFilterService";
 import { createId } from "@/utils/id";
+import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { logger } from "@/utils/logger";
 
 import { persistPhotoAsset } from "../services/photoStorageService";
@@ -394,7 +400,12 @@ export async function listPlants(input: {
   filter: PlantLibraryFilter;
   sort: PlantSortOption;
   query: string;
+  isPremium?: boolean;
 }) {
+  const filter = resolvePlantLibraryFilter(
+    input.filter,
+    input.isPremium ?? false,
+  );
   const database = await getDatabase();
   const rows = await database.getAllAsync<PlantRow>(
     "SELECT * FROM plants WHERE user_id = ? AND status = ? ORDER BY updated_at DESC;",
@@ -502,24 +513,28 @@ export async function listPlants(input: {
       };
     })
     .filter(({ plant, status }) => {
-      if (input.filter === "needs-water") {
+      if (filter === "needs-water") {
         return status.isDue || status.isOverdue;
       }
 
-      if (input.filter === "thriving") {
+      if (filter === "thriving") {
         return status.healthState === "thriving";
       }
 
-      if (input.filter === "recently-watered") {
+      if (filter === "recently-watered") {
         return status.isRecentlyWatered;
       }
 
-      if (input.filter === "with-notes") {
+      if (filter === "with-notes") {
         return Boolean(plant.notes?.trim());
       }
 
-      if (input.filter === "unplaced") {
+      if (filter === "unplaced") {
         return !plant.location?.trim();
+      }
+
+      if (isPremiumLibraryFilter(filter)) {
+        return true;
       }
 
       return true;
@@ -536,6 +551,10 @@ export async function listPlants(input: {
 
   return filtered
     .sort((left, right) => {
+      if (isPremiumLibraryFilter(filter)) {
+        return comparePlantsForAdvancedFilter(left.plant, right.plant, filter);
+      }
+
       if (input.sort === "name") {
         return left.plant.name.localeCompare(right.plant.name);
       }
@@ -557,6 +576,7 @@ export async function listPlants(input: {
 export async function listPhotosForPlants(input: {
   userId: string;
   plantIds: string[];
+  sinceCapturedAt?: string;
 }) {
   if (!input.plantIds.length) {
     return [] as Photo[];
@@ -565,13 +585,18 @@ export async function listPhotosForPlants(input: {
   const database = await getDatabase();
   const uniquePlantIds = [...new Set(input.plantIds)];
   const placeholders = uniquePlantIds.map(() => "?").join(", ");
+  const sinceClause = input.sinceCapturedAt
+    ? ` AND COALESCE(captured_at, taken_at, created_at) >= ?`
+    : "";
+  const params = input.sinceCapturedAt
+    ? [input.userId, ...uniquePlantIds, input.sinceCapturedAt]
+    : [input.userId, ...uniquePlantIds];
   const rows = await database.getAllAsync<PhotoRow>(
     `SELECT * FROM photos
      WHERE user_id = ?
-       AND plant_id IN (${placeholders})
+       AND plant_id IN (${placeholders})${sinceClause}
      ORDER BY created_at DESC;`,
-    input.userId,
-    ...uniquePlantIds,
+    ...params,
   );
 
   return hydratePhotosForDisplay(rows);
@@ -580,6 +605,7 @@ export async function listPhotosForPlants(input: {
 export async function getPlantById(
   userId: string,
   plantId: string,
+  options?: { careLogSinceLoggedAt?: string },
 ): Promise<PlantWithRelations | null> {
   const database = await getDatabase();
   const plantRow = await database.getFirstAsync<PlantRow>(
@@ -619,6 +645,12 @@ export async function getPlantById(
     "SELECT * FROM care_reminders WHERE plant_id = ? ORDER BY created_at DESC;",
     plantId,
   );
+  const logSql = options?.careLogSinceLoggedAt
+    ? "SELECT * FROM care_logs WHERE plant_id = ? AND logged_at >= ? ORDER BY logged_at DESC;"
+    : "SELECT * FROM care_logs WHERE plant_id = ? ORDER BY logged_at DESC;";
+  const logParams = options?.careLogSinceLoggedAt
+    ? [plantId, options.careLogSinceLoggedAt]
+    : [plantId];
   const logs = await database.getAllAsync<{
     id: string;
     user_id: string;
@@ -633,10 +665,7 @@ export async function getPlantById(
     pending: number;
     synced_at: string | null;
     sync_error: string | null;
-  }>(
-    "SELECT * FROM care_logs WHERE plant_id = ? ORDER BY logged_at DESC;",
-    plantId,
-  );
+  }>(logSql, ...logParams);
 
   return {
     plant: toPlant(plantRow),
@@ -856,9 +885,16 @@ export async function createPlant(input: {
     if (reminder?.enabled) {
       void reschedulePlantReminder(reminder, created.plant.name).catch(
         (error) => {
+          const message =
+            error instanceof Error ? error.message : "unknown";
           logger.warn("plants.reminder_schedule_failed", {
             plantId,
-            error: error instanceof Error ? error.message : "unknown",
+            error: message,
+          });
+          trackMonetizationEvent("reminder_schedule_failed", {
+            plantId,
+            source: "create_plant",
+            error: message,
           });
         },
       );
@@ -1166,9 +1202,16 @@ export async function updatePlant(input: {
     if (reminder?.enabled) {
       void reschedulePlantReminder(reminder, updated.plant.name).catch(
         (error) => {
+          const message =
+            error instanceof Error ? error.message : "unknown";
           logger.warn("plants.reminder_schedule_failed", {
             plantId: input.plantId,
-            error: error instanceof Error ? error.message : "unknown",
+            error: message,
+          });
+          trackMonetizationEvent("reminder_schedule_failed", {
+            plantId: input.plantId,
+            source: "update_plant",
+            error: message,
           });
         },
       );

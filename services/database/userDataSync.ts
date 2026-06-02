@@ -16,6 +16,7 @@ export interface UserDataSyncSnapshot {
   isRunning: boolean;
   activeUserId: string | null;
   activeTrigger: UserDataSyncTrigger | null;
+  lastFailedTrigger: UserDataSyncTrigger | null;
   lastStartedAt: string | null;
   lastCompletedAt: string | null;
   lastSuccessfulAt: string | null;
@@ -27,6 +28,10 @@ export interface UserDataSyncResult {
   successful: number;
   failed: number;
   remaining: number;
+  deletedBeforeSync: number;
+  skipped: number;
+  deferred: number;
+  hydrationApplied: boolean;
 }
 
 type Listener = (snapshot: UserDataSyncSnapshot) => void;
@@ -43,6 +48,7 @@ let snapshot: UserDataSyncSnapshot = {
   isRunning: false,
   activeUserId: null,
   activeTrigger: null,
+  lastFailedTrigger: null,
   lastStartedAt: null,
   lastCompletedAt: null,
   lastSuccessfulAt: null,
@@ -72,6 +78,10 @@ async function executeUserDataSync(
     successful: 0,
     failed: 0,
     remaining: 0,
+    deletedBeforeSync: 0,
+    skipped: 0,
+    deferred: 0,
+    hydrationApplied: false,
   };
 
   for (let batch = 0; batch < MAX_SYNC_BATCHES_PER_RUN; batch += 1) {
@@ -81,6 +91,11 @@ async function executeUserDataSync(
       successful: report.successful + nextReport.successful,
       failed: report.failed + nextReport.failed,
       remaining: nextReport.remaining,
+      deletedBeforeSync:
+        report.deletedBeforeSync + (nextReport.deletedBeforeSync ?? 0),
+      skipped: report.skipped + (nextReport.skipped ?? 0),
+      deferred: report.deferred + (nextReport.deferred ?? 0),
+      hydrationApplied: false,
     };
 
     if (
@@ -103,7 +118,14 @@ async function executeUserDataSync(
       `Sync completed with ${failedLabel} and ${remainingLabel}.`,
     );
   }
-  await hydrateRemoteUserData(userId);
+  try {
+    await hydrateRemoteUserData(userId);
+    report = { ...report, hydrationApplied: true };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Remote hydration failed.";
+    throw new Error(`Cloud hydration failed after queue replay: ${message}`);
+  }
   await repairLocalPhotoRecords(userId);
 
   logger.info("sync.execution.completed", {
@@ -120,6 +142,10 @@ async function executeUserDataSync(
     successful: report.successful,
     failed: report.failed,
     remaining: report.remaining,
+    deletedBeforeSync: report.deletedBeforeSync,
+    skipped: report.skipped,
+    deferred: report.deferred,
+    hydrationApplied: report.hydrationApplied,
   };
 }
 
@@ -135,6 +161,7 @@ function startRun(input: {
     activeTrigger: input.trigger,
     lastStartedAt: startedAt,
     lastError: null,
+    lastFailedTrigger: null,
   };
   emitSnapshot();
 
@@ -149,6 +176,7 @@ function startRun(input: {
         lastCompletedAt: completedAt,
         lastSuccessfulAt: completedAt,
         lastError: null,
+        lastFailedTrigger: null,
       };
       emitSnapshot();
       return result;
@@ -163,6 +191,7 @@ function startRun(input: {
         activeUserId: null,
         activeTrigger: null,
         lastCompletedAt: completedAt,
+        lastFailedTrigger: input.trigger,
         lastError: message,
       };
       emitSnapshot();

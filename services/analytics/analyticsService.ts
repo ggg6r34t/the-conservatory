@@ -61,7 +61,9 @@ export function trackMonetizationEvent(
     | 'entitlement_refresh'
     | 'sync_photo_deferred'
     | 'premium_deferred_photo_retry'
-    | 'sync_item_abandoned',
+    | 'sync_item_abandoned'
+    | 'sync_item_deleted_before_sync'
+    | 'reminder_schedule_failed',
   properties?: Record<string, string | number | boolean | null>,
 ): void {
   trackEvent(name, properties);

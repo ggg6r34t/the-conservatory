@@ -2,6 +2,7 @@ import type { GatedFeature } from './types';
 
 export const FREE_PLANT_LIMIT = 10;
 export const FREE_PROGRESS_PHOTOS_PER_PLANT = 3;
+export const FREE_CARE_LOG_HISTORY_DAYS = 60;
 export const FREE_AI_HEALTH_INSIGHTS_PER_PLANT_PER_MONTH = 1;
 export const FREE_PLANT_IDENTIFICATIONS_PER_MONTH = 3;
 

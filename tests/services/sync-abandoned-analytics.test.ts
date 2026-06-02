@@ -112,6 +112,28 @@ class InMemorySyncQueueStorage implements SyncQueueStorage {
     );
   }
 
+  async markSkipped(id: string, reason: string, updatedAt: string) {
+    this.items = this.items.map((item) =>
+      item.id === id
+        ? { ...item, status: "skipped", lastError: reason, nextRetryAt: null, updatedAt }
+        : item,
+    );
+  }
+
+  async markDeletedBeforeSync(id: string, reason: string, updatedAt: string) {
+    this.items = this.items.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            status: "deleted_before_sync",
+            lastError: reason,
+            nextRetryAt: null,
+            updatedAt,
+          }
+        : item,
+    );
+  }
+
   seed(item: SyncQueueItem) {
     this.items.push(item);
   }

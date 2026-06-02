@@ -14,6 +14,23 @@ describe("archiveCurationService", () => {
         plantId: "plant-1",
         plantName: "Juniper",
         photoUris: ["file://recent.jpg", "file://mid.jpg", "file://early.jpg"],
+        photos: [
+          {
+            id: "recent",
+            uri: "file://recent.jpg",
+            capturedAt: "2026-06-01T00:00:00.000Z",
+          },
+          {
+            id: "mid",
+            uri: "file://mid.jpg",
+            capturedAt: "2026-03-01T00:00:00.000Z",
+          },
+          {
+            id: "early",
+            uri: "file://early.jpg",
+            capturedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
       },
     ];
 

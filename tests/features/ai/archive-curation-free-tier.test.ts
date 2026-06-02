@@ -23,6 +23,18 @@ describe("getArchiveCuration — free tier (cloudAllowed=false)", () => {
         plantId: "plant-1",
         plantName: "Monstera",
         photoUris: ["file://recent.jpg", "file://early.jpg"],
+        photos: [
+          {
+            id: "photo-recent",
+            uri: "file://recent.jpg",
+            capturedAt: "2026-06-01T10:00:00.000Z",
+          },
+          {
+            id: "photo-early",
+            uri: "file://early.jpg",
+            capturedAt: "2026-01-01T10:00:00.000Z",
+          },
+        ],
       },
     ];
 

@@ -1,6 +1,7 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "@/config/constants";
+import { sortPhotosChronologically } from "@/features/ai/services/archivePhotoOrdering";
 import { getArchiveCuration } from "@/features/ai/services/archiveCurationService";
 import { listArchiveCurationOverrides } from "@/features/ai/services/archiveCurationOverridesService";
 import type { ArchiveCuratedPair } from "@/features/ai/types/ai";
@@ -22,20 +23,21 @@ export function useArchiveCuration(input: {
 
   const items = input.memorials.map((memorial, index) => {
     const plant = plantQueries[index]?.data;
+    const sortedPhotos = sortPhotosChronologically(
+      plant?.photos.map((photo) => ({
+        id: photo.id,
+        uri: photo.localUri ?? photo.remoteUrl ?? "",
+        capturedAt: photo.capturedAt,
+        takenAt: photo.takenAt,
+        createdAt: photo.createdAt,
+      })) ?? [],
+    ).filter((photo) => photo.uri);
+
     return {
       plantId: memorial.plantId,
       plantName: memorial.name,
-      photoUris:
-        plant?.photos
-          .map((photo) => photo.localUri ?? photo.remoteUrl ?? "")
-          .filter(Boolean) ?? [],
-      photos:
-        plant?.photos
-          .map((photo) => ({
-            id: photo.id,
-            uri: photo.localUri ?? photo.remoteUrl ?? "",
-          }))
-          .filter((photo) => Boolean(photo.uri)) ?? [],
+      photoUris: sortedPhotos.map((photo) => photo.uri),
+      photos: sortedPhotos,
     };
   });
 

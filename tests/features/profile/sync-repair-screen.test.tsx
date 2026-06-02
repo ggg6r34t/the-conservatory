@@ -82,7 +82,9 @@ describe("SyncRepairScreen", () => {
     renderWithProviders(<SyncRepairScreen />);
 
     expect(await screen.findByText("care logs")).toBeTruthy();
-    expect(screen.getByText("UPDATE - FAILED - 3 attempts")).toBeTruthy();
+    expect(
+      screen.getByText("UPDATE - RETRYABLE FAILURE - 3 attempts"),
+    ).toBeTruthy();
     expect(screen.getByText("Network unavailable")).toBeTruthy();
 
     fireEvent.press(screen.getByText("Retry Item"));
@@ -92,5 +94,29 @@ describe("SyncRepairScreen", () => {
     );
     await waitFor(() => expect(mockListSyncRepairItems).toHaveBeenCalledTimes(2));
     expect(mockSuccess).toHaveBeenCalledWith("Backup item is ready to retry.");
+  });
+
+  it("disables retry for informational queue items", async () => {
+    mockListSyncRepairItems.mockResolvedValue([
+      {
+        id: "sync-2",
+        entity: "plants",
+        entityId: "plant-1",
+        operation: "delete",
+        status: "deleted_before_sync",
+        attemptCount: 1,
+        lastError: null,
+        queuedAt: "2026-05-06T10:00:00.000Z",
+        updatedAt: "2026-05-06T10:05:00.000Z",
+      },
+    ]);
+
+    renderWithProviders(<SyncRepairScreen />);
+
+    expect(await screen.findByText("plants")).toBeTruthy();
+    expect(
+      screen.getByText("DELETE - LOCAL RECORD REMOVED BEFORE UPLOAD - 1 attempt"),
+    ).toBeTruthy();
+    expect(screen.getByText("Informational Only")).toBeTruthy();
   });
 });

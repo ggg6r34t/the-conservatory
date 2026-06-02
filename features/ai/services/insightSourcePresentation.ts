@@ -9,3 +9,9 @@ export function getInsightSourceLabel(source: AiSource): string {
 export function getInsightSourceTone(source: AiSource): InsightSourceTone {
   return source === "cloud" ? "enhanced" : "local";
 }
+
+export function getInsightSourceDescription(source: AiSource): string {
+  return source === "cloud"
+    ? "Prepared with cloud assistance using your plant data."
+    : "Prepared on this device from your care history.";
+}

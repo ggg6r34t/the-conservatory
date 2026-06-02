@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -20,7 +19,7 @@ import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
-import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
+import { useCareLogsForPlantIds } from "@/features/care-logs/hooks/useCareLogsForPlantIds";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
 import {
@@ -183,11 +182,7 @@ export default function ProfileScreen() {
   const themeLabel = formatThemeLabel(settingsQuery.data?.preferredTheme);
 
   const plantIds = plants.map((plant) => plant.id);
-  const careLogsQuery = useQuery({
-    queryKey: ["care-logs", "batch", plantIds.join("|")],
-    queryFn: () => listCareLogsForPlants(plantIds),
-    enabled: plantIds.length > 0,
-  });
+  const careLogsQuery = useCareLogsForPlantIds(plantIds, "profile");
 
   const streakDays = useMemo(() => {
     const allLoggedAt = (careLogsQuery.data ?? []).map((log) => log.loggedAt);
@@ -498,6 +493,11 @@ export default function ProfileScreen() {
               { backgroundColor: colors.surfaceContainerLowest },
             ]}
           >
+            <ProfileRow
+              icon="star-circle-outline"
+              label="Manage Subscription"
+              onPress={() => router.push("/subscription-plans")}
+            />
             <ProfileRow
               icon="shield-account-outline"
               label="Privacy & Security"

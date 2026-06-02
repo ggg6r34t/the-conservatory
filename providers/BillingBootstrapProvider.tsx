@@ -111,7 +111,22 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
         initializeAnalytics(user!.id);
       } catch (err) {
         if (cancelled) return;
-        setSubscriptionState({ isLoading: false, entitlementUnavailable: true });
+        const cachedOnFailure = await readEntitlementCache();
+        if (cachedOnFailure) {
+          const effectiveTier = resolveEffectiveTier(cachedOnFailure);
+          setSubscriptionState({
+            tier: effectiveTier,
+            isLoading: false,
+            expiresAt: cachedOnFailure.expiresAt,
+            period: cachedOnFailure.period,
+            lastVerifiedAt: cachedOnFailure.lastVerifiedAt,
+            subscribedAt: cachedOnFailure.subscribedAt ?? null,
+            entitlementUnavailable: true,
+          });
+          setEntitlementState(effectiveTier === 'premium');
+        } else {
+          setSubscriptionState({ isLoading: false, entitlementUnavailable: true });
+        }
         trackMonetizationEvent('billing_initialization_failed', {
           reason: err instanceof Error ? err.message : 'unknown',
         });

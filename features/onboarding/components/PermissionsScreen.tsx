@@ -210,7 +210,7 @@ export function PermissionsScreen({
         <View style={styles.cardStack}>
           <PermissionCard
             title="Notifications"
-            body="Never miss a watering session or a nutrient boost. We'll send gentle reminders for your green friends."
+            body="Never miss a watering session. Care reminders need notification permission to alert you on time — enable alerts now, or skip and turn them on later from device settings."
             icon="notifications"
             actionLabel={getPermissionActionLabel(
               permissions.permissions.notifications,

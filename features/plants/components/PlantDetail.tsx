@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
@@ -15,6 +15,8 @@ import { useRecordCareEvent } from "@/features/care-logs/hooks/useRecordCareEven
 import { useUpdateCareLogNote } from "@/features/care-logs/hooks/useUpdateCareLogNote";
 import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import { FREE_CARE_LOG_HISTORY_DAYS } from "@/features/billing/constants";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { buildGrowthTimeline } from "@/features/plants/services/growthTimelineService";
 import { derivePlantStatus } from "@/features/plants/services/plantStatusService";
@@ -128,7 +130,10 @@ function formatConditionLabel(condition: CareLogCondition) {
   return condition;
 }
 
-function buildCareGuide(plant: Plant): CareGuideCard[] {
+function buildCareGuide(
+  plant: Plant,
+  colors: ReturnType<typeof useTheme>["colors"],
+): CareGuideCard[] {
   const defaults = buildCareDefaults({
     speciesName: plant.speciesName,
     lightCondition: "indirect",
@@ -142,7 +147,7 @@ function buildCareGuide(plant: Plant): CareGuideCard[] {
       icon: "wb-sunny",
       iconFamily: "MaterialIcons",
       tone: "light",
-      tileColor: "#fde5dd",
+      tileColor: colors.primaryFixed,
     },
     {
       key: "water",
@@ -151,7 +156,7 @@ function buildCareGuide(plant: Plant): CareGuideCard[] {
       icon: "opacity",
       iconFamily: "MaterialIcons",
       tone: "dark",
-      tileColor: "#3a5647",
+      tileColor: colors.primary,
     },
     {
       key: "humidity",
@@ -160,7 +165,7 @@ function buildCareGuide(plant: Plant): CareGuideCard[] {
       icon: "air",
       iconFamily: "MaterialIcons",
       tone: "light",
-      tileColor: "#e7e4de",
+      tileColor: colors.surfaceContainerHigh,
     },
   ];
 }
@@ -241,9 +246,10 @@ function getActivityVisualType(
   return item.logType;
 }
 
-export function PlantDetail({ data }: PlantDetailProps) {
+export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const { isPremium } = useSubscription();
   const alert = useAlert();
   const snackbar = useSnackbar();
   const addPlantProgressPhoto = useAddPlantProgressPhoto(data.plant.id);
@@ -254,8 +260,14 @@ export function PlantDetail({ data }: PlantDetailProps) {
   const [waterNoteSheetVisible, setWaterNoteSheetVisible] = useState(false);
   const [activeWaterLogId, setActiveWaterLogId] = useState<string | null>(null);
   const primaryPhoto = getPrimaryPhoto(data);
-  const careGuide = buildCareGuide(data.plant);
-  const recentActivity = buildRecentActivity(data);
+  const careGuide = useMemo(
+    () => buildCareGuide(data.plant, colors),
+    [colors, data.plant],
+  );
+  const recentActivity = useMemo(
+    () => buildRecentActivity(data),
+    [data],
+  );
   const plantStatus = useMemo(
     () =>
       derivePlantStatus({
@@ -265,11 +277,11 @@ export function PlantDetail({ data }: PlantDetailProps) {
       }),
     [data.logs, data.plant, data.reminders],
   );
-  const growthTimeline = useMemo(() => buildGrowthTimeline(data), [data]);
-  const growthPhotos = useMemo(
-    () => growthTimeline.slice(-3).reverse(),
-    [growthTimeline],
+  const growthTimeline = useMemo(
+    () => buildGrowthTimeline(data, { order: "desc" }),
+    [data],
   );
+  const growthPhotos = useMemo(() => growthTimeline.slice(0, 3), [growthTimeline]);
 
   const applyPhotoUpdate = async (photo: PlantImageAsset) => {
     setIsUploadingPhoto(true);
@@ -594,6 +606,15 @@ export function PlantDetail({ data }: PlantDetailProps) {
           </Pressable>
         </View>
 
+        {!isPremium ? (
+          <Text
+            style={[styles.historyNotice, { color: colors.onSurfaceVariant }]}
+          >
+            Showing the last {FREE_CARE_LOG_HISTORY_DAYS} days of care history.
+            Premium unlocks your full journal.
+          </Text>
+        ) : null}
+
         <View style={styles.activityStack}>
           {recentActivity.length ? (
             recentActivity.map((item, index) => {
@@ -806,7 +827,7 @@ export function PlantDetail({ data }: PlantDetailProps) {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -929,6 +950,12 @@ const styles = StyleSheet.create({
   },
   activityStack: {
     gap: 16,
+  },
+  historyNotice: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 8,
   },
   activityRow: {
     flexDirection: "row",

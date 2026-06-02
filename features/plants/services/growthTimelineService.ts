@@ -209,6 +209,7 @@ function compareTimelinePhotos(
 
 export function buildGrowthTimeline(
   data: Pick<PlantWithRelations, "photos" | "logs"> | null | undefined,
+  options?: { order?: "asc" | "desc" },
 ): GrowthTimelineItem[] {
   if (!data) {
     return [];
@@ -216,7 +217,7 @@ export function buildGrowthTimeline(
 
   const seenPhotoIds = new Set<string>();
 
-  return [...data.photos]
+  const timeline = [...data.photos]
     .filter((photo) => {
       if (seenPhotoIds.has(photo.id)) {
         return false;
@@ -263,4 +264,6 @@ export function buildGrowthTimeline(
       associatedLog: item.associatedLog,
       caption: item.caption,
     }));
+
+  return options?.order === "desc" ? timeline.reverse() : timeline;
 }

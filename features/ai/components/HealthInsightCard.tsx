@@ -2,7 +2,10 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { getInsightSourceLabel } from "@/features/ai/services/insightSourcePresentation";
+import {
+  getInsightSourceDescription,
+  getInsightSourceLabel,
+} from "@/features/ai/services/insightSourcePresentation";
 import type { HealthInsight } from "@/features/ai/types/ai";
 
 export function HealthInsightCard({ insight }: { insight: HealthInsight }) {
@@ -28,6 +31,9 @@ export function HealthInsightCard({ insight }: { insight: HealthInsight }) {
       </Text>
       <Text style={[styles.source, { color: colors.onSurfaceVariant }]}>
         {getInsightSourceLabel(insight.source)}
+      </Text>
+      <Text style={[styles.sourceDetail, { color: colors.onSurfaceVariant }]}>
+        {getInsightSourceDescription(insight.source)}
       </Text>
     </View>
   );
@@ -61,5 +67,10 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     letterSpacing: 1.2,
     textTransform: "uppercase",
+  },
+  sourceDetail: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 11,
+    lineHeight: 16,
   },
 });

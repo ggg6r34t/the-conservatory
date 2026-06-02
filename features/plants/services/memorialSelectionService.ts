@@ -79,6 +79,35 @@ function pickBest(
   );
 }
 
+export function applyMemorialLayoutPreferences(
+  selection: MemorialRoleSelection,
+  preferences: { featuredMemorialId: string | null },
+  memorials: GraveyardPlantListItem[],
+): MemorialRoleSelection {
+  const featured = preferences.featuredMemorialId
+    ? (memorials.find(
+        (memorial) => memorial.id === preferences.featuredMemorialId,
+      ) ?? null)
+    : null;
+
+  if (!featured) {
+    return selection;
+  }
+
+  const others = memorials.filter((memorial) => memorial.id !== featured.id);
+  const rest = selectMemorialRoles(others);
+
+  return {
+    featuredMemorial: featured,
+    reflectionMemorial: rest.featuredMemorial,
+    tributeMemorial: rest.reflectionMemorial,
+    compactMemorials: [
+      ...(rest.tributeMemorial ? [rest.tributeMemorial] : []),
+      ...rest.compactMemorials,
+    ],
+  };
+}
+
 export function selectMemorialRoles(
   memorials: GraveyardPlantListItem[],
 ): MemorialRoleSelection {

@@ -36,9 +36,12 @@ function createMigrationDatabase(foreignKeys: ForeignKeyMap) {
     return Promise.resolve([]);
   });
 
+  const runAsync = jest.fn().mockResolvedValue(undefined);
+
   return {
     execAsync,
     getAllAsync,
+    runAsync,
   };
 }
 
@@ -47,6 +50,7 @@ describe("database migrations integrity", () => {
     expect(bootstrapSql).toContain(
       "FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE",
     );
+    expect(bootstrapSql).toContain("CREATE TABLE IF NOT EXISTS schema_migrations");
     expect(bootstrapSql).toContain("CREATE TABLE IF NOT EXISTS photos");
     expect(bootstrapSql).toContain("CREATE TABLE IF NOT EXISTS care_logs");
     expect(bootstrapSql).toContain("CREATE TABLE IF NOT EXISTS care_reminders");

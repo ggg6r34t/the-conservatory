@@ -6,7 +6,7 @@ This file tracks the app's current route screens and route-adjacent files so pro
 
 - Route names are listed exactly as they exist in `app/`.
 - User-facing labels sometimes differ from route names.
-- `app/privavcy.tsx` is intentionally listed with its current route spelling because that is the real file and route in the codebase.
+- `app/privacy.tsx` is the in-app Privacy Policy route.
 
 ## App Entry and Root Routes
 
@@ -127,10 +127,9 @@ This file tracks the app's current route screens and route-adjacent files so pro
     Screen: Terms of Service
     File: `app/terms.tsx`
 
-26. `/privavcy`
+26. `/privacy`
     Screen: Privacy Policy
-    File: `app/privavcy.tsx`
-    Notes: Route/file name currently uses `privavcy`.
+    File: `app/privacy.tsx`
 
 ## Collection and Utility Screens
 

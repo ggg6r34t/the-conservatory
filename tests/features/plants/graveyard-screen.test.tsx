@@ -53,6 +53,27 @@ jest.mock("@/features/plants/hooks/useUpdateGraveyardMemorial", () => ({
   }),
 }));
 
+jest.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: () => ({
+    user: { id: "user-1" },
+    isAuthenticated: true,
+  }),
+}));
+
+jest.mock("@/features/plants/hooks/useMemorialLayoutPreferences", () => ({
+  useMemorialLayoutPreferences: () => ({
+    preferences: {
+      featuredMemorialId: null,
+      pinnedMemorialIds: [],
+    },
+    isLoading: false,
+    setFeaturedMemorial: {
+      mutateAsync: jest.fn(),
+      isPending: false,
+    },
+  }),
+}));
+
 jest.mock("@/hooks/usePullToRefreshSync", () => ({
   usePullToRefreshSync: () => ({ onRefresh: jest.fn(), refreshing: false }),
 }));

@@ -162,6 +162,10 @@ describe("userDataSync", () => {
       successful: 27,
       failed: 0,
       remaining: 0,
+      deletedBeforeSync: 0,
+      skipped: 0,
+      deferred: 0,
+      hydrationApplied: true,
     });
 
     expect(mockSyncPendingChanges).toHaveBeenCalledTimes(2);

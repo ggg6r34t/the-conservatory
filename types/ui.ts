@@ -4,7 +4,9 @@ export type PlantLibraryFilter =
   | "thriving"
   | "recently-watered"
   | "with-notes"
-  | "unplaced";
+  | "unplaced"
+  | "by-location"
+  | "by-species";
 export type PlantSortOption = "recent" | "name" | "water-due";
 
 export interface PlantLibraryState {

@@ -8,6 +8,10 @@ import {
   listSyncRepairItems,
   retrySyncRepairItems,
 } from "@/features/profile/services/syncRepairService";
+import {
+  canRetrySyncRepairItem,
+  formatSyncRepairStatus,
+} from "@/features/profile/services/syncDiagnosticsService";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
 function formatEntityLabel(entity: string) {
@@ -23,7 +27,7 @@ function formatItemDiagnostics(item: {
   status: string;
   attemptCount: number;
 }) {
-  return `${item.operation.toUpperCase()} - ${item.status.toUpperCase()} - ${formatAttemptLabel(item.attemptCount)}`;
+  return `${item.operation.toUpperCase()} - ${formatSyncRepairStatus(item.status).toUpperCase()} - ${formatAttemptLabel(item.attemptCount)}`;
 }
 
 function formatRepairTimestampLabel(item: {
@@ -56,6 +60,7 @@ export default function SyncRepairScreen() {
     },
   });
   const items = repairQuery.data ?? [];
+  const retryableItems = items.filter((item) => canRetrySyncRepairItem(item.status));
 
   return (
     <ProfileScreenScaffold
@@ -87,8 +92,14 @@ export default function SyncRepairScreen() {
                 {formatRepairTimestampLabel(item)}
               </Text>
               <PrimaryButton
-                label="Retry Item"
-                disabled={retryMutation.isPending}
+                label={
+                  canRetrySyncRepairItem(item.status)
+                    ? "Retry Item"
+                    : "Informational Only"
+                }
+                disabled={
+                  retryMutation.isPending || !canRetrySyncRepairItem(item.status)
+                }
                 loading={retryMutation.isPending}
                 onPress={() => retryMutation.mutate([item.id])}
               />
@@ -110,7 +121,7 @@ export default function SyncRepairScreen() {
 
       <PrimaryButton
         label={retryMutation.isPending ? "Preparing Retry..." : "Retry Queue"}
-        disabled={retryMutation.isPending || items.length === 0}
+        disabled={retryMutation.isPending || retryableItems.length === 0}
         loading={retryMutation.isPending}
         onPress={() => retryMutation.mutate(undefined)}
       />

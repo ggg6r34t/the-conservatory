@@ -191,6 +191,44 @@ export async function listCareLogsForPlants(plantIds: string[]) {
   return mergeNormalizedCareLogTags(database, rows.map(mapCareLog));
 }
 
+export async function listCareLogsForPlantsSince(
+  plantIds: string[],
+  sinceLoggedAt: string,
+) {
+  const uniquePlantIds = Array.from(new Set(plantIds.filter(Boolean)));
+  if (!uniquePlantIds.length) {
+    return [];
+  }
+
+  const database = await getDatabase();
+  const placeholders = uniquePlantIds.map(() => "?").join(", ");
+  const rows = await database.getAllAsync<{
+    id: string;
+    user_id: string;
+    plant_id: string;
+    log_type: CareLogType;
+    current_condition: CareLogCondition | null;
+    notes: string | null;
+    tags: string | null;
+    logged_at: string;
+    created_at: string;
+    updated_at: string;
+    updated_by: string | null;
+    pending: number;
+    synced_at: string | null;
+    sync_error: string | null;
+  }>(
+    `SELECT * FROM care_logs
+     WHERE plant_id IN (${placeholders})
+       AND logged_at >= ?
+     ORDER BY logged_at DESC;`,
+    ...uniquePlantIds,
+    sinceLoggedAt,
+  );
+
+  return mergeNormalizedCareLogTags(database, rows.map(mapCareLog));
+}
+
 export async function createCareLog(input: {
   userId: string;
   plantId: string;

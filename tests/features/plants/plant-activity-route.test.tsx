@@ -13,6 +13,10 @@ jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush, back: mockBack }),
 }));
 
+jest.mock("@/features/billing/hooks/useSubscription", () => ({
+  useSubscription: () => ({ isPremium: false, tier: "free" }),
+}));
+
 jest.mock("expo-image", () => ({
   Image: () => null,
 }));

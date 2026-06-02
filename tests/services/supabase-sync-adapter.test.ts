@@ -555,4 +555,83 @@ describe("supabase sync adapter", () => {
       "photo-invalid-1",
     );
   });
+
+  it("returns deleted_before_sync when local plant row is missing instead of completing silently", async () => {
+    const from = require("@/config/supabase").supabase.from as jest.Mock;
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    from.mockReturnValue({ upsert });
+
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    require("@/services/database/sqlite").getDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn().mockResolvedValue(null),
+      runAsync,
+    });
+
+    const {
+      processSyncQueueItemWithSupabase,
+    } = require("@/services/database/supabaseSyncAdapter");
+
+    const result = await processSyncQueueItemWithSupabase({
+      id: "sync-missing-plant",
+      entity: "plants",
+      entityId: "plant-missing",
+      operation: "update",
+      payload: JSON.stringify({ userId: "user-1" }),
+      status: "pending",
+      attemptCount: 0,
+      lastError: null,
+      nextRetryAt: null,
+      queuedAt: "2026-03-21T10:00:00.000Z",
+      updatedAt: "2026-03-21T10:00:00.000Z",
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "deleted_before_sync",
+        reasonCode: "LOCAL_ROW_MISSING",
+      }),
+    );
+    expect(upsert).not.toHaveBeenCalled();
+    expect(runAsync).not.toHaveBeenCalledWith(
+      expect.stringContaining("SET pending = 0"),
+      expect.any(String),
+      "plant-missing",
+    );
+  });
+
+  it("still completes delete operations when the local row is already gone", async () => {
+    const eqId = jest.fn().mockResolvedValue({ error: null });
+    const eqUser = jest.fn().mockReturnValue({ eq: eqId });
+    const deleteFn = jest.fn().mockReturnValue({ eq: eqUser });
+    const from = require("@/config/supabase").supabase.from as jest.Mock;
+    from.mockReturnValue({ delete: deleteFn });
+
+    require("@/services/database/sqlite").getDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn().mockResolvedValue(null),
+      runAsync: jest.fn(),
+    });
+
+    const {
+      processSyncQueueItemWithSupabase,
+    } = require("@/services/database/supabaseSyncAdapter");
+
+    const result = await processSyncQueueItemWithSupabase({
+      id: "sync-delete-missing",
+      entity: "plants",
+      entityId: "plant-gone",
+      operation: "delete",
+      payload: JSON.stringify({ userId: "user-1" }),
+      status: "pending",
+      attemptCount: 0,
+      lastError: null,
+      nextRetryAt: null,
+      queuedAt: "2026-03-21T10:00:00.000Z",
+      updatedAt: "2026-03-21T10:00:00.000Z",
+    });
+
+    expect(result).toBeUndefined();
+    expect(deleteFn).toHaveBeenCalled();
+    expect(eqUser).toHaveBeenCalledWith("id", "plant-gone");
+    expect(eqId).toHaveBeenCalledWith("user_id", "user-1");
+  });
 });

@@ -89,24 +89,41 @@ export async function getUserPreferences(userId: string) {
   }
 
   const preferences = defaultPreferences(userId);
-  await database.runAsync(
-    `INSERT OR IGNORE INTO user_preferences (
-      user_id, reminders_enabled, auto_sync_enabled, preferred_theme, timezone, default_watering_hour,
-      created_at, updated_at, updated_by, pending, synced_at, sync_error
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-    preferences.userId,
-    Number(preferences.remindersEnabled),
-    Number(preferences.autoSyncEnabled),
-    preferences.preferredTheme,
-    preferences.timezone,
-    preferences.defaultWateringHour,
-    preferences.createdAt,
-    preferences.updatedAt,
-    preferences.userId,
-    preferences.pending,
-    preferences.syncedAt ?? null,
-    preferences.syncError ?? null,
-  );
+  await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: preferences.updatedAt,
+    perform: async (transactionNowIso) => {
+      await database.runAsync(
+        `INSERT OR IGNORE INTO user_preferences (
+          user_id, reminders_enabled, auto_sync_enabled, preferred_theme, timezone, default_watering_hour,
+          created_at, updated_at, updated_by, pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        preferences.userId,
+        Number(preferences.remindersEnabled),
+        Number(preferences.autoSyncEnabled),
+        preferences.preferredTheme,
+        preferences.timezone,
+        preferences.defaultWateringHour,
+        preferences.createdAt,
+        transactionNowIso,
+        preferences.userId,
+        1,
+        preferences.syncedAt ?? null,
+        preferences.syncError ?? null,
+      );
+
+      return {
+        result: undefined,
+        operations: [
+          {
+            entity: "user_preferences",
+            entityId: userId,
+            operation: "insert",
+            payload: { userId },
+          },
+        ],
+      };
+    },
+  });
 
   const persistedRow = await readPreferencesRow(database, userId);
   if (persistedRow) {

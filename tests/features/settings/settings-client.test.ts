@@ -83,8 +83,11 @@ describe("settingsClient", () => {
     );
   });
 
-  it("creates a local default preferences row without forcing remote sync", async () => {
+  it("creates default preferences through the sync outbox on first read", async () => {
     const runAsync = jest.fn().mockResolvedValue(undefined);
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
     const getFirstAsync = jest
       .fn()
       .mockResolvedValueOnce(null)
@@ -98,7 +101,7 @@ describe("settingsClient", () => {
         created_at: "2026-03-21T10:00:00.000Z",
         updated_at: "2026-03-21T10:00:00.000Z",
         updated_by: "user-1",
-        pending: 0,
+        pending: 1,
         synced_at: null,
         sync_error: null,
       });
@@ -106,6 +109,7 @@ describe("settingsClient", () => {
     mockGetDatabase.mockResolvedValue({
       getFirstAsync,
       runAsync,
+      withTransactionAsync,
     });
 
     const {
@@ -125,11 +129,25 @@ describe("settingsClient", () => {
       expect.any(String),
       expect.any(String),
       "user-1",
-      0,
+      1,
       null,
       null,
     );
-    expect(result.pending).toBe(0);
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO sync_queue"),
+      expect.any(String),
+      "user_preferences",
+      "user-1",
+      "insert",
+      expect.stringContaining('"userId":"user-1"'),
+      "pending",
+      0,
+      null,
+      null,
+      expect.any(String),
+      expect.any(String),
+    );
+    expect(result.pending).toBe(1);
     expect(result.autoSyncEnabled).toBe(true);
     expect(result.syncedAt).toBeNull();
   });

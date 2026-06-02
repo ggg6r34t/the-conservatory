@@ -90,7 +90,7 @@ Debug onboarding routes are dev-only surfaces and should not leak into productio
 Current legal drill-ins:
 
 - `/terms`
-- `/privavcy`
+- `/privacy`
 
 ### Account Safety
 

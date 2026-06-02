@@ -1,6 +1,25 @@
 import { getBackupSummary } from "@/features/profile/api/profileClient";
 
+const mockCountUserRecords = jest.fn();
+const mockCountUserPendingRecords = jest.fn();
+const mockCountUserFailedRecords = jest.fn();
+const mockGetUserLastObservedSyncAt = jest.fn();
+const mockGetUserTableLastSyncedAt = jest.fn();
+const mockCountSyncQueue = jest.fn();
 const mockGetDatabase = jest.fn();
+
+jest.mock("@/features/profile/services/backupSummaryQueries", () => ({
+  countUserRecords: (...args: unknown[]) => mockCountUserRecords(...args),
+  countUserPendingRecords: (...args: unknown[]) =>
+    mockCountUserPendingRecords(...args),
+  countUserFailedRecords: (...args: unknown[]) =>
+    mockCountUserFailedRecords(...args),
+  getUserLastObservedSyncAt: (...args: unknown[]) =>
+    mockGetUserLastObservedSyncAt(...args),
+  getUserTableLastSyncedAt: (...args: unknown[]) =>
+    mockGetUserTableLastSyncedAt(...args),
+  countSyncQueue: (...args: unknown[]) => mockCountSyncQueue(...args),
+}));
 
 jest.mock("@/services/database/sqlite", () => ({
   getDatabase: (...args: unknown[]) => mockGetDatabase(...args),
@@ -9,67 +28,58 @@ jest.mock("@/services/database/sqlite", () => ({
 describe("profileClient.getBackupSummary", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCountUserRecords.mockImplementation(async (table: string) => {
+      if (table === "plants") return 2;
+      if (table === "graveyard_plants") return 1;
+      if (table === "photos") return 4;
+      if (table === "care_logs") return 6;
+      if (table === "care_reminders") return 3;
+      if (table === "care_log_tags") return 8;
+      if (table === "plant_status_snapshots") return 5;
+      if (table === "specimen_tags") return 2;
+      if (table === "archive_curation_overrides") return 1;
+      if (table === "feature_usage") return 4;
+      return 0;
+    });
+    mockCountUserPendingRecords.mockResolvedValue(1);
+    mockCountUserFailedRecords.mockResolvedValue(1);
+    mockGetUserLastObservedSyncAt.mockResolvedValue("2026-05-01T10:00:00.000Z");
+    mockGetUserTableLastSyncedAt.mockResolvedValue("2026-05-01T09:00:00.000Z");
+    mockCountSyncQueue.mockImplementation(async (status: string, userId?: string) => {
+      if (status === "pending" && userId) return 5;
+      if (status === "failed" && userId) return 1;
+      if (status === "pending") return 7;
+      if (status === "failed") return 2;
+      if (status === "abandoned" && userId) return 1;
+      if (status === "abandoned") return 3;
+      if (status === "processing") return 1;
+      if (status === "completed") return 9;
+      return 0;
+    });
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn().mockResolvedValue({ auto_sync_enabled: 1 }),
+    });
   });
 
-  it("separates account-scoped pending/error counts from device queue totals", async () => {
-    // 31 calls in Promise.all order: activePlants, archivedPlants, photos, careLogs,
-    // reminders, lastSuccessfulSyncAt, pendingPlants, pendingPhotos, pendingCareLogs,
-    // pendingReminders, pendingMemorials, pendingPreferences, failedPlants, failedPhotos,
-    // failedCareLogs, failedReminders, failedMemorials, failedPreferences,
-    // pendingSyncQueueAccount, failedSyncQueueAccount, pendingSyncQueueDevice,
-    // failedSyncQueueDevice, processingSync, completedSync, userPreferences,
-    // plantsLastSynced, careLogsLastSynced, photosLastSynced, remindersLastSynced,
-    // graveyardPlantsLastSynced, userPreferencesLastSynced
-    const getFirstAsync = jest
-      .fn()
-      .mockResolvedValueOnce({ count: 2 }) // activePlants
-      .mockResolvedValueOnce({ count: 1 }) // archivedPlants
-      .mockResolvedValueOnce({ count: 4 }) // photos
-      .mockResolvedValueOnce({ count: 6 }) // careLogs
-      .mockResolvedValueOnce({ count: 3 }) // reminders
-      .mockResolvedValueOnce({ last_synced_at: null }) // lastSuccessfulSyncAt
-      .mockResolvedValueOnce({ count: 2 }) // pendingPlants
-      .mockResolvedValueOnce({ count: 0 }) // pendingPhotos
-      .mockResolvedValueOnce({ count: 1 }) // pendingCareLogs
-      .mockResolvedValueOnce({ count: 0 }) // pendingReminders
-      .mockResolvedValueOnce({ count: 1 }) // pendingMemorials
-      .mockResolvedValueOnce({ count: 1 }) // pendingPreferences → sum = 5
-      .mockResolvedValueOnce({ count: 1 }) // failedPlants
-      .mockResolvedValueOnce({ count: 0 }) // failedPhotos
-      .mockResolvedValueOnce({ count: 2 }) // failedCareLogs
-      .mockResolvedValueOnce({ count: 0 }) // failedReminders
-      .mockResolvedValueOnce({ count: 1 }) // failedMemorials
-      .mockResolvedValueOnce({ count: 0 }) // failedPreferences → sum = 4
-      .mockResolvedValueOnce({ count: 5 }) // pendingSyncQueueAccount
-      .mockResolvedValueOnce({ count: 1 }) // failedSyncQueueAccount
-      .mockResolvedValueOnce({ count: 7 }) // pendingSyncQueueDevice
-      .mockResolvedValueOnce({ count: 2 }) // failedSyncQueueDevice
-      .mockResolvedValueOnce({ count: 1 }) // processingSync
-      .mockResolvedValueOnce({ count: 9 }) // completedSync
-      .mockResolvedValueOnce({ auto_sync_enabled: 1 }) // userPreferences
-      .mockResolvedValueOnce({ last_synced_at: "2026-05-01T10:00:00.000Z" }) // plantsLastSynced
-      .mockResolvedValueOnce({ last_synced_at: "2026-05-01T09:00:00.000Z" }) // careLogsLastSynced
-      .mockResolvedValueOnce({ last_synced_at: null }) // photosLastSynced
-      .mockResolvedValueOnce({ last_synced_at: "2026-05-01T08:00:00.000Z" }) // remindersLastSynced
-      .mockResolvedValueOnce({ last_synced_at: "2026-05-01T07:00:00.000Z" }) // graveyardPlantsLastSynced
-      .mockResolvedValueOnce({ last_synced_at: null });                        // userPreferencesLastSynced
-
-    mockGetDatabase.mockResolvedValue({ getFirstAsync });
-
+  it("includes all synced entity counts and queue health metrics", async () => {
     const summary = await getBackupSummary("user-1");
 
-    expect(summary.pendingSyncUser).toBe(5);
-    expect(summary.failedSyncUser).toBe(4);
+    expect(summary.activePlants).toBe(2);
+    expect(summary.archivedPlants).toBe(1);
+    expect(summary.careLogTags).toBe(8);
+    expect(summary.plantStatusSnapshots).toBe(5);
+    expect(summary.specimenTags).toBe(2);
+    expect(summary.archiveCurationOverrides).toBe(1);
+    expect(summary.featureUsageRecords).toBe(4);
+    expect(summary.pendingSyncUser).toBe(10);
+    expect(summary.failedSyncUser).toBe(10);
     expect(summary.pendingSyncQueueAccount).toBe(5);
     expect(summary.failedSyncQueueAccount).toBe(1);
-    expect(summary.pendingSyncQueueDevice).toBe(7);
-    expect(summary.failedSyncQueueDevice).toBe(2);
-    expect(summary.syncEnabled).toBe(true);
-    expect(summary.tableLastSyncedAt.plants).toBe("2026-05-01T10:00:00.000Z");
-    expect(summary.tableLastSyncedAt.careLogs).toBe("2026-05-01T09:00:00.000Z");
-    expect(summary.tableLastSyncedAt.photos).toBeNull();
-    expect(summary.tableLastSyncedAt.careReminders).toBe("2026-05-01T08:00:00.000Z");
-    expect(summary.tableLastSyncedAt.graveyardPlants).toBe("2026-05-01T07:00:00.000Z");
-    expect(summary.tableLastSyncedAt.userPreferences).toBeNull();
+    expect(summary.abandonedSyncQueueAccount).toBe(1);
+    expect(summary.abandonedSyncQueueDevice).toBe(3);
+    expect(summary.lastSuccessfulSyncAt).toBe("2026-05-01T10:00:00.000Z");
+    expect(summary.tableLastSyncedAt.careLogTags).toBe(
+      "2026-05-01T09:00:00.000Z",
+    );
   });
 });

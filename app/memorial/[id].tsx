@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { MemorialEntrySheet } from "@/features/plants/components/MemorialEntrySheet";
 import { MemorialFilmstrip } from "@/features/plants/components/MemorialFilmstrip";
 import { MemorialFooter } from "@/features/plants/components/MemorialFooter";
@@ -11,6 +12,7 @@ import { MemorialHero } from "@/features/plants/components/MemorialHero";
 import { MemorialLesson } from "@/features/plants/components/MemorialLesson";
 import { MemorialStatsCard } from "@/features/plants/components/MemorialStatsCard";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
+import { useMemorialLayoutPreferences } from "@/features/plants/hooks/useMemorialLayoutPreferences";
 import { usePlant } from "@/features/plants/hooks/usePlant";
 import { useUpdateGraveyardMemorial } from "@/features/plants/hooks/useUpdateGraveyardMemorial";
 import { useAlert } from "@/hooks/useAlert";
@@ -47,8 +49,13 @@ export default function MemorialDetailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
 
+  const { user } = useAuth();
   const graveyardQuery = useGraveyard();
   const memorial = (graveyardQuery.data ?? []).find((entry) => entry.id === id) ?? null;
+  const layoutPreferences = useMemorialLayoutPreferences(user?.id);
+  const isFeatured =
+    memorial?.id != null &&
+    layoutPreferences.preferences?.featuredMemorialId === memorial.id;
 
   const plantQuery = usePlant(memorial?.plantId ?? "");
   const photos = plantQuery.data?.photos ?? [];
@@ -125,7 +132,31 @@ export default function MemorialDetailScreen() {
         {photos.length > 0 ? <MemorialFilmstrip photos={photos} /> : null}
 
         {memorial ? (
-          <MemorialFooter onEdit={() => setEditSheetOpen(true)} />
+          <MemorialFooter
+            onEdit={() => setEditSheetOpen(true)}
+            isFeatured={isFeatured}
+            featureLoading={layoutPreferences.setFeaturedMemorial.isPending}
+            onToggleFeatured={() => {
+              void layoutPreferences.setFeaturedMemorial
+                .mutateAsync(isFeatured ? null : memorial.id)
+                .then(() => {
+                  snackbar.success(
+                    isFeatured
+                      ? "Memorial removed from graveyard feature."
+                      : "Memorial featured on graveyard.",
+                  );
+                })
+                .catch(async (error) => {
+                  await alert.show({
+                    variant: "error",
+                    title: "Unable to update memorial layout",
+                    message:
+                      error instanceof Error ? error.message : "Try again.",
+                    primaryAction: { label: "Close", tone: "danger" },
+                  });
+                });
+            }}
+          />
         ) : null}
       </ScrollView>
     </SafeAreaView>

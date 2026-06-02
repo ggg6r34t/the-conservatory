@@ -1,6 +1,5 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 
-import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Link, useRouter } from "expo-router";
 import {
@@ -18,13 +17,17 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
-import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
+import { useCareLogsForPlantIds } from "@/features/care-logs/hooks/useCareLogsForPlantIds";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
 import { usePlants } from "@/features/plants/hooks/usePlants";
+import {
+  groupPlantsForAdvancedFilter,
+  isPremiumLibraryFilter,
+} from "@/features/plants/services/plantLibraryFilterService";
 import {
   buildPlantStatusMap,
   type PlantStatusMap,
@@ -33,6 +36,7 @@ import { usePlantStore } from "@/features/plants/stores/usePlantStore";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import { formatDueLabel } from "@/utils/dateFormatter";
 import type { BotanicalTokens } from "@/styles/tokens";
+import type { PlantLibraryFilter } from "@/types/ui";
 
 function formatMetaLabel(nextWateringDate: string | null) {
   return `NEXT WATER: ${formatDueLabel(nextWateringDate).toUpperCase()}`;
@@ -50,18 +54,73 @@ function chunkPlants(plants: PlantListItem[]): PlantRow[] {
   return rows;
 }
 
+type LibraryListItem =
+  | { type: "section"; key: string; title: string }
+  | { type: "row"; key: string; row: PlantRow };
+
+function buildLibraryListItems(
+  plants: PlantListItem[],
+  filter: PlantLibraryFilter,
+): LibraryListItem[] {
+  if (!isPremiumLibraryFilter(filter)) {
+    return chunkPlants(plants).map((row, index) => ({
+      type: "row",
+      key: `row-${index}`,
+      row,
+    }));
+  }
+
+  const items: LibraryListItem[] = [];
+
+  for (const section of groupPlantsForAdvancedFilter(plants, filter)) {
+    items.push({
+      type: "section",
+      key: `section-${section.title}`,
+      title: section.title,
+    });
+
+    chunkPlants(section.plants).forEach((row, index) => {
+      items.push({
+        type: "row",
+        key: `${section.title}-row-${index}`,
+        row,
+      });
+    });
+  }
+
+  return items;
+}
+
+function getLibraryCardMetaLabel(
+  plant: PlantListItem,
+  filter: PlantLibraryFilter,
+  nextWateringDate: string | null,
+) {
+  if (filter === "by-species" && plant.location?.trim()) {
+    return plant.location.trim().toUpperCase();
+  }
+
+  if (filter === "by-location") {
+    return plant.speciesName.toUpperCase();
+  }
+
+  return formatMetaLabel(nextWateringDate);
+}
+
 // ─── Memoized single plant card ────────────────────────────────────────────
 
 interface LibraryCardProps {
   plant: PlantListItem;
   plantStatusMap: PlantStatusMap;
   colors: BotanicalTokens["colors"];
+  filter: PlantLibraryFilter;
 }
 
 const LibraryCard = memo(function LibraryCard({
   plant,
   plantStatusMap,
   colors,
+  filter,
 }: LibraryCardProps) {
   const plantStatus = plantStatusMap.get(plant.id);
   const needsAttention = plantStatus?.healthState === "needs_attention";
@@ -117,7 +176,9 @@ const LibraryCard = memo(function LibraryCard({
               },
             ]}
           >
-            {formatMetaLabel(
+            {getLibraryCardMetaLabel(
+              plant,
+              filter,
               plantStatus?.effectiveNextWateringDate ?? null,
             )}
           </Text>
@@ -133,12 +194,14 @@ interface PlantRowItemProps {
   row: PlantRow;
   plantStatusMap: PlantStatusMap;
   colors: BotanicalTokens["colors"];
+  filter: PlantLibraryFilter;
 }
 
 const PlantRowItem = memo(function PlantRowItem({
   row,
   plantStatusMap,
   colors,
+  filter,
 }: PlantRowItemProps) {
   return (
     <View style={styles.galleryRow}>
@@ -148,6 +211,7 @@ const PlantRowItem = memo(function PlantRowItem({
           plant={plant}
           plantStatusMap={plantStatusMap}
           colors={colors}
+          filter={filter}
         />
       ))}
       {row.length === 1 ? <View style={styles.cardSpacer} /> : null}
@@ -167,14 +231,17 @@ export default function LibraryScreen() {
   const query = usePlantStore((state) => state.query);
   const setFilter = usePlantStore((state) => state.setFilter);
   const setQuery = usePlantStore((state) => state.setQuery);
+
+  useEffect(() => {
+    if (!isPremium && isPremiumLibraryFilter(filter)) {
+      setFilter("all");
+    }
+  }, [filter, isPremium, setFilter]);
+
   const plants = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
   const remindersQuery = useReminders();
   const plantIds = useMemo(() => plants.map((p) => p.id), [plants]);
-  const logsQuery = useQuery({
-    queryKey: ["care-logs", "library", plantIds.join("|")],
-    queryFn: () => listCareLogsForPlants(plantIds),
-    enabled: plantIds.length > 0,
-  });
+  const logsQuery = useCareLogsForPlantIds(plantIds, "library");
   const plantStatusMap = useMemo(
     () =>
       buildPlantStatusMap({
@@ -184,7 +251,10 @@ export default function LibraryScreen() {
       }),
     [logsQuery.data, plants, remindersQuery.data],
   );
-  const plantRows = useMemo(() => chunkPlants(plants), [plants]);
+  const libraryListItems = useMemo(
+    () => buildLibraryListItems(plants, filter),
+    [filter, plants],
+  );
 
   const ListHeader = useMemo(
     () => (
@@ -241,46 +311,63 @@ export default function LibraryScreen() {
           {[
             {
               label: "By Location",
+              value: "by-location" as const,
               premiumFeature: "advanced_library_filters" as const,
             },
             {
               label: "By Species",
+              value: "by-species" as const,
               premiumFeature: "advanced_library_filters" as const,
             },
-          ].map((option) => (
-            <Pressable
-              key={option.label}
-              onPress={() => {
-                if (!isPremium) {
-                  trackMonetizationEvent("upgrade_prompt_viewed", {
-                    feature: option.premiumFeature,
-                  });
-                  router.push("/premium");
-                }
-              }}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: colors.surfaceContainerHigh,
-                  opacity: isPremium ? 1 : 0.55,
-                },
-              ]}
-            >
-              <Text style={[styles.chipLabel, { color: colors.onSurface }]}>
-                {option.label}
-              </Text>
-              {!isPremium ? (
+          ].map((option) => {
+            const isActive = filter === option.value;
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => {
+                  if (!isPremium) {
+                    trackMonetizationEvent("upgrade_prompt_viewed", {
+                      feature: option.premiumFeature,
+                    });
+                    router.push("/premium");
+                    return;
+                  }
+
+                  setFilter(option.value);
+                }}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: isActive
+                      ? colors.tertiaryContainer
+                      : colors.surfaceContainerHigh,
+                    opacity: isPremium ? 1 : 0.55,
+                  },
+                ]}
+              >
                 <Text
                   style={[
                     styles.chipLabel,
-                    { color: colors.primary, marginLeft: 4 },
+                    {
+                      color: isActive ? colors.surfaceBright : colors.onSurface,
+                    },
                   ]}
                 >
-                  ✦
+                  {option.label}
                 </Text>
-              ) : null}
-            </Pressable>
-          ))}
+                {!isPremium ? (
+                  <Text
+                    style={[
+                      styles.chipLabel,
+                      { color: colors.primary, marginLeft: 4 },
+                    ]}
+                  >
+                    ✦
+                  </Text>
+                ) : null}
+              </Pressable>
+            );
+          })}
         </ScrollView>
       </View>
     ),
@@ -318,15 +405,22 @@ export default function LibraryScreen() {
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
       <FlatList
-        data={plantRows}
-        keyExtractor={(_, index) => `row-${index}`}
-        renderItem={({ item }) => (
-          <PlantRowItem
-            row={item}
-            plantStatusMap={plantStatusMap}
-            colors={colors}
-          />
-        )}
+        data={libraryListItems}
+        keyExtractor={(item) => item.key}
+        renderItem={({ item }) =>
+          item.type === "section" ? (
+            <Text style={[styles.sectionTitle, { color: colors.primary }]}>
+              {item.title}
+            </Text>
+          ) : (
+            <PlantRowItem
+              row={item.row}
+              plantStatusMap={plantStatusMap}
+              colors={colors}
+              filter={filter}
+            />
+          )
+        }
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={EmptyState}
         contentContainerStyle={[
@@ -378,6 +472,13 @@ const styles = StyleSheet.create({
   chipLabel: {
     fontFamily: "Manrope_700Bold",
     fontSize: 14,
+  },
+  sectionTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 24,
+    lineHeight: 30,
+    marginTop: 8,
+    marginBottom: 4,
   },
   galleryRow: {
     flexDirection: "row",

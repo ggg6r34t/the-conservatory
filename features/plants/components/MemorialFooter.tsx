@@ -6,9 +6,17 @@ import { useTheme } from "@/components/design-system/useTheme";
 
 interface MemorialFooterProps {
   onEdit: () => void;
+  onToggleFeatured?: () => void;
+  isFeatured?: boolean;
+  featureLoading?: boolean;
 }
 
-export function MemorialFooter({ onEdit }: MemorialFooterProps) {
+export function MemorialFooter({
+  onEdit,
+  onToggleFeatured,
+  isFeatured = false,
+  featureLoading = false,
+}: MemorialFooterProps) {
   const { colors, spacing } = useTheme();
 
   return (
@@ -38,6 +46,20 @@ export function MemorialFooter({ onEdit }: MemorialFooterProps) {
         textColor={colors.primary}
         onPress={onEdit}
       />
+      {onToggleFeatured ? (
+        <SecondaryButton
+          label={
+            featureLoading
+              ? "Saving..."
+              : isFeatured
+                ? "Featured on Graveyard"
+                : "Feature on Graveyard"
+          }
+          backgroundColor={colors.surfaceContainerLow}
+          textColor={colors.primary}
+          onPress={featureLoading ? undefined : onToggleFeatured}
+        />
+      ) : null}
     </View>
   );
 }

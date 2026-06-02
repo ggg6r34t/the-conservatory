@@ -9,6 +9,10 @@ import { DataBackupExportCard } from "@/features/profile/components/DataBackupEx
 import { DataBackupHeroCard } from "@/features/profile/components/DataBackupHeroCard";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useBackupStatus } from "@/features/profile/hooks/useBackupStatus";
+import {
+  getBackupSyncFailureMessage,
+  getBackupSyncSuccessMessage,
+} from "@/features/profile/services/backupSyncMessaging";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
@@ -29,21 +33,27 @@ export default function DataBackupScreen() {
     cloudSyncTitle,
     cloudSyncDescription,
     isSyncRunning,
+    remoteAvailability,
+    hasIssues,
+    hasPending,
   } = useBackupStatus();
 
   const handleSync = () => {
     syncMutation.mutate(undefined, {
       onSuccess: () => {
-        snackbar.success("Your conservatory backup has been refreshed.");
+        snackbar.success(
+          getBackupSyncSuccessMessage({
+            remoteCanSync: remoteAvailability.canSync,
+            hasIssues,
+            hasPending,
+          }),
+        );
       },
       onError: (error) => {
         void alert.show({
           variant: "error",
           title: "Backup update failed",
-          message:
-            error instanceof Error
-              ? error.message
-              : "We couldn't update your backup right now.",
+          message: getBackupSyncFailureMessage(error),
           primaryAction: { label: "Close", tone: "danger" },
         });
       },

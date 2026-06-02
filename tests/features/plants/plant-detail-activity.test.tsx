@@ -15,6 +15,10 @@ jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+jest.mock("@/features/billing/hooks/useSubscription", () => ({
+  useSubscription: () => ({ isPremium: false, tier: "free" }),
+}));
+
 jest.mock("expo-blur", () => ({
   BlurView: ({ children }: { children: React.ReactNode }) => children,
 }));

@@ -1,3 +1,4 @@
+import { pickArchiveBeforeAfterPhotos } from "@/features/ai/services/archivePhotoOrdering";
 import { requestArchiveCuration } from "@/features/ai/api/aiClient";
 import { withCuratedArchivePairSource } from "@/features/ai/schemas/aiMappers";
 import { parseArchiveCurationResponse } from "@/features/ai/schemas/aiValidators";
@@ -9,7 +10,13 @@ const ARCHIVE_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 export interface ArchiveCurationItem {
   plantId: string;
   plantName: string;
-  photos?: { id: string; uri: string }[];
+  photos?: {
+    id: string;
+    uri: string;
+    capturedAt?: string | null;
+    takenAt?: string | null;
+    createdAt?: string | null;
+  }[];
   photoUris: string[];
 }
 
@@ -44,8 +51,12 @@ export function curateArchiveLocally(items: ArchiveCurationItem[]) {
         return null;
       }
 
-      const beforePhoto = photos[photos.length - 1];
-      const afterPhoto = photos[0];
+      const pairing = pickArchiveBeforeAfterPhotos(photos);
+      if (!pairing) {
+        return null;
+      }
+
+      const { beforePhoto, afterPhoto } = pairing;
       const beforeUri = beforePhoto.uri;
       const afterUri = afterPhoto.uri;
       if (beforeUri === afterUri) {

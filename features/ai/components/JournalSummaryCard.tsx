@@ -1,7 +1,10 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
-import { getInsightSourceLabel } from "@/features/ai/services/insightSourcePresentation";
+import {
+  getInsightSourceDescription,
+  getInsightSourceLabel,
+} from "@/features/ai/services/insightSourcePresentation";
 import type { JournalMonthlySummary } from "@/features/ai/types/ai";
 
 export function JournalSummaryCard({
@@ -26,6 +29,9 @@ export function JournalSummaryCard({
       </Text>
       <Text style={[styles.source, { color: colors.onSurfaceVariant }]}>
         {getInsightSourceLabel(summary.source)}
+      </Text>
+      <Text style={[styles.sourceDetail, { color: colors.onSurfaceVariant }]}>
+        {getInsightSourceDescription(summary.source)}
       </Text>
     </View>
   );
@@ -60,5 +66,10 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     letterSpacing: 1.4,
     textTransform: "uppercase",
+  },
+  sourceDetail: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 11,
+    lineHeight: 16,
   },
 });

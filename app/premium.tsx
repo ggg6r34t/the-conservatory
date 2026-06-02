@@ -23,36 +23,37 @@ const PREMIUM_FEATURES = [
     icon: "heart-pulse",
     label: "AI Health Insights",
     detail:
-      "Unlimited AI analysis of each plant's health, growth signals, and care needs.",
+      "Unlimited AI analysis of each plant's health, growth signals, and care needs when Premium and AI services are enabled.",
   },
   {
     icon: "book-open-outline",
     label: "Journal Narratives",
     detail:
-      "Monthly AI-written stories of your care rituals, not just statistics.",
+      "Monthly AI-written stories of your care rituals when Premium and AI services are enabled.",
   },
   {
     icon: "image-multiple-outline",
     label: "Unlimited Photo History",
     detail:
-      "Full photo archive synced to the cloud. Your collection's story, preserved.",
+      "Progress photos are backed up to the cloud when Premium and cloud sync are active.",
   },
   {
     icon: "archive-star-outline",
     label: "Archive Curation",
     detail:
-      "AI automatically pairs before-and-after photos to reveal your plants' growth over time.",
+      "AI-enhanced before-and-after pairing is available when Premium and AI services are enabled.",
   },
   {
     icon: "cloud-sync-outline",
     label: "Full Cloud Backup",
-    detail: "Every photo and record backed up and accessible across devices.",
+    detail:
+      "Plants, care logs, reminders, and progress photos upload when Premium and cloud sync are active.",
   },
   {
     icon: "qrcode",
     label: "Specimen Tags",
     detail:
-      "Create and print botanical QR labels to bridge your physical and digital collection.",
+      "Create and print botanical QR labels to bridge your physical and digital collection with Premium.",
   },
 ];
 

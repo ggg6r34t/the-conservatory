@@ -49,7 +49,7 @@ export default function GrowthTimelineScreen() {
     getFloatingActionBottomOffset(insets.bottom) - insets.bottom;
 
   const timelineMoments = useMemo(
-    () => buildGrowthTimeline(plantQuery.data ?? null),
+    () => buildGrowthTimeline(plantQuery.data ?? null, { order: "desc" }),
     [plantQuery.data],
   );
 

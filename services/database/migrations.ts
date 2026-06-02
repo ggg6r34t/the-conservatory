@@ -1,6 +1,13 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
+export const CURRENT_SCHEMA_VERSION = 1;
+
 export const bootstrapSql = `
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version INTEGER PRIMARY KEY NOT NULL,
+  applied_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY NOT NULL,
   email TEXT NOT NULL UNIQUE,
@@ -716,4 +723,14 @@ CREATE INDEX IF NOT EXISTS idx_care_logs_user_id ON care_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_photos_user_id ON photos(user_id);
 CREATE INDEX IF NOT EXISTS idx_care_reminders_user_id ON care_reminders(user_id);
 `);
+
+  await recordSchemaMigrationVersion(database);
+}
+
+async function recordSchemaMigrationVersion(database: SQLiteDatabase) {
+  await database.runAsync(
+    `INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (?, ?);`,
+    CURRENT_SCHEMA_VERSION,
+    new Date().toISOString(),
+  );
 }

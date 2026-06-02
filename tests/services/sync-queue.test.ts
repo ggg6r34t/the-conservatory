@@ -142,6 +142,34 @@ class InMemorySyncQueueStorage implements SyncQueueStorage {
     );
   }
 
+  async markSkipped(id: string, reason: string, updatedAt: string) {
+    this.items = this.items.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            status: "skipped",
+            lastError: reason,
+            nextRetryAt: null,
+            updatedAt,
+          }
+        : item,
+    );
+  }
+
+  async markDeletedBeforeSync(id: string, reason: string, updatedAt: string) {
+    this.items = this.items.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            status: "deleted_before_sync",
+            lastError: reason,
+            nextRetryAt: null,
+            updatedAt,
+          }
+        : item,
+    );
+  }
+
   findByEntity(entity: string) {
     return this.items.find((item) => item.entity === entity);
   }
@@ -500,5 +528,33 @@ describe("sync queue abandoned path", () => {
     expect(item?.lastError).toBe("terminal failure");
     // attemptCount is incremented by markAbandoned
     expect(item?.attemptCount).toBe(10);
+  });
+
+  it("marks queue items deleted_before_sync when local row is missing on upsert", async () => {
+    const storage = new InMemorySyncQueueStorage();
+    const service = createSyncQueueService(storage);
+
+    await service.enqueueSyncOperation({
+      entity: "plants",
+      entityId: "plant-missing-1",
+      operation: "update",
+      nowIso: "2026-03-21T10:00:00.000Z",
+    });
+
+    const report = await service.syncPendingChanges({
+      nowIso: "2026-03-21T10:05:00.000Z",
+      processOperation: async () => ({
+        status: "deleted_before_sync" as const,
+        reason: "Local plants record was removed before changes could be uploaded to the cloud.",
+        reasonCode: "LOCAL_ROW_MISSING",
+      }),
+    });
+
+    expect(report.processed).toBe(1);
+    expect(report.successful).toBe(0);
+    expect(report.failed).toBe(0);
+    expect(report.deletedBeforeSync).toBe(1);
+    expect(storage.findByEntity("plants")?.status).toBe("deleted_before_sync");
+    expect(storage.findByEntity("plants")?.lastError).toMatch(/removed before/i);
   });
 });

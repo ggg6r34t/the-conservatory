@@ -3,6 +3,10 @@ import { supabase } from "@/config/supabase";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { getDatabase } from "@/services/database/sqlite";
 import type { SyncProcessResult, SyncQueueItem } from "@/services/database/sync";
+import {
+  buildDeletedBeforeSyncOutcome,
+  SYNC_OUTCOME_REASON_CODES,
+} from "@/services/database/syncOutcomes";
 import { getEntitlementState } from "@/services/entitlementState";
 import {
   getStorageAssetUrl,
@@ -501,7 +505,9 @@ async function deleteRemoteRecord(item: SyncQueueItem) {
   }
 }
 
-async function upsertRemoteRecord(item: SyncQueueItem) {
+async function upsertRemoteRecord(
+  item: SyncQueueItem,
+): Promise<SyncProcessResult> {
   if (!supabase) {
     throw new Error("Supabase client is unavailable.");
   }
@@ -509,7 +515,7 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
   if (item.entity === "plants") {
     const row = await loadPlantRecord(item.entityId);
     if (!row) {
-      return;
+      return buildDeletedBeforeSyncOutcome("plants");
     }
     const { error } = await supabase
       .from("plants")
@@ -523,7 +529,7 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
   if (item.entity === "user_preferences") {
     const row = await loadUserPreferencesRecord(item.entityId);
     if (!row) {
-      return;
+      return buildDeletedBeforeSyncOutcome("user_preferences");
     }
     const { error } = await supabase
       .from("user_preferences")
@@ -537,7 +543,7 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
   if (item.entity === "care_logs") {
     const row = await loadCareLogRecord(item.entityId);
     if (!row) {
-      return;
+      return buildDeletedBeforeSyncOutcome("care_logs");
     }
     const { error } = await supabase
       .from("care_logs")
@@ -551,7 +557,7 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
   if (item.entity === "care_reminders") {
     const row = await loadReminderRecord(item.entityId);
     if (!row) {
-      return;
+      return buildDeletedBeforeSyncOutcome("care_reminders");
     }
     const { error } = await supabase
       .from("care_reminders")
@@ -564,7 +570,9 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
 
   if (item.entity === "care_log_tags") {
     const row = await loadCareLogTagRecord(item.entityId);
-    if (!row) return;
+    if (!row) {
+      return buildDeletedBeforeSyncOutcome("care_log_tags");
+    }
     const { error } = await supabase
       .from("care_log_tags")
       .upsert(row, { onConflict: "id" });
@@ -574,7 +582,9 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
 
   if (item.entity === "plant_status_snapshots") {
     const row = await loadStatusSnapshotRecord(item.entityId);
-    if (!row) return;
+    if (!row) {
+      return buildDeletedBeforeSyncOutcome("plant_status_snapshots");
+    }
     const { error } = await supabase
       .from("plant_status_snapshots")
       .upsert(row, { onConflict: "id" });
@@ -584,7 +594,9 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
 
   if (item.entity === "specimen_tags") {
     const row = await loadSpecimenTagRecord(item.entityId);
-    if (!row) return;
+    if (!row) {
+      return buildDeletedBeforeSyncOutcome("specimen_tags");
+    }
     const { error } = await supabase
       .from("specimen_tags")
       .upsert(row, { onConflict: "id" });
@@ -594,7 +606,9 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
 
   if (item.entity === "archive_curation_overrides") {
     const row = await loadArchiveOverrideRecord(item.entityId);
-    if (!row) return;
+    if (!row) {
+      return buildDeletedBeforeSyncOutcome("archive_curation_overrides");
+    }
     const { error } = await supabase
       .from("archive_curation_overrides")
       .upsert(row, { onConflict: "id" });
@@ -610,12 +624,13 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
       return {
         status: "deferred" as const,
         reason: PREMIUM_PHOTO_BACKUP_DEFERRED_REASON,
+        reasonCode: SYNC_OUTCOME_REASON_CODES.PREMIUM_PHOTO_DEFERRED,
       };
     }
     const localRow = await loadPhotoRecord(item.entityId);
     const row = await uploadPhotoAsset(localRow);
     if (!row) {
-      return;
+      return buildDeletedBeforeSyncOutcome("photos");
     }
     const { error } = await supabase.from("photos").upsert(
       {
@@ -646,7 +661,7 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
   if (item.entity === "graveyard_plants") {
     const row = await loadGraveyardRecord(item.entityId);
     if (!row) {
-      return;
+      return buildDeletedBeforeSyncOutcome("graveyard_plants");
     }
     const { error } = await supabase
       .from("graveyard_plants")
@@ -661,7 +676,9 @@ async function upsertRemoteRecord(item: SyncQueueItem) {
     const row = await mergeFeatureUsageRecordWithRemote(
       await loadFeatureUsageRecord(item.entityId),
     );
-    if (!row) return;
+    if (!row) {
+      return buildDeletedBeforeSyncOutcome("feature_usage");
+    }
     const { error } = await supabase
       .from("feature_usage")
       .upsert(row, { onConflict: "id" });
@@ -684,6 +701,13 @@ export async function processSyncQueueItemWithSupabase(
     }
 
     if (result?.status === "deferred") {
+      return result;
+    }
+
+    if (
+      result?.status === "deleted_before_sync" ||
+      result?.status === "skipped"
+    ) {
       return result;
     }
 

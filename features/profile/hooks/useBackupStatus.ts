@@ -10,6 +10,7 @@ import {
 } from "@/features/profile/api/profileClient";
 import { useUserDataSyncState } from "@/features/profile/hooks/useUserDataSyncState";
 import { deriveCloudSyncStatus } from "@/features/profile/services/cloudSyncStatusService";
+import { deriveSyncHealth } from "@/features/profile/services/syncHealthService";
 import { invalidateBackupQueries } from "@/features/profile/utils/invalidateBackupQueries";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
@@ -81,19 +82,9 @@ export function useBackupStatus() {
     );
   }, [backendConfiguration.mode, network.isOffline, remoteAvailabilityQuery.data]);
 
-  const hasIssues = Boolean(
-    summary &&
-      (summary.failedSyncUser > 0 ||
-        summary.failedSyncQueueAccount > 0 ||
-        summary.failedSyncQueueDevice > 0),
-  );
-  const hasPending = Boolean(
-    summary &&
-      (summary.pendingSyncUser > 0 ||
-        summary.pendingSyncQueueAccount > 0 ||
-        summary.pendingSyncQueueDevice > 0 ||
-        summary.processingSync > 0),
-  );
+  const syncHealth = useMemo(() => deriveSyncHealth(summary), [summary]);
+  const hasIssues = syncHealth.hasIssues;
+  const hasPending = syncHealth.hasPending;
   const autoSyncEnabled = settingsQuery.data?.autoSyncEnabled ?? true;
   const isSyncRunning = syncRuntime.isRunning || syncMutation.isPending;
   const cloudSyncStatus = useMemo(
@@ -147,6 +138,7 @@ export function useBackupStatus() {
     overviewSupportingLabel: cloudSyncStatus.statusDetail,
     hasIssues,
     hasPending,
+    syncHealth,
     canSync:
       Boolean(user?.id) && remoteAvailability.canSync && !isSyncRunning,
     canToggleAutoSync: Boolean(user?.id),

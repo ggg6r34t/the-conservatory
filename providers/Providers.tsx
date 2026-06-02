@@ -14,11 +14,19 @@ import {
 } from "@expo-google-fonts/noto-serif";
 
 import { BotanicalThemeProvider } from "@/components/design-system/Theme";
+import { DatabaseBootstrapGate } from "@/components/feedback/DatabaseBootstrapGate";
+import { ReleaseConfigGate } from "@/components/feedback/ReleaseConfigGate";
+import { SyncAutoFailureNotifier } from "@/components/feedback/SyncAutoFailureNotifier";
 import { AlertProvider } from "@/providers/AlertProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { SnackbarProvider } from "@/providers/SnackbarProvider";
 import { BillingBootstrapProvider } from "@/providers/BillingBootstrapProvider";
 import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
+import {
+  markDatabaseBootstrapFailed,
+  markDatabaseBootstrapLoading,
+  markDatabaseBootstrapReady,
+} from "@/services/database/databaseBootstrap";
 import { initializeDatabase } from "@/services/database/sqlite";
 
 export function Providers({ children }: PropsWithChildren) {
@@ -33,7 +41,14 @@ export function Providers({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (loaded) {
-      initializeDatabase().catch(() => undefined);
+      markDatabaseBootstrapLoading();
+      initializeDatabase()
+        .then(() => {
+          markDatabaseBootstrapReady();
+        })
+        .catch((error) => {
+          markDatabaseBootstrapFailed(error);
+        });
     }
   }, [loaded]);
 
@@ -48,9 +63,16 @@ export function Providers({ children }: PropsWithChildren) {
           <AlertProvider>
             <SnackbarProvider>
               <QueryProvider>
-                <SyncBootstrapProvider>
-                  <BillingBootstrapProvider>{children}</BillingBootstrapProvider>
-                </SyncBootstrapProvider>
+                <DatabaseBootstrapGate>
+                  <ReleaseConfigGate>
+                    <SyncBootstrapProvider>
+                      <BillingBootstrapProvider>
+                        <SyncAutoFailureNotifier />
+                        {children}
+                      </BillingBootstrapProvider>
+                    </SyncBootstrapProvider>
+                  </ReleaseConfigGate>
+                </DatabaseBootstrapGate>
               </QueryProvider>
             </SnackbarProvider>
           </AlertProvider>

@@ -87,7 +87,7 @@ export function deriveCloudSyncStatus(
     return {
       statusTitle: "Needs attention",
       statusDetail:
-        "Some sync work is still recoverable, but it needs another clean pass before cloud durability looks healthy again.",
+        "Some sync work failed or reached an unrecoverable state and needs review in Backup Repair before cloud durability looks healthy again.",
       statusValue: "Retry needed",
       photoSyncAvailable,
       photoSyncDetail,
@@ -120,7 +120,7 @@ export function deriveCloudSyncStatus(
     return {
       statusTitle: "Auto sync is on",
       statusDetail:
-        "Cloud backup is enabled and the latest observed sync completed successfully.",
+        "Cloud backup is enabled. The latest observed sync timestamp is recorded below, but open Backup Details to review queue coverage.",
       statusValue: formatLastSuccessfulSync(input.lastSuccessfulSyncAt),
       photoSyncAvailable,
       photoSyncDetail,

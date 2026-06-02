@@ -11,7 +11,9 @@ export type SyncStatus =
   | "processing"
   | "failed"
   | "completed"
-  | "abandoned";
+  | "abandoned"
+  | "skipped"
+  | "deleted_before_sync";
 
 export interface SyncQueueItem {
   id: string;
@@ -54,6 +56,12 @@ export interface SyncQueueStorage {
     errorMessage: string,
     updatedAt: string,
   ): Promise<void>;
+  markSkipped(id: string, reason: string, updatedAt: string): Promise<void>;
+  markDeletedBeforeSync(
+    id: string,
+    reason: string,
+    updatedAt: string,
+  ): Promise<void>;
 }
 
 export type SyncProcessResult =
@@ -61,6 +69,17 @@ export type SyncProcessResult =
   | {
       status: "deferred";
       reason: string;
+      reasonCode?: string;
+    }
+  | {
+      status: "deleted_before_sync";
+      reason: string;
+      reasonCode: string;
+    }
+  | {
+      status: "skipped";
+      reason: string;
+      reasonCode: string;
     };
 
 const PROCESSING_STALE_TIMEOUT_MS = 5 * 60 * 1000;
@@ -256,6 +275,36 @@ class SQLiteSyncQueueStorage implements SyncQueueStorage {
       id,
     );
   }
+
+  async markSkipped(id: string, reason: string, updatedAt: string) {
+    const database = await getDatabase();
+    await database.runAsync(
+      `UPDATE sync_queue
+       SET status = 'skipped',
+           last_error = ?,
+           next_retry_at = NULL,
+           updated_at = ?
+       WHERE id = ?;`,
+      reason,
+      updatedAt,
+      id,
+    );
+  }
+
+  async markDeletedBeforeSync(id: string, reason: string, updatedAt: string) {
+    const database = await getDatabase();
+    await database.runAsync(
+      `UPDATE sync_queue
+       SET status = 'deleted_before_sync',
+           last_error = ?,
+           next_retry_at = NULL,
+           updated_at = ?
+       WHERE id = ?;`,
+      reason,
+      updatedAt,
+      id,
+    );
+  }
 }
 
 function computeRetryAt(attemptCount: number, nowIso: string) {
@@ -328,6 +377,8 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
       let successful = 0;
       let failed = 0;
       let deferred = 0;
+      let skipped = 0;
+      let deletedBeforeSync = 0;
 
       for (const item of queue) {
         const startedAt = new Date().toISOString();
@@ -335,15 +386,37 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
 
         try {
           const result = await processOperation(item);
+          const finishedAt = new Date().toISOString();
           if (result?.status === "deferred") {
-            await storage.markDeferred(
+            await storage.markDeferred(item.id, result.reason, finishedAt);
+            deferred += 1;
+          } else if (result?.status === "deleted_before_sync") {
+            await storage.markDeletedBeforeSync(
               item.id,
               result.reason,
-              new Date().toISOString(),
+              finishedAt,
             );
-            deferred += 1;
+            deletedBeforeSync += 1;
+            logger.info("sync.item_deleted_before_sync", {
+              entity: item.entity,
+              entityId: item.entityId,
+              reasonCode: result.reasonCode,
+            });
+            trackMonetizationEvent("sync_item_deleted_before_sync", {
+              entity: item.entity,
+              entityId: item.entityId,
+              reasonCode: result.reasonCode,
+            });
+          } else if (result?.status === "skipped") {
+            await storage.markSkipped(item.id, result.reason, finishedAt);
+            skipped += 1;
+            logger.info("sync.item_skipped", {
+              entity: item.entity,
+              entityId: item.entityId,
+              reasonCode: result.reasonCode,
+            });
           } else {
-            await storage.markCompleted(item.id, new Date().toISOString());
+            await storage.markCompleted(item.id, finishedAt);
             successful += 1;
           }
         } catch (error) {
@@ -387,6 +460,8 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
         successful,
         failed,
         deferred,
+        skipped,
+        deletedBeforeSync,
         remaining,
       };
     },

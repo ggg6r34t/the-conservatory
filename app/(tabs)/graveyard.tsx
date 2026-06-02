@@ -15,11 +15,16 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
 import { MemorialEntrySheet } from "@/features/plants/components/MemorialEntrySheet";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
+import { useMemorialLayoutPreferences } from "@/features/plants/hooks/useMemorialLayoutPreferences";
 import { useUpdateGraveyardMemorial } from "@/features/plants/hooks/useUpdateGraveyardMemorial";
-import { selectMemorialRoles } from "@/features/plants/services/memorialSelectionService";
+import {
+  applyMemorialLayoutPreferences,
+  selectMemorialRoles,
+} from "@/features/plants/services/memorialSelectionService";
 import { useAlert } from "@/hooks/useAlert";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import { useSnackbar } from "@/hooks/useSnackbar";
@@ -94,7 +99,9 @@ export default function GraveyardScreen() {
   const router = useRouter();
   const alert = useAlert();
   const snackbar = useSnackbar();
+  const { user } = useAuth();
   const graveyardQuery = useGraveyard();
+  const layoutPreferences = useMemorialLayoutPreferences(user?.id);
   const updateMemorial = useUpdateGraveyardMemorial();
   const { onRefresh, refreshing } = usePullToRefreshSync();
   const memorials = useMemo(
@@ -108,7 +115,18 @@ export default function GraveyardScreen() {
     reflectionMemorial,
     tributeMemorial,
     compactMemorials,
-  } = useMemo(() => selectMemorialRoles(memorials), [memorials]);
+  } = useMemo(() => {
+    const base = selectMemorialRoles(memorials);
+    if (!layoutPreferences.preferences) {
+      return base;
+    }
+
+    return applyMemorialLayoutPreferences(
+      base,
+      layoutPreferences.preferences,
+      memorials,
+    );
+  }, [layoutPreferences.preferences, memorials]);
   const compactMemorial = compactMemorials[0] ?? null;
   const tributeCompanion = compactMemorials[1] ?? null;
   const hasMemorials = memorials.length > 0;

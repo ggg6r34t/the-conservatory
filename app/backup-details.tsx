@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
@@ -6,6 +7,11 @@ import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useBackupStatus } from "@/features/profile/hooks/useBackupStatus";
+import {
+  getBackupSyncFailureMessage,
+  getBackupSyncSuccessMessage,
+} from "@/features/profile/services/backupSyncMessaging";
+import { getSyncQueueDiagnostics } from "@/features/profile/services/syncDiagnosticsService";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
@@ -40,22 +46,30 @@ export default function BackupDetailsScreen() {
   const router = useRouter();
   const alert = useAlert();
   const snackbar = useSnackbar();
-  const { canSync, remoteAvailability, summary, syncMutation } =
+  const { canSync, remoteAvailability, summary, syncMutation, hasIssues, hasPending } =
     useBackupStatus();
+  const queueDiagnosticsQuery = useQuery({
+    queryKey: ["sync-queue-diagnostics"],
+    queryFn: getSyncQueueDiagnostics,
+  });
+  const queueDiagnostics = queueDiagnosticsQuery.data;
 
   const handleSync = () => {
     syncMutation.mutate(undefined, {
       onSuccess: () => {
-        snackbar.success("Your local backup summary has been refreshed.");
+        snackbar.success(
+          getBackupSyncSuccessMessage({
+            remoteCanSync: remoteAvailability.canSync,
+            hasIssues,
+            hasPending,
+          }),
+        );
       },
       onError: (error) => {
         void alert.show({
           variant: "error",
           title: "Backup update failed",
-          message:
-            error instanceof Error
-              ? error.message
-              : "We couldn't update your backup right now.",
+          message: getBackupSyncFailureMessage(error),
           primaryAction: { label: "Close", tone: "danger" },
         });
       },
@@ -122,6 +136,20 @@ export default function BackupDetailsScreen() {
             <BackupMetric label="Photos" value={summary.photos} />
             <BackupMetric label="Care logs" value={summary.careLogs} />
             <BackupMetric label="Reminders" value={summary.reminders} />
+            <BackupMetric label="Care log tags" value={summary.careLogTags} />
+            <BackupMetric
+              label="Status snapshots"
+              value={summary.plantStatusSnapshots}
+            />
+            <BackupMetric label="Specimen tags" value={summary.specimenTags} />
+            <BackupMetric
+              label="Archive overrides"
+              value={summary.archiveCurationOverrides}
+            />
+            <BackupMetric
+              label="Local usage records"
+              value={summary.featureUsageRecords}
+            />
             <BackupMetric
               label="Records waiting to save"
               value={summary.pendingSyncUser}
@@ -147,6 +175,13 @@ export default function BackupDetailsScreen() {
               value={summary.failedSyncQueueDevice}
             />
             <BackupMetric
+              label="Unrecoverable queue items"
+              value={
+                summary.abandonedSyncQueueAccount +
+                summary.abandonedSyncQueueDevice
+              }
+            />
+            <BackupMetric
               label="Currently in progress"
               value={summary.processingSync}
             />
@@ -154,6 +189,24 @@ export default function BackupDetailsScreen() {
               label="Recently completed"
               value={summary.completedSync}
             />
+            {queueDiagnostics && queueDiagnostics.deletedBeforeSync > 0 ? (
+              <BackupMetric
+                label="Removed before upload"
+                value={queueDiagnostics.deletedBeforeSync}
+              />
+            ) : null}
+            {queueDiagnostics && queueDiagnostics.skipped > 0 ? (
+              <BackupMetric
+                label="Skipped by sync"
+                value={queueDiagnostics.skipped}
+              />
+            ) : null}
+            {queueDiagnostics && queueDiagnostics.deferred > 0 ? (
+              <BackupMetric
+                label="Deferred for retry"
+                value={queueDiagnostics.deferred}
+              />
+            ) : null}
           </View>
         </View>
       ) : null}

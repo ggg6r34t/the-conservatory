@@ -4,15 +4,17 @@ import { useQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "@/config/constants";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { listCareLogsForPlants } from "@/features/care-logs/api/careLogsClient";
+import { listCareLogsForPlantsSince } from "@/features/care-logs/api/careLogsClient";
 import {
   listPhotosForPlants,
   listPlants,
 } from "@/features/plants/api/plantsClient";
 import { buildMonthlyHighlights } from "@/features/journal/services/monthlyHighlightsService";
+import { getMonthlyHighlightsSinceIso } from "@/features/journal/services/monthlyHighlightsWindow";
 
 export function useMonthlyHighlights() {
   const { user } = useAuth();
+  const sinceIso = useMemo(() => getMonthlyHighlightsSinceIso(), []);
 
   const plantsQuery = useQuery({
     queryKey: [...queryKeys.plants, "monthly-highlights", "all"],
@@ -36,13 +38,14 @@ export function useMonthlyHighlights() {
       listPhotosForPlants({
         userId: user!.id,
         plantIds,
+        sinceCapturedAt: sinceIso,
       }),
   });
 
   const logsQuery = useQuery({
-    queryKey: ["care-logs", "monthly-highlights", user?.id ?? "anonymous", plantIds.join("|")],
+    queryKey: ["care-logs", "monthly-highlights", user?.id ?? "anonymous", plantIds.join("|"), sinceIso],
     enabled: Boolean(user?.id) && plantIds.length > 0,
-    queryFn: () => listCareLogsForPlants(plantIds),
+    queryFn: () => listCareLogsForPlantsSince(plantIds, sinceIso),
   });
 
   const photos = useMemo(() => photosQuery.data ?? [], [photosQuery.data]);

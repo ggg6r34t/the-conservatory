@@ -67,7 +67,7 @@ describe("Premium subscription screens", () => {
   it("opens the dedicated plan selector from the membership card", () => {
     renderWithProviders(<PremiumScreen />);
 
-    fireEvent.press(screen.getByText("Change Plan"));
+    fireEvent.press(screen.getByText("View Subscription Plans"));
 
     expect(mockPush).toHaveBeenCalledWith("/subscription-plans");
   });
