@@ -1,7 +1,7 @@
-import * as Sentry from "@sentry/react-native";
-
 import { env } from "@/config/env";
 import { trackEvent } from "@/services/analytics/analyticsService";
+
+import { getSentryRuntime } from "./sentryRuntime";
 
 export async function measureAsync<T>(
   name: string,
@@ -23,7 +23,8 @@ export async function measureAsync<T>(
     }
   };
 
-  if (!env.sentryDsn) {
+  const Sentry = getSentryRuntime();
+  if (!env.sentryDsn || !Sentry) {
     return run();
   }
 

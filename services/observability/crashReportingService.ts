@@ -1,8 +1,9 @@
 import type { ComponentType } from "react";
-import * as Sentry from "@sentry/react-native";
 
 import { env } from "@/config/env";
 import { logger } from "@/utils/logger";
+
+import { getSentryRuntime, wrapWithSentryRuntime } from "./sentryRuntime";
 
 export type CrashReportingMode = "disabled" | "active";
 
@@ -13,12 +14,13 @@ export function getCrashReportingMode(): CrashReportingMode {
 }
 
 export function initializeCrashReporting() {
-  if (initialized || !env.sentryDsn) {
+  const Sentry = getSentryRuntime();
+  if (initialized || !Sentry) {
     return;
   }
 
   Sentry.init({
-    dsn: env.sentryDsn,
+    dsn: env.sentryDsn!,
     enabled: true,
     debug: __DEV__,
     tracesSampleRate: env.isProductionBuild ? 0.2 : 1,
@@ -33,7 +35,8 @@ export function initializeCrashReporting() {
 }
 
 export function setCrashReportingUser(user: { id: string; email?: string | null }) {
-  if (getCrashReportingMode() !== "active") {
+  const Sentry = getSentryRuntime();
+  if (!Sentry) {
     return;
   }
 
@@ -44,7 +47,8 @@ export function setCrashReportingUser(user: { id: string; email?: string | null 
 }
 
 export function clearCrashReportingUser() {
-  if (getCrashReportingMode() !== "active") {
+  const Sentry = getSentryRuntime();
+  if (!Sentry) {
     return;
   }
 
@@ -55,7 +59,8 @@ export function captureException(
   error: unknown,
   context?: Record<string, string | number | boolean | null>,
 ) {
-  if (getCrashReportingMode() !== "active") {
+  const Sentry = getSentryRuntime();
+  if (!Sentry) {
     if (__DEV__) {
       logger.warn("observability.crash_reporting_skipped", {
         message: error instanceof Error ? error.message : String(error),
@@ -73,9 +78,5 @@ export function captureException(
 export function wrapWithCrashReporting<T extends ComponentType<unknown>>(
   component: T,
 ) {
-  if (getCrashReportingMode() !== "active") {
-    return component;
-  }
-
-  return Sentry.wrap(component);
+  return wrapWithSentryRuntime(component);
 }
