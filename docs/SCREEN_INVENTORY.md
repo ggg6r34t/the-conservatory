@@ -18,7 +18,25 @@ This file tracks the app's current route screens and route-adjacent files so pro
 2. `/profile`
    Screen: Profile
    File: `app/profile.tsx`
-   Notes: Main account hub with collection, subscription, preference, account, and legal entry points.
+   Notes: Main account hub with collection, subscription, preference, account, legal, and product feedback entry points.
+
+27. `/feature-requests`
+    Screen: Product Feedback Hub
+    File: `app/feature-requests/index.tsx`
+    Notes: Browse, search, vote, and submit feature requests.
+
+28. `/feature-requests/new`
+    Screen: Submit Feature Request
+    File: `app/feature-requests/new.tsx`
+
+29. `/feature-requests/[id]`
+    Screen: Feature Request Detail
+    File: `app/feature-requests/[id].tsx`
+
+30. `/roadmap`
+    Screen: Product Roadmap
+    File: `app/roadmap.tsx`
+    Notes: Planned, in progress, and recently released roadmap items.
 
 ## Primary Tab Screens
 

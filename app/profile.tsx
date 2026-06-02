@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useRouter, type Href } from "expo-router";
 import {
   Image,
   Pressable,
@@ -22,6 +22,7 @@ import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { useCollectionStreak } from "@/features/plants/hooks/useCollectionStreak";
 import { StreakBadge } from "@/features/plants/components/StreakBadge";
+import { useProductFeedbackNotifications } from "@/features/product-feedback/hooks/useProductFeedbackNotifications";
 import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
 import {
   getProfileDisplayEmail,
@@ -136,6 +137,7 @@ export default function ProfileScreen() {
   const themeLabel = formatThemeLabel(settingsQuery.data?.preferredTheme);
   const { currentStreak: streakDays, refetch: refetchStreak } =
     useCollectionStreak();
+  useProductFeedbackNotifications();
 
   useFocusEffect(
     useCallback(() => {
@@ -446,6 +448,11 @@ export default function ProfileScreen() {
               { backgroundColor: colors.surfaceContainerLowest },
             ]}
           >
+            <ProfileRow
+              icon="lightbulb-on-outline"
+              label="Request a Feature"
+              onPress={() => router.push("/feature-requests" as Href)}
+            />
             <ProfileRow
               icon="star-circle-outline"
               label="Manage Subscription"

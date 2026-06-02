@@ -205,6 +205,10 @@ function RootNavigator({
       <Stack.Screen name="subscription-plans" options={drillInScreenOptions} />
       <Stack.Screen name="data-backup" options={drillInScreenOptions} />
       <Stack.Screen name="interface-theme" options={drillInScreenOptions} />
+      <Stack.Screen name="feature-requests/index" options={drillInScreenOptions} />
+      <Stack.Screen name="feature-requests/new" options={drillInScreenOptions} />
+      <Stack.Screen name="feature-requests/[id]" options={drillInScreenOptions} />
+      <Stack.Screen name="roadmap" options={drillInScreenOptions} />
       <Stack.Screen name="plant/add" options={drillInScreenOptions} />
       <Stack.Screen name="plant/[id]" options={drillInScreenOptions} />
       <Stack.Screen name="plant/[id]/edit" options={drillInScreenOptions} />

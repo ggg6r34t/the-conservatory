@@ -99,6 +99,15 @@ Current account-safety drill-ins:
 - `/privacy-security`
 - `/change-password`
 
+### Product Feedback
+
+Current product-feedback drill-ins:
+
+- Profile row opens `/feature-requests`
+- `/feature-requests/new` submits a new idea
+- `/feature-requests/[id]` shows request detail, votes, updates, and release notes
+- `/roadmap` shows planned, in-progress, and released roadmap items
+
 ## Navigation Rules
 
 ### Do

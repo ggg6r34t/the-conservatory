@@ -1,6 +1,7 @@
 import { env } from "@/config/env";
 import { supabase } from "@/config/supabase";
 import { syncOnboardingStatusToAccount } from "@/features/onboarding/services/onboardingStorage";
+import { clearFeatureRequestCache } from "@/features/product-feedback/services/featureRequestCacheService";
 import {
   clearSession,
   readSession,
@@ -821,6 +822,7 @@ export async function logout() {
 }
 
 async function clearAllLocalUserData() {
+  await clearFeatureRequestCache().catch(() => undefined);
   const database = await getDatabase();
   await database.execAsync(`
     DELETE FROM care_log_tags;

@@ -12,4 +12,9 @@ export const queryKeys = {
   careLogs: (plantId: string) => ["care-logs", plantId] as const,
   reminders: ["reminders"] as const,
   preferences: ["preferences"] as const,
+  featureRequests: ["feature-requests"] as const,
+  featureRequest: (id: string) => ["feature-requests", id] as const,
+  roadmap: ["roadmap"] as const,
+  productFeedbackNotifications: ["product-feedback-notifications"] as const,
+  betaProgram: ["beta-program"] as const,
 };
