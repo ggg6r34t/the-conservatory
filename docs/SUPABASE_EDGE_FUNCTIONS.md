@@ -28,14 +28,22 @@ Configure at least one model provider API key before enabling AI functions. Spec
 
 ## Database Migration
 
-Apply the Edge AI usage migration before enabling the functions:
+Apply migrations in filename order before enabling functions:
 
 ```bash
 supabase db push
 supabase migration up
 ```
 
-The migration creates `public.edge_ai_usage` and `public.consume_ai_usage`, which are used by all AI Edge Functions for server-side daily and monthly quota enforcement.
+Required migrations:
+
+1. `20260401000000_baseline_conservatory_schema_rls.sql` — core tables, RLS, private `photos` storage policies
+2. `20260507000000_edge_ai_usage.sql` — AI quota RPC
+3. `20260602120000_feature_requests.sql` — feature request tables + RLS
+4. `20260602140000_edge_ai_observability.sql` — AI request telemetry log
+5. `20260602150000_security_hardening.sql` — `feature_usage` RLS, AI table lockdown, function grants
+
+The canonical schema source remains `database/schema.sql` (kept in sync with the baseline migration).
 
 For local verification, run Supabase locally, apply migrations, and confirm the RPC accepts a test user id:
 

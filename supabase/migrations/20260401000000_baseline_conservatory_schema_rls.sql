@@ -1,5 +1,5 @@
--- Canonical remote schema. Supabase migration mirror:
--- supabase/migrations/20260401000000_baseline_conservatory_schema_rls.sql
+-- Canonical Conservatory remote schema + RLS (mirrors database/schema.sql).
+-- Idempotent for fresh Supabase projects and alignment with production.
 
 create extension if not exists pgcrypto;
 create extension if not exists citext;
@@ -214,6 +214,24 @@ alter table public.plant_status_snapshots enable row level security;
 alter table public.specimen_tags enable row level security;
 alter table public.archive_curation_overrides enable row level security;
 alter table public.graveyard_plants enable row level security;
+
+drop policy if exists "users select own or admin" on public.users;
+drop policy if exists "users insert own or admin" on public.users;
+drop policy if exists "users update own or admin" on public.users;
+drop policy if exists "user_preferences own or admin" on public.user_preferences;
+drop policy if exists "plants own or admin" on public.plants;
+drop policy if exists "photos own or admin" on public.photos;
+drop policy if exists "care_logs own or admin" on public.care_logs;
+drop policy if exists "care_log_tags own or admin" on public.care_log_tags;
+drop policy if exists "care_reminders own or admin" on public.care_reminders;
+drop policy if exists "plant_status_snapshots own or admin" on public.plant_status_snapshots;
+drop policy if exists "specimen_tags own or admin" on public.specimen_tags;
+drop policy if exists "archive_curation_overrides own or admin" on public.archive_curation_overrides;
+drop policy if exists "graveyard own or admin" on public.graveyard_plants;
+drop policy if exists "photo objects own folder read" on storage.objects;
+drop policy if exists "photo objects own folder write" on storage.objects;
+drop policy if exists "photo objects own folder update" on storage.objects;
+drop policy if exists "photo objects own folder delete" on storage.objects;
 
 create policy "users select own or admin" on public.users for select using (auth.uid() = id or public.is_admin());
 create policy "users insert own or admin" on public.users for insert with check (auth.uid() = id or public.is_admin());

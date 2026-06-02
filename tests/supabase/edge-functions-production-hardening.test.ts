@@ -184,7 +184,11 @@ describe("Supabase Edge Function production hardening", () => {
     expect(source).toContain("createEdgeContext");
     expect(source).toContain("logEdgeEvent");
     expect(source).toContain("safeErrorResponse");
+    expect(source).toContain("purgeUserStorageObjects");
     expect(source).toContain("auth.admin.deleteUser(context.userId)");
+    expect(source.indexOf("purgeUserStorageObjects")).toBeLessThan(
+      source.indexOf("auth.admin.deleteUser"),
+    );
     expect(source).not.toContain("auth.getUser(jwt)");
     expect(source).not.toContain("Missing authorization token.");
   });

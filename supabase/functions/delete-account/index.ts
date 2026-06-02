@@ -1,3 +1,4 @@
+import { purgeUserStorageObjects } from "../_shared/accountDeletion.ts";
 import {
   createEdgeContext,
   EdgeFunctionError,
@@ -16,6 +17,15 @@ Deno.serve(async (request) => {
   let context;
   try {
     context = await createEdgeContext(request, FUNCTION_NAME);
+
+    const storageResult = await purgeUserStorageObjects(
+      context.supabaseAdmin,
+      context.userId,
+    );
+    logEdgeEvent(context, "storage_purged", {
+      removedObjects: storageResult.removed,
+    });
+
     const { error: deleteError } =
       await context.supabaseAdmin.auth.admin.deleteUser(context.userId);
 
@@ -28,7 +38,7 @@ Deno.serve(async (request) => {
     }
 
     logEdgeEvent(context, "request_success", { status: 200 });
-    return jsonResponse({ success: true });
+    return jsonResponse({ success: true, storageRemoved: storageResult.removed });
   } catch (error) {
     return safeErrorResponse(error, context);
   }
