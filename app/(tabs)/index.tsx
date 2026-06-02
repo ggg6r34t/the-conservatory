@@ -17,8 +17,8 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
 import { DashboardInsightCard } from "@/features/ai/components/DashboardInsightCard";
 import { useDashboardInsight } from "@/features/ai/hooks/useDashboardInsight";
-import { calculateCurrentStreakDays } from "@/features/ai/services/streakNudgeService";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useCareLogsForPlantIds } from "@/features/care-logs/hooks/useCareLogsForPlantIds";
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
 import { HydrationCard } from "@/features/dashboard/components/HydrationCard";
@@ -26,8 +26,8 @@ import { SpeciesCounter } from "@/features/dashboard/components/SpeciesCounter";
 import { UpcomingCare } from "@/features/dashboard/components/UpcomingCare";
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
 import { buildDashboardHeroCopy } from "@/features/dashboard/services/dashboardHeroCopy";
-import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
+import { useCollectionStreak } from "@/features/plants/hooks/useCollectionStreak";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 
 export default function HomeScreen() {
@@ -91,7 +91,7 @@ export default function HomeScreen() {
   const plantIds = dashboard.plants.map((plant) => plant.id);
   const logsQuery = useCareLogsForPlantIds(plantIds, "dashboard");
   const logs = logsQuery.data ?? [];
-  const currentStreakDays = calculateCurrentStreakDays(logs);
+  const { currentStreak: currentStreakDays } = useCollectionStreak();
   const insightQuery = useDashboardInsight({
     userId: user?.id,
     plants: dashboard.plants,

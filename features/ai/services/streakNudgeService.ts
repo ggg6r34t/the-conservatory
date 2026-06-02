@@ -1,11 +1,12 @@
 import { requestStreakNudge } from "@/features/ai/api/aiClient";
-import {
-  buildDayKey,
-  withStreakNudgeSource,
-} from "@/features/ai/schemas/aiMappers";
+import { withStreakNudgeSource } from "@/features/ai/schemas/aiMappers";
 import { parseStreakNudgeResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import { selectDeterministicVariant } from "@/features/ai/services/editorialVoiceService";
+import {
+  computeCollectionStreak,
+  toLocalDayKeyFromDate,
+} from "@/features/plants/services/collectionStreakService";
 import type { StreakRecoveryNudge } from "@/features/ai/types/ai";
 import type { CareLog, Plant } from "@/types/models";
 
@@ -45,42 +46,19 @@ function buildStreakNudgeCacheKey(
   return `ai:streak-nudge:${userId}:${dayKey}:${signature}`;
 }
 
-export function calculateCurrentStreakDays(logs: CareLog[], now = new Date()) {
-  const dayKeys = Array.from(
-    new Set(logs.map((log) => log.loggedAt.slice(0, 10))),
-  ).sort((left, right) => right.localeCompare(left));
+export function calculateCurrentStreakDays(
+  logs: CareLog[],
+  options?: { now?: Date; timeZone?: string },
+) {
+  const timeZone =
+    options?.timeZone ??
+    Intl.DateTimeFormat().resolvedOptions().timeZone ??
+    "UTC";
 
-  if (!dayKeys.length) {
-    return 0;
-  }
-
-  const nowMs = now.getTime();
-  const todayKey = now.toISOString().slice(0, 10);
-  const yesterdayKey = new Date(nowMs - 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
-
-  if (dayKeys[0] !== todayKey && dayKeys[0] !== yesterdayKey) {
-    return 0;
-  }
-
-  let streak = 1;
-  let expectedDate = new Date(
-    (dayKeys[0] === todayKey ? nowMs : nowMs - 24 * 60 * 60 * 1000) -
-      24 * 60 * 60 * 1000,
-  );
-
-  for (let index = 1; index < dayKeys.length; index += 1) {
-    const expectedKey = expectedDate.toISOString().slice(0, 10);
-    if (dayKeys[index] !== expectedKey) {
-      break;
-    }
-
-    streak += 1;
-    expectedDate = new Date(expectedDate.getTime() - 24 * 60 * 60 * 1000);
-  }
-
-  return streak;
+  return computeCollectionStreak(logs, {
+    timeZone,
+    now: options?.now,
+  }).currentStreak;
 }
 
 function daysSince(value?: string | null, now = new Date()) {
@@ -166,9 +144,14 @@ export async function getStreakRecoveryNudge(input: {
   plants: Plant[];
   logs: CareLog[];
   now?: Date;
+  timeZone?: string;
 }) {
   const now = input.now ?? new Date();
-  const dayKey = buildDayKey(input.now);
+  const timeZone =
+    input.timeZone ??
+    Intl.DateTimeFormat().resolvedOptions().timeZone ??
+    "UTC";
+  const dayKey = toLocalDayKeyFromDate(now, timeZone);
   const signature = buildStreakNudgeStateSignature(input);
   const cacheKey = buildStreakNudgeCacheKey(input.userId, dayKey, signature);
   const cached = await getCachedValue<StreakRecoveryNudge>(cacheKey);
@@ -176,7 +159,10 @@ export async function getStreakRecoveryNudge(input: {
     return cached;
   }
 
-  const currentStreakDays = calculateCurrentStreakDays(input.logs, now);
+  const currentStreakDays = calculateCurrentStreakDays(input.logs, {
+    now,
+    timeZone,
+  });
   const fallback = buildLocalStreakNudge({
     currentStreakDays,
     plants: input.plants,

@@ -41,6 +41,18 @@ export function trackEvent(
   posthog?.capture(name, properties ?? {});
 }
 
+export function trackStreakEvent(
+  name:
+    | "streak_started"
+    | "streak_extended"
+    | "streak_maintained"
+    | "streak_broken"
+    | "streak_recovered",
+  properties?: Record<string, string | number | boolean | null>,
+): void {
+  trackEvent(name, properties);
+}
+
 export function trackMonetizationEvent(
   name:
     | 'premium_screen_viewed'

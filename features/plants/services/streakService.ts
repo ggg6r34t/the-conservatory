@@ -1,5 +1,10 @@
 import type { CareLog } from "@/types/models";
 
+/**
+ * Per-plant watering cadence streak — consecutive on-interval water events
+ * for a single plant. This is separate from the collection-wide daily streak
+ * in collectionStreakService.ts.
+ */
 function differenceInDays(from: string, to: string) {
   const delta = new Date(from).getTime() - new Date(to).getTime();
   return Math.round(delta / (1000 * 60 * 60 * 24));

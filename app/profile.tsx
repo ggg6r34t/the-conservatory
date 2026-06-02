@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   Image,
   Pressable,
@@ -19,8 +19,9 @@ import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
-import { useCareLogsForPlantIds } from "@/features/care-logs/hooks/useCareLogsForPlantIds";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
+import { useCollectionStreak } from "@/features/plants/hooks/useCollectionStreak";
+import { StreakBadge } from "@/features/plants/components/StreakBadge";
 import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
 import {
   getProfileDisplayEmail,
@@ -44,53 +45,6 @@ type StatItemProps = {
   value: string;
   label: string;
 };
-
-function computeCareStreak(loggedAtValues: string[]) {
-  if (!loggedAtValues.length) {
-    return 0;
-  }
-
-  const dayKeys = Array.from(
-    new Set(
-      loggedAtValues.map((value) => {
-        const date = new Date(value);
-        return new Date(
-          date.getFullYear(),
-          date.getMonth(),
-          date.getDate(),
-        ).getTime();
-      }),
-    ),
-  ).sort((left, right) => right - left);
-
-  const today = new Date();
-  let cursor = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  ).getTime();
-  let streak = 0;
-
-  for (const dayKey of dayKeys) {
-    if (dayKey === cursor) {
-      streak += 1;
-      cursor -= 24 * 60 * 60 * 1000;
-      continue;
-    }
-
-    if (streak === 0 && dayKey === cursor - 24 * 60 * 60 * 1000) {
-      streak += 1;
-      cursor = dayKey - 24 * 60 * 60 * 1000;
-      continue;
-    }
-
-    if (dayKey < cursor) {
-      break;
-    }
-  }
-
-  return streak;
-}
 
 function formatThemeLabel(theme: string | undefined) {
   if (!theme) {
@@ -180,15 +134,14 @@ export default function ProfileScreen() {
   const graveyard = graveyardQuery.data ?? [];
   const remindersEnabled = settingsQuery.data?.remindersEnabled ?? true;
   const themeLabel = formatThemeLabel(settingsQuery.data?.preferredTheme);
+  const { currentStreak: streakDays, refetch: refetchStreak } =
+    useCollectionStreak();
 
-  const plantIds = plants.map((plant) => plant.id);
-  const careLogsQuery = useCareLogsForPlantIds(plantIds, "profile");
-
-  const streakDays = useMemo(() => {
-    const allLoggedAt = (careLogsQuery.data ?? []).map((log) => log.loggedAt);
-
-    return computeCareStreak(allLoggedAt);
-  }, [careLogsQuery.data]);
+  useFocusEffect(
+    useCallback(() => {
+      void refetchStreak();
+    }, [refetchStreak]),
+  );
 
   const displayName = getProfileDisplayName(user?.displayName);
   const email = getProfileDisplayEmail(user?.email);
@@ -307,7 +260,7 @@ export default function ProfileScreen() {
               { backgroundColor: colors.surfaceContainerHigh },
             ]}
           />
-          <StatItem value={`${streakDays}`} label="DAYS STREAK" />
+          <StreakBadge streak={streakDays} variant="compact" />
           <View
             style={[
               styles.statDivider,
