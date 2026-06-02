@@ -18,12 +18,15 @@ describe("Phase 06 enhancements certification", () => {
     );
   });
 
-  it("enforces server-side premium entitlement on AI edge functions", () => {
+  it("enforces server-side premium entitlement on premium AI edge functions", () => {
     expect(read("supabase/functions/_shared/entitlements.ts")).toContain(
       "assertPremiumEntitlement",
     );
+    expect(
+      read("supabase/functions/generate-dashboard-insight/index.ts"),
+    ).toContain("assertPremiumEntitlement");
     expect(read("supabase/functions/identify-plant/index.ts")).toContain(
-      "assertPremiumEntitlement",
+      "assertAiUsageQuota",
     );
   });
 
