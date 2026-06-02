@@ -11,6 +11,10 @@ import {
 import { useBillingStore } from '@/features/billing/stores/useBillingStore';
 import type { SubscriptionState } from '@/features/billing/types';
 import { initializeAnalytics, resetAnalyticsUser, trackMonetizationEvent } from '@/services/analytics/analyticsService';
+import {
+  clearCrashReportingUser,
+  setCrashReportingUser,
+} from '@/services/observability/crashReportingService';
 import { retryDeferredPremiumPhotoBackups } from '@/services/database/photoBackupRetry';
 import { setEntitlementState } from '@/services/entitlementState';
 
@@ -36,6 +40,7 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
       });
       setEntitlementState(false);
       resetAnalyticsUser();
+      clearCrashReportingUser();
       void clearEntitlementCache();
       return;
     }
@@ -109,6 +114,7 @@ export function BillingBootstrapProvider({ children }: PropsWithChildren) {
         setOfferings(offerings);
         await applyResolvedSubscriptionState(state, false);
         initializeAnalytics(user!.id);
+        setCrashReportingUser({ id: user!.id, email: user!.email ?? null });
       } catch (err) {
         if (cancelled) return;
         const cachedOnFailure = await readEntitlementCache();

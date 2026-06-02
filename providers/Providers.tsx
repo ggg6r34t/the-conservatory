@@ -28,6 +28,10 @@ import {
   markDatabaseBootstrapLoading,
   markDatabaseBootstrapReady,
 } from "@/services/database/databaseBootstrap";
+import {
+  captureException,
+  initializeCrashReporting,
+} from "@/services/observability/crashReportingService";
 import { initializeDatabase } from "@/services/database/sqlite";
 
 export function Providers({ children }: PropsWithChildren) {
@@ -39,6 +43,10 @@ export function Providers({ children }: PropsWithChildren) {
     NotoSerif_400Regular_Italic,
     NotoSerif_700Bold,
   });
+
+  useEffect(() => {
+    initializeCrashReporting();
+  }, []);
 
   useEffect(() => {
     if (!loaded) {
@@ -59,6 +67,7 @@ export function Providers({ children }: PropsWithChildren) {
       })
       .catch((error) => {
         if (!cancelled) {
+          captureException(error, { surface: "database_bootstrap" });
           markDatabaseBootstrapFailed(error);
         }
       });

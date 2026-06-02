@@ -18,6 +18,7 @@ import {
   resolveSafeAuthRedirectTarget,
 } from "@/features/onboarding/utils/resolveEntryRoute";
 import { Providers } from "@/providers/Providers";
+import { wrapWithCrashReporting } from "@/services/observability/crashReportingService";
 
 export const unstable_settings = {
   initialRouteName: "index",
@@ -25,7 +26,7 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
-export default function RootLayout() {
+function RootLayout() {
   const { isReady, isAuthenticated, authStatus, user } = useAuth();
   const onboarding = useOnboarding(user?.id);
 
@@ -226,3 +227,5 @@ function RootNavigator({
     </Stack>
   );
 }
+
+export default wrapWithCrashReporting(RootLayout);

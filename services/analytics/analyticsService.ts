@@ -7,7 +7,7 @@ type AnalyticsMode = 'disabled' | 'debug-log' | 'production';
 
 export function getAnalyticsMode(): AnalyticsMode {
   if (!env.posthogApiKey) return 'disabled';
-  if (__DEV__) return 'debug-log';
+  if (__DEV__ && !env.enableAnalytics) return 'debug-log';
   return 'production';
 }
 
@@ -75,10 +75,28 @@ export function trackMonetizationEvent(
     | 'premium_deferred_photo_retry'
     | 'sync_item_abandoned'
     | 'sync_item_deleted_before_sync'
-    | 'reminder_schedule_failed',
+    | 'reminder_schedule_failed'
+    | 'export_collection_started'
+    | 'export_collection_completed'
+    | 'export_collection_failed',
   properties?: Record<string, string | number | boolean | null>,
 ): void {
   trackEvent(name, properties);
+}
+
+export function trackAiFeatureUsed(
+  feature:
+    | 'ai_health_insight'
+    | 'ai_journal_narrative'
+    | 'ai_dashboard_editorial'
+    | 'ai_archive_curation'
+    | 'ai_species_identification',
+  properties?: Record<string, string | number | boolean | null>,
+): void {
+  trackMonetizationEvent('ai_feature_used', {
+    feature,
+    ...properties,
+  });
 }
 
 export function resetAnalyticsUser(): void {
@@ -86,8 +104,11 @@ export function resetAnalyticsUser(): void {
 }
 
 export function getAnalyticsStatus() {
+  const mode = getAnalyticsMode();
   return {
-    mode: getAnalyticsMode(),
-    productionReady: getAnalyticsMode() === 'production',
+    mode,
+    productionReady: mode === 'production',
+    posthogConfigured: Boolean(env.posthogApiKey),
+    analyticsExplicitlyEnabled: env.enableAnalytics,
   };
 }

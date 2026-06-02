@@ -5,6 +5,7 @@ import { withCuratedArchivePairSource } from "@/features/ai/schemas/aiMappers";
 import { parseArchiveCurationResponse } from "@/features/ai/schemas/aiValidators";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import type { ArchiveCuratedPair } from "@/features/ai/types/ai";
+import { trackAiFeatureUsed } from "@/services/analytics/analyticsService";
 
 const ARCHIVE_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 
@@ -116,6 +117,13 @@ export async function getArchiveCuration(items: ArchiveCurationItem[], cloudAllo
       )
     : [];
   const result = parsedCloud.length ? parsedCloud : fallback;
+
+  if (parsedCloud.length) {
+    trackAiFeatureUsed("ai_archive_curation", {
+      source: "cloud",
+      pair_count: parsedCloud.length,
+    });
+  }
 
   await setCachedValue(cacheKey, result, ARCHIVE_CACHE_TTL_MS);
   return result;

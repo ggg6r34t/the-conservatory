@@ -10,6 +10,7 @@ const envSchema = z.object({
     .transform((value) => value === "true"),
   expoPublicPosthogApiKey: z.string().min(1).optional(),
   expoPublicPosthogHost: z.string().url().optional(),
+  expoPublicSentryDsn: z.string().url().optional(),
 });
 
 const parsed = envSchema.safeParse({
@@ -28,6 +29,9 @@ const parsed = envSchema.safeParse({
   expoPublicPosthogHost:
     process.env.EXPO_PUBLIC_POSTHOG_HOST ??
     Constants.expoConfig?.extra?.expoPublicPosthogHost,
+  expoPublicSentryDsn:
+    process.env.EXPO_PUBLIC_SENTRY_DSN ??
+    Constants.expoConfig?.extra?.expoPublicSentryDsn,
 });
 
 const safeEnv: z.infer<typeof envSchema> = parsed.success
@@ -38,6 +42,7 @@ const safeEnv: z.infer<typeof envSchema> = parsed.success
       expoPublicEnableAnalytics: false,
       expoPublicPosthogApiKey: undefined,
       expoPublicPosthogHost: undefined,
+      expoPublicSentryDsn: undefined,
     };
 
 const isDevelopmentBuild = __DEV__ || process.env.NODE_ENV === "test";
@@ -58,4 +63,5 @@ export const env = {
   enableAnalytics: Boolean(safeEnv.expoPublicEnableAnalytics),
   posthogApiKey: safeEnv.expoPublicPosthogApiKey ?? null,
   posthogHost: safeEnv.expoPublicPosthogHost ?? 'https://app.posthog.com',
+  sentryDsn: safeEnv.expoPublicSentryDsn ?? null,
 };

@@ -15,6 +15,7 @@ import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { LegalFooterLinks } from "@/features/legal/components/LegalFooterLinks";
+import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 
 const HEIRLOOM_CARD_IMAGE = require("@/assets/images/intricate-vintage-botanical-illustration-of-fern-leaves.png");
@@ -72,6 +73,7 @@ export default function PremiumScreen() {
   } = useSubscription();
 
   useEffect(() => {
+    trackMonetizationEvent("premium_screen_viewed", { surface: "premium" });
     void refreshOfferings();
   }, [refreshOfferings]);
 

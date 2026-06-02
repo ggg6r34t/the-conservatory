@@ -6,6 +6,7 @@ import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import { enforceHealthInsightSafety } from "@/features/ai/services/healthInsightSafetyService";
 import { buildHealthSignalAnalysis } from "@/features/ai/services/healthSignalAnalysisService";
 import { incrementUsage } from "@/features/billing/services/usageClient";
+import { trackAiFeatureUsed } from "@/services/analytics/analyticsService";
 import { getDatabase } from "@/services/database/sqlite";
 import type { HealthInsight } from "@/features/ai/types/ai";
 import type { PlantWithRelations } from "@/types/models";
@@ -123,6 +124,7 @@ export async function getHealthInsight(input: {
   if (insight.source === "cloud" && input.userId) {
     const db = await getDatabase();
     await incrementUsage(db, input.userId, "ai_health_insight", { entityId: input.plantId });
+    trackAiFeatureUsed("ai_health_insight", { source: "cloud" });
   }
 
   await setCachedValue(cacheKey, insight, HEALTH_CACHE_TTL_MS);

@@ -8,6 +8,7 @@ import { parseDashboardInsightResponse } from "@/features/ai/schemas/aiValidator
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import { selectDeterministicVariant } from "@/features/ai/services/editorialVoiceService";
 import type { DashboardInsight } from "@/features/ai/types/ai";
+import { trackAiFeatureUsed } from "@/services/analytics/analyticsService";
 import type { CareReminder, Plant } from "@/types/models";
 
 const DAY_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
@@ -206,6 +207,10 @@ export async function getDashboardInsight(input: {
     parsedCloud && hasVerifiedModelGeneration(cloud)
       ? withInsightSource(parsedCloud, "cloud")
       : withInsightSource(fallback, "local");
+
+  if (insight.source === "cloud") {
+    trackAiFeatureUsed("ai_dashboard_editorial", { source: "cloud" });
+  }
 
   await setCachedValue(cacheKey, insight, DAY_CACHE_TTL_MS);
   return insight;

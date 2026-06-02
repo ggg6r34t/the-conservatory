@@ -44,6 +44,7 @@ module.exports = {
       favicon: "./assets/images/favicon.png",
     },
     plugins: [
+      "@sentry/react-native",
       "expo-router",
       [
         "expo-image-picker",

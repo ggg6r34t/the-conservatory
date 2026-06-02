@@ -8,6 +8,7 @@ import { parseJournalSummaryResponse } from "@/features/ai/schemas/aiValidators"
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import { selectDeterministicVariant } from "@/features/ai/services/editorialVoiceService";
 import type { JournalMonthlySummary } from "@/features/ai/types/ai";
+import { trackAiFeatureUsed } from "@/services/analytics/analyticsService";
 import type { CareLog, Plant } from "@/types/models";
 
 const MONTH_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7;
@@ -183,6 +184,10 @@ export async function getJournalMonthlySummary(input: {
     parsedCloud && hasVerifiedModelGeneration(cloud)
       ? withSummarySource(parsedCloud, monthKey, "cloud")
       : withSummarySource(fallback, monthKey, "local");
+
+  if (summary.source === "cloud") {
+    trackAiFeatureUsed("ai_journal_narrative", { source: "cloud" });
+  }
 
   await setCachedValue(cacheKey, summary, MONTH_CACHE_TTL_MS);
   return summary;

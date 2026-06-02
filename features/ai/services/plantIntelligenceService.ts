@@ -9,6 +9,7 @@ import { parseSpeciesSuggestionResponse } from "@/features/ai/schemas/aiValidato
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import { encodeLocalImageForAi } from "@/features/ai/services/imageEncodingService";
 import { incrementUsage } from "@/features/billing/services/usageClient";
+import { trackAiFeatureUsed } from "@/services/analytics/analyticsService";
 import { getDatabase } from "@/services/database/sqlite";
 import type {
   IdentifyPlantResponse,
@@ -117,6 +118,7 @@ export async function getSpeciesSuggestion(input: { imageUri: string; cloudAllow
     if (input.userId) {
       const db = await getDatabase();
       await incrementUsage(db, input.userId, "ai_species_identification");
+      trackAiFeatureUsed("ai_species_identification", { source: "cloud" });
     }
     return suggestion;
   }

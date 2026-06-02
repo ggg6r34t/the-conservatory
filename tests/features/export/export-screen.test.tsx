@@ -13,6 +13,10 @@ jest.mock("@/features/billing/hooks/useSubscription", () => ({
   }),
 }));
 
+jest.mock("@/services/observability/performanceMonitoringService", () => ({
+  measureAsync: (_name: string, fn: () => Promise<unknown>) => fn(),
+}));
+
 jest.mock("@/features/export/hooks/useExportCollectionData", () => ({
   useExportCollectionData: () => ({
     summaryQuery: {
