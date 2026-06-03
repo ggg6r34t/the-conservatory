@@ -28,7 +28,7 @@ export interface AlertDialogAction {
 export interface AlertDialogOptions {
   variant: AlertDialogVariant;
   title: string;
-  message: string;
+  message?: string;
   icon?: React.ComponentProps<typeof Icon>["name"];
   iconFamily?: React.ComponentProps<typeof Icon>["family"];
   primaryAction?: AlertDialogAction;
@@ -38,6 +38,8 @@ export interface AlertDialogOptions {
   testID?: string;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+  analyticsKey?: string;
+  sourceScreen?: string;
 }
 
 export interface QueuedAlertDialog extends AlertDialogOptions {
@@ -53,6 +55,8 @@ export interface AlertDialogContextValue {
       "variant" | "primaryAction" | "secondaryAction"
     > & {
       variant?: Extract<AlertDialogVariant, "confirm" | "destructive">;
+      confirmLabel?: string;
+      cancelLabel?: string;
       primaryAction?: AlertDialogAction;
       secondaryAction?: AlertDialogAction;
     },

@@ -36,6 +36,7 @@ import { queryKeys } from "@/config/constants";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 import { usePreferredThemeDisplayName } from "@/features/theme/hooks/usePreferredThemeDisplay";
+import { useAlert } from "@/hooks/useAlert";
 
 type ProfileRowProps = {
   icon: string;
@@ -115,6 +116,7 @@ function ProfileRow({
 export default function ProfileScreen() {
   const { colors, spacing } = useTheme();
   const { user, signOut, isSigningOut } = useAuth();
+  const alert = useAlert();
   const router = useRouter();
   const [showDeveloperMenu, setShowDeveloperMenu] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
@@ -520,7 +522,21 @@ export default function ProfileScreen() {
           accessibilityState={{ disabled: isSigningOut }}
           disabled={isSigningOut}
           onPress={() => {
-            void signOut();
+            void (async () => {
+              const confirmed = await alert.confirm({
+                variant: "confirm",
+                title: "Sign out?",
+                message:
+                  "You'll need to sign in again to access your collection on this device.",
+                confirmLabel: "Sign out",
+                cancelLabel: "Stay signed in",
+                analyticsKey: "profile_sign_out",
+                sourceScreen: "profile",
+              });
+              if (confirmed) {
+                void signOut();
+              }
+            })();
           }}
           style={styles.signOutRow}
         >

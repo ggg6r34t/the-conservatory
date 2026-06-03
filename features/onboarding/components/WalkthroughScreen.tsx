@@ -1,7 +1,6 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
   FlatList,
   Pressable,
   type PressableStateCallbackType,
@@ -23,6 +22,7 @@ import {
   markWalkthroughSlideViewed,
 } from "@/features/onboarding/services/onboardingDebugStorage";
 import { resolveWalkthroughTarget } from "@/features/onboarding/utils/resolveWalkthroughTarget";
+import { useAlert } from "@/hooks/useAlert";
 import { trackEvent } from "@/services/analytics/analyticsService";
 
 export function WalkthroughScreen({
@@ -32,6 +32,7 @@ export function WalkthroughScreen({
 }) {
   const router = useRouter();
   const { colors } = useTheme();
+  const alert = useAlert();
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<(typeof walkthroughSlides)[number]>>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -80,10 +81,17 @@ export function WalkthroughScreen({
 
       router.replace(resolvedTarget);
     } catch (error) {
-      Alert.alert(
-        "Unable to continue",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Couldn't continue",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Something interrupted the walkthrough. Try again in a moment.",
+        primaryAction: { label: "Close", tone: "danger" },
+        analyticsKey: "onboarding_walkthrough_continue_failed",
+        sourceScreen: "onboarding_walkthrough",
+      });
     } finally {
       setIsNavigating(false);
     }

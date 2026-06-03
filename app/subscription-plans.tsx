@@ -18,10 +18,12 @@ import { formatAnnualSavingsLabel } from "@/features/billing/services/subscripti
 import { EmptyState } from "@/features/empty-states/components/EmptyState";
 import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
+import { useAlert } from "@/hooks/useAlert";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 
 export default function SubscriptionPlansScreen() {
   const { colors } = useTheme();
+  const alert = useAlert();
   const {
     isPremium,
     isLoading,
@@ -76,6 +78,16 @@ export default function SubscriptionPlansScreen() {
         reason: result.error ?? "unknown",
         packageType: selectedPackage.packageType,
       });
+      void alert.show({
+        variant: "error",
+        title: "Purchase didn't complete",
+        message:
+          result.error ??
+          "Check your connection and App Store or Play billing, then try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+        analyticsKey: "subscription_purchase_failed",
+        sourceScreen: "subscription_plans",
+      });
     }
   }
 
@@ -84,6 +96,17 @@ export default function SubscriptionPlansScreen() {
     const result = await restore();
     if (result.success) {
       trackMonetizationEvent("restore_completed");
+    } else {
+      void alert.show({
+        variant: "error",
+        title: "Couldn't restore purchases",
+        message:
+          result.error ??
+          "We couldn't find an active subscription for this account. Try again or contact support.",
+        primaryAction: { label: "Close", tone: "danger" },
+        analyticsKey: "subscription_restore_failed",
+        sourceScreen: "subscription_plans",
+      });
     }
   }
 

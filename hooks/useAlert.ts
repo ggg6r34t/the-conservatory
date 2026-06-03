@@ -11,3 +11,6 @@ export function useAlert() {
 
   return context;
 }
+
+/** Canonical alias for the app alert dialog API. */
+export const useAppAlert = useAlert;

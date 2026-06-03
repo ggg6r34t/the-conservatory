@@ -1,7 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import {
-  Alert,
   Linking,
   Pressable,
   ScrollView,
@@ -22,6 +21,7 @@ import {
 } from "@/features/onboarding/services/onboardingDebugStorage";
 import { shadowScale } from "@/styles/shadows";
 import type { PermissionState } from "@/features/onboarding/utils/permissionState";
+import { useAlert } from "@/hooks/useAlert";
 import { trackEvent } from "@/services/analytics/analyticsService";
 
 function getPermissionActionLabel(
@@ -130,6 +130,7 @@ export function PermissionsScreen({
   const router = useRouter();
   const { colors, spacing } = useTheme();
   const permissions = useOnboardingPermissions();
+  const alert = useAlert();
 
   useEffect(() => {
     void markPermissionsViewed();
@@ -143,10 +144,15 @@ export function PermissionsScreen({
       try {
         await Linking.openSettings();
       } catch {
-        Alert.alert(
-          "Unable to open settings",
-          "Open device settings manually.",
-        );
+        void alert.show({
+          variant: "error",
+          title: "Couldn't open settings",
+          message:
+            "Open your device settings manually to change notification or photo permissions.",
+          primaryAction: { label: "Close", tone: "danger" },
+          analyticsKey: "onboarding_permissions_open_settings_failed",
+          sourceScreen: "onboarding_permissions",
+        });
       }
       return;
     }
@@ -155,17 +161,27 @@ export function PermissionsScreen({
     const result = await permissions.requestPermission(key);
 
     if (result === "denied") {
-      Alert.alert(
-        "Permission blocked",
-        "This permission was denied. You can continue for now and enable it later from your device settings.",
-      );
+      void alert.show({
+        variant: "warning",
+        title: "Permission blocked",
+        message:
+          "You can continue for now and enable this later in your device settings.",
+        primaryAction: { label: "Close" },
+        analyticsKey: "onboarding_permissions_denied",
+        sourceScreen: "onboarding_permissions",
+      });
     }
 
     if (result === "unavailable") {
-      Alert.alert(
-        "Permission unavailable",
-        "This permission is not available in the current runtime, but you can continue onboarding.",
-      );
+      void alert.show({
+        variant: "info",
+        title: "Permission unavailable",
+        message:
+          "This permission isn't available in the current build. You can still continue onboarding.",
+        primaryAction: { label: "Close" },
+        analyticsKey: "onboarding_permissions_unavailable",
+        sourceScreen: "onboarding_permissions",
+      });
     }
   };
 

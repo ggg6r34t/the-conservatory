@@ -99,9 +99,11 @@ export function AlertDialogCard({
         <Text style={[styles.title, { color: colors.onSurface }]}>
           {alert.title}
         </Text>
-        <Text style={[styles.message, { color: colors.onSurfaceVariant }]}>
-          {alert.message}
-        </Text>
+        {alert.message ? (
+          <Text style={[styles.message, { color: colors.onSurfaceVariant }]}>
+            {alert.message}
+          </Text>
+        ) : null}
 
         <View style={styles.actions}>
           {alert.secondaryAction ? (

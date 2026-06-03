@@ -3,7 +3,6 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   Easing,
   Modal,
@@ -38,6 +37,7 @@ import {
   pickPlantImage,
 } from "@/features/plants/services/photoService";
 import { setPlantDraft } from "@/features/plants/services/plantDraftStorage";
+import { useAlert } from "@/hooks/useAlert";
 import { trackEvent } from "@/services/analytics/analyticsService";
 import { shadowScale } from "@/styles/shadows";
 
@@ -63,6 +63,7 @@ export default function QuickStartScreen({
   const router = useRouter();
   const { colors, spacing } = useTheme();
   const insets = useSafeAreaInsets();
+  const alert = useAlert();
   const lightOptions = [
     {
       key: "low" as const,
@@ -149,10 +150,17 @@ export default function QuickStartScreen({
     try {
       await applyPhotoAsset(await capturePlantImage());
     } catch (error) {
-      Alert.alert(
-        "Unable to open camera",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Couldn't open camera",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Check camera permissions and try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+        analyticsKey: "onboarding_quick_start_camera_failed",
+        sourceScreen: "onboarding_quick_start",
+      });
     }
   };
 
@@ -161,19 +169,30 @@ export default function QuickStartScreen({
     try {
       await applyPhotoAsset(await pickPlantImage());
     } catch (error) {
-      Alert.alert(
-        "Unable to open photo library",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Couldn't open photo library",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Check photo permissions and try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+        analyticsKey: "onboarding_quick_start_library_failed",
+        sourceScreen: "onboarding_quick_start",
+      });
     }
   };
 
   const handleCreate = async () => {
     if (!speciesName.trim()) {
-      Alert.alert(
-        "Add a plant name",
-        "Start with a scientific or common name.",
-      );
+      void alert.show({
+        variant: "warning",
+        title: "Add a plant name",
+        message: "Enter a scientific or common name to continue.",
+        primaryAction: { label: "Close" },
+        analyticsKey: "onboarding_quick_start_name_required",
+        sourceScreen: "onboarding_quick_start",
+      });
       return;
     }
 
@@ -202,10 +221,17 @@ export default function QuickStartScreen({
         params: { redirectTo: "/plant/add" },
       });
     } catch (error) {
-      Alert.alert(
-        "Unable to continue",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Couldn't continue",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Your draft wasn't saved. Try again in a moment.",
+        primaryAction: { label: "Close", tone: "danger" },
+        analyticsKey: "onboarding_quick_start_create_failed",
+        sourceScreen: "onboarding_quick_start",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -220,10 +246,17 @@ export default function QuickStartScreen({
       trackEvent("onboarding_quick_start_skipped");
       router.push(debugPreview ? "/debug/onboarding" : "/(auth)/signup");
     } catch (error) {
-      Alert.alert(
-        "Unable to continue",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Couldn't continue",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Something interrupted onboarding. Try again in a moment.",
+        primaryAction: { label: "Close", tone: "danger" },
+        analyticsKey: "onboarding_quick_start_skip_failed",
+        sourceScreen: "onboarding_quick_start",
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -1,7 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +16,7 @@ import { useObservationTagging } from "@/features/ai/hooks/useObservationTagging
 import { buildCareLogNoteForSave } from "@/features/ai/services/observationTaggingService";
 import type { ObservationTag } from "@/features/ai/types/ai";
 import { useRecordCareEvent } from "@/features/care-logs/hooks/useRecordCareEvent";
+import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import type { CareLogCondition, CareLogType } from "@/types/models";
 
@@ -55,6 +55,7 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
   const router = useRouter();
   const { colors } = useTheme();
   const snackbar = useSnackbar();
+  const alert = useAlert();
   const [notes, setNotes] = useState("");
   const [logType, setLogType] = useState<CareLogType>("inspect");
   const [condition, setCondition] = useState<CareLogCondition | null>(null);
@@ -90,10 +91,17 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
       }
       router.back();
     } catch (error) {
-      Alert.alert(
-        "Unable to log care",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Couldn't save care log",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Your entry is still on this screen. Check your connection and try again.",
+        primaryAction: { label: "Close", tone: "danger" },
+        analyticsKey: "care_log_save_failed",
+        sourceScreen: "care_log_form",
+      });
     }
   };
 

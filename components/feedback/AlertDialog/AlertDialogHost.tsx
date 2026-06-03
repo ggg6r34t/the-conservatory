@@ -34,7 +34,9 @@ export function AlertDialogHost({
       return;
     }
 
-    const announcement = `${currentAlert.title}. ${currentAlert.message}`;
+    const announcement = currentAlert.message
+      ? `${currentAlert.title}. ${currentAlert.message}`
+      : currentAlert.title;
     AccessibilityInfo.announceForAccessibility(announcement);
   }, [currentAlert]);
 
@@ -43,31 +45,50 @@ export function AlertDialogHost({
       return;
     }
 
-    opacity.setValue(0);
-    scale.setValue(0.965);
-    translateY.setValue(12);
+    let cancelled = false;
 
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 180,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: false,
-      }),
-      Animated.spring(scale, {
-        toValue: 1,
-        damping: 16,
-        mass: 0.9,
-        stiffness: 190,
-        useNativeDriver: false,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }),
-    ]).start();
+    const runEntrance = (reduceMotion: boolean) => {
+      if (cancelled) {
+        return;
+      }
+
+      if (reduceMotion) {
+        opacity.setValue(1);
+        scale.setValue(1);
+        translateY.setValue(0);
+        return;
+      }
+
+      opacity.setValue(0);
+      scale.setValue(0.965);
+      translateY.setValue(12);
+
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 180,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: false,
+        }),
+        Animated.spring(scale, {
+          toValue: 1,
+          damping: 16,
+          mass: 0.9,
+          stiffness: 190,
+          useNativeDriver: false,
+        }),
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+      ]).start();
+    };
+
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then(runEntrance)
+      .catch(() => runEntrance(false));
 
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
@@ -81,7 +102,10 @@ export function AlertDialogHost({
       },
     );
 
-    return () => subscription.remove();
+    return () => {
+      cancelled = true;
+      subscription.remove();
+    };
   }, [currentAlert, onBackdropPress, opacity, scale, translateY]);
 
   if (!currentAlert) {

@@ -8,6 +8,13 @@ import type {
   QueuedAlertDialog,
 } from "@/components/feedback/AlertDialog/alert.types";
 import { dismissAlert, enqueueAlert, resolveAllAlerts } from "@/services/feedback/alertQueue";
+import {
+  trackAppAlertCancelled,
+  trackAppAlertDismissed,
+  trackAppAlertPrimaryAction,
+  trackAppAlertSecondaryAction,
+  trackAppAlertShown,
+} from "@/services/feedback/alertAnalytics";
 import { logger } from "@/utils/logger";
 
 export const AlertContext = createContext<AlertDialogContextValue | null>(null);
@@ -41,17 +48,33 @@ export function AlertProvider({ children }: PropsWithChildren) {
       return dismissAlert(current, id);
     });
 
-    dismissedAlert?.resolve({ action: "dismiss" });
+    if (dismissedAlert) {
+      trackAppAlertDismissed({
+        variant: dismissedAlert.variant,
+        analyticsKey: dismissedAlert.analyticsKey,
+        sourceScreen: dismissedAlert.sourceScreen,
+      });
+      dismissedAlert.resolve({ action: "dismiss" });
+    }
     setLoadingAction(null);
   }, []);
 
   const show = useCallback((options: AlertDialogOptions) => {
     return new Promise<AlertDialogResult>((resolve) => {
       const nextAlert: QueuedAlertDialog = {
+        message: "",
+        dismissOnBackdropPress: true,
+        dismissOnBackButton: true,
         ...options,
         id: createDialogId(),
         resolve,
       };
+
+      trackAppAlertShown({
+        variant: nextAlert.variant,
+        analyticsKey: nextAlert.analyticsKey,
+        sourceScreen: nextAlert.sourceScreen,
+      });
 
       setQueue((current) => enqueueAlert(current, nextAlert));
     });
@@ -59,15 +82,18 @@ export function AlertProvider({ children }: PropsWithChildren) {
 
   const confirm = useCallback<AlertDialogContextValue["confirm"]>(
     async (options) => {
+      const variant = options.variant ?? "confirm";
       const result = await show({
         ...options,
-        variant: options.variant ?? "confirm",
+        variant,
         primaryAction: options.primaryAction ?? {
-          label: options.variant === "destructive" ? "Delete" : "Confirm",
-          tone: options.variant === "destructive" ? "danger" : "primary",
+          label:
+            options.confirmLabel ??
+            (variant === "destructive" ? "Delete" : "Confirm"),
+          tone: variant === "destructive" ? "danger" : "primary",
         },
         secondaryAction: options.secondaryAction ?? {
-          label: "Cancel",
+          label: options.cancelLabel ?? "Cancel",
         },
       });
 
@@ -91,6 +117,29 @@ export function AlertProvider({ children }: PropsWithChildren) {
           : activeAlert.secondaryAction;
 
       if (!definition) {
+        if (action === "primary") {
+          trackAppAlertPrimaryAction({
+            variant: activeAlert.variant,
+            analyticsKey: activeAlert.analyticsKey,
+            sourceScreen: activeAlert.sourceScreen,
+          });
+        } else if (
+          activeAlert.variant === "confirm" ||
+          activeAlert.variant === "destructive" ||
+          activeAlert.secondaryAction?.label?.toLowerCase() === "cancel"
+        ) {
+          trackAppAlertCancelled({
+            variant: activeAlert.variant,
+            analyticsKey: activeAlert.analyticsKey,
+            sourceScreen: activeAlert.sourceScreen,
+          });
+        } else {
+          trackAppAlertSecondaryAction({
+            variant: activeAlert.variant,
+            analyticsKey: activeAlert.analyticsKey,
+            sourceScreen: activeAlert.sourceScreen,
+          });
+        }
         activeAlert.resolve({ action });
         setQueue((current) => dismissAlert(current, activeAlert.id));
         return;
@@ -101,6 +150,30 @@ export function AlertProvider({ children }: PropsWithChildren) {
         if (maybePromise && typeof maybePromise === "object" && "then" in maybePromise) {
           setLoadingAction(action);
           await maybePromise;
+        }
+
+        if (action === "primary") {
+          trackAppAlertPrimaryAction({
+            variant: activeAlert.variant,
+            analyticsKey: activeAlert.analyticsKey,
+            sourceScreen: activeAlert.sourceScreen,
+          });
+        } else if (
+          activeAlert.variant === "confirm" ||
+          activeAlert.variant === "destructive" ||
+          activeAlert.secondaryAction?.label?.toLowerCase() === "cancel"
+        ) {
+          trackAppAlertCancelled({
+            variant: activeAlert.variant,
+            analyticsKey: activeAlert.analyticsKey,
+            sourceScreen: activeAlert.sourceScreen,
+          });
+        } else {
+          trackAppAlertSecondaryAction({
+            variant: activeAlert.variant,
+            analyticsKey: activeAlert.analyticsKey,
+            sourceScreen: activeAlert.sourceScreen,
+          });
         }
 
         activeAlert.resolve({ action });

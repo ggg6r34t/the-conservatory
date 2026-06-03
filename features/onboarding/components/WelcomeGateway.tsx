@@ -2,7 +2,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
@@ -12,6 +12,7 @@ import {
   markOnboardingAction,
   markWelcomeViewed,
 } from "@/features/onboarding/services/onboardingDebugStorage";
+import { useAlert } from "@/hooks/useAlert";
 import { trackEvent } from "@/services/analytics/analyticsService";
 
 export function WelcomeGateway({
@@ -22,6 +23,7 @@ export function WelcomeGateway({
   const router = useRouter();
   const { colors } = useTheme();
   const onboarding = useOnboarding();
+  const alert = useAlert();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -41,10 +43,17 @@ export function WelcomeGateway({
         debugPreview ? "/debug/onboarding-walkthrough" : "/onboarding/walkthrough",
       );
     } catch (error) {
-      Alert.alert(
-        "Unable to continue",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Couldn't continue",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Something interrupted onboarding. Try again in a moment.",
+        primaryAction: { label: "Close", tone: "danger" },
+        analyticsKey: "onboarding_welcome_begin_failed",
+        sourceScreen: "onboarding_welcome",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -62,10 +71,17 @@ export function WelcomeGateway({
       await onboarding.complete();
       router.push(debugPreview ? "/debug/onboarding" : "/(auth)/login");
     } catch (error) {
-      Alert.alert(
-        "Unable to continue",
-        error instanceof Error ? error.message : "Try again.",
-      );
+      void alert.show({
+        variant: "error",
+        title: "Couldn't continue",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Something interrupted onboarding. Try again in a moment.",
+        primaryAction: { label: "Close", tone: "danger" },
+        analyticsKey: "onboarding_welcome_existing_account_failed",
+        sourceScreen: "onboarding_welcome",
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -3,7 +3,12 @@ import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { useAlert } from "@/hooks/useAlert";
+import { trackEvent } from "@/services/analytics/analyticsService";
 import { renderWithProviders } from "@/tests/utils/renderWithProviders";
+
+jest.mock("@/services/analytics/analyticsService", () => ({
+  trackEvent: jest.fn(),
+}));
 
 jest.mock("react-native-safe-area-context", () => {
   const React = require("react");
@@ -91,6 +96,23 @@ function AlertHarness() {
 }
 
 describe("AlertProvider", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("tracks app_alert_shown when a dialog opens", async () => {
+    renderWithProviders(<AlertHarness />);
+
+    fireEvent.press(screen.getByText("open-alert"));
+
+    await waitFor(() => {
+      expect(trackEvent).toHaveBeenCalledWith(
+        "app_alert_shown",
+        expect.objectContaining({ variant: "destructive" }),
+      );
+    });
+  });
+
   it("resolves the selected action and advances the queue", async () => {
     renderWithProviders(<AlertHarness />);
 
@@ -197,6 +219,84 @@ describe("AlertProvider", () => {
 
     await waitFor(() => {
       expect(screen.queryByText("Delete Specimen?")).toBeNull();
+    });
+  });
+
+  it("confirm uses custom confirm and cancel labels", async () => {
+    const ConfirmHarness = () => {
+      const alert = useAlert();
+      const [confirmed, setConfirmed] = useState<boolean | null>(null);
+
+      return (
+        <View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={async () => {
+              const result = await alert.confirm({
+                variant: "destructive",
+                title: "Remove reminder?",
+                message: "You can add it again later.",
+                confirmLabel: "Remove",
+                cancelLabel: "Keep",
+              });
+              setConfirmed(result);
+            }}
+          >
+            <Text>open-confirm</Text>
+          </Pressable>
+          <Text testID="confirm-result">
+            {confirmed === null ? "pending" : confirmed ? "yes" : "no"}
+          </Text>
+        </View>
+      );
+    };
+
+    renderWithProviders(<ConfirmHarness />);
+
+    fireEvent.press(screen.getByText("open-confirm"));
+    expect(screen.getByText("Remove")).toBeTruthy();
+    expect(screen.getByText("Keep")).toBeTruthy();
+
+    fireEvent.press(screen.getByText("Keep"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("confirm-result")).toHaveTextContent("no");
+    });
+
+    expect(trackEvent).toHaveBeenCalledWith("app_alert_cancelled", expect.any(Object));
+  });
+
+  it.each([
+    ["info", "Heads up"],
+    ["success", "Saved"],
+    ["warning", "Check settings"],
+    ["error", "Couldn't sync"],
+  ] as const)("shows %s variant", async (variant, title) => {
+    const VariantHarness = () => {
+      const alert = useAlert();
+      return (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            void alert.show({
+              variant,
+              title,
+              message: "Supporting detail.",
+              primaryAction: { label: "Close" },
+            });
+          }}
+        >
+          <Text>open-{variant}</Text>
+        </Pressable>
+      );
+    };
+
+    renderWithProviders(<VariantHarness />);
+    fireEvent.press(screen.getByText(`open-${variant}`));
+
+    await waitFor(() => {
+      expect(screen.getByText(title)).toBeTruthy();
+      expect(screen.getByText("Supporting detail.")).toBeTruthy();
     });
   });
 });

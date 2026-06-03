@@ -1,6 +1,8 @@
 import React from "react";
 
-import { render, screen } from "@testing-library/react-native";
+import { screen } from "@testing-library/react-native";
+
+import { renderWithProviders } from "@/tests/utils/renderWithProviders";
 
 const mockPermissions = {
   permissions: {
@@ -22,6 +24,8 @@ jest.mock("expo-router", () => ({
 
 jest.mock("react-native-safe-area-context", () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
 jest.mock("@/components/common/Buttons/PrimaryButton", () => ({
@@ -74,6 +78,24 @@ jest.mock("@/services/analytics/analyticsService", () => ({
   trackEvent: jest.fn(),
 }));
 
+jest.mock("expo-blur", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+  return {
+    BlurView: ({ children }: { children?: React.ReactNode }) =>
+      React.createElement(View, null, children),
+  };
+});
+
+jest.mock("react-native-paper", () => {
+  const React = require("react");
+  const actual = jest.requireActual("react-native-paper");
+  return {
+    ...actual,
+    Portal: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
 describe("PermissionsScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -84,7 +106,7 @@ describe("PermissionsScreen", () => {
       PermissionsScreen,
     } = require("@/features/onboarding/components/PermissionsScreen");
 
-    render(<PermissionsScreen />);
+    renderWithProviders(<PermissionsScreen />);
 
     expect(screen.getByText("Notifications")).toBeTruthy();
     expect(screen.getByText("Photos & Media")).toBeTruthy();
