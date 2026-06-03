@@ -32,6 +32,7 @@ import {
   getPlantActivityIcon,
   getPlantActivityIconFamily,
 } from "@/features/plants/services/plantActivityTimeline";
+import { runWithSystemPermission } from "@/features/permissions/runWithSystemPermission";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { shadowScale } from "@/styles/shadows";
@@ -376,7 +377,13 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
     setMediaSheetVisible(false);
 
     try {
-      const asset = await capturePlantImage();
+      const asset = await runWithSystemPermission({
+        confirm: alert.confirm,
+        show: alert.show,
+        kind: "camera",
+        sourceScreen: "plant_detail",
+        action: capturePlantImage,
+      });
       if (!asset) {
         return;
       }
@@ -396,7 +403,13 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
     setMediaSheetVisible(false);
 
     try {
-      const asset = await pickPlantImage();
+      const asset = await runWithSystemPermission({
+        confirm: alert.confirm,
+        show: alert.show,
+        kind: "mediaLibrary",
+        sourceScreen: "plant_detail",
+        action: pickPlantImage,
+      });
       if (!asset) {
         return;
       }

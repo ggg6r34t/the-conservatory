@@ -15,6 +15,8 @@ import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useOnboardingPermissions } from "@/features/onboarding/hooks/useOnboardingPermissions";
+import { promptAndRequestSystemPermission } from "@/features/permissions/promptAndRequestSystemPermission";
+import type { SystemPermissionKind } from "@/features/permissions/systemPermissionKinds";
 import {
   markOnboardingAction,
   markPermissionsViewed,
@@ -136,10 +138,31 @@ export function PermissionsScreen({
     void markPermissionsViewed();
   }, []);
 
+  const permissionKindForKey = (
+    key: "notifications" | "media",
+  ): SystemPermissionKind => (key === "notifications" ? "notifications" : "media");
+
   const handlePermissionRequest = async (
     key: "notifications" | "media",
   ) => {
     const currentState = permissions.permissions[key];
+    if (currentState === "granted") {
+      return;
+    }
+
+    if (currentState === "unavailable") {
+      void alert.show({
+        variant: "info",
+        title: "Permission unavailable",
+        message:
+          "This permission isn't available in the current build. You can still continue onboarding.",
+        primaryAction: { label: "Close" },
+        analyticsKey: "onboarding_permissions_unavailable",
+        sourceScreen: "onboarding_permissions",
+      });
+      return;
+    }
+
     if (currentState === "denied") {
       try {
         await Linking.openSettings();
@@ -158,7 +181,23 @@ export function PermissionsScreen({
     }
 
     await markOnboardingAction(`permissions_request_${key}`);
-    const result = await permissions.requestPermission(key);
+
+    let result: PermissionState;
+
+    if (currentState === "undetermined") {
+      const outcome = await promptAndRequestSystemPermission(
+        alert.confirm,
+        permissionKindForKey(key),
+        "onboarding_permissions",
+      );
+      if (outcome.status === "cancelled") {
+        return;
+      }
+      const snapshot = await permissions.refreshPermissions();
+      result = snapshot[key];
+    } else {
+      result = currentState;
+    }
 
     if (result === "denied") {
       void alert.show({
@@ -188,7 +227,32 @@ export function PermissionsScreen({
   const handleContinue = async () => {
     await markOnboardingAction("permissions_continue");
     trackEvent("onboarding_permissions_continue_pressed");
-    await permissions.requestAllPendingPermissions();
+    permissions.setContinueLoadingState(true);
+
+    try {
+      const pending: Array<"notifications" | "media"> = [];
+      if (permissions.permissions.notifications === "undetermined") {
+        pending.push("notifications");
+      }
+      if (permissions.permissions.media === "undetermined") {
+        pending.push("media");
+      }
+
+      for (const key of pending) {
+        const outcome = await promptAndRequestSystemPermission(
+          alert.confirm,
+          permissionKindForKey(key),
+          "onboarding_permissions",
+        );
+        if (outcome.status === "cancelled") {
+          break;
+        }
+      }
+
+      await permissions.refreshPermissions();
+    } finally {
+      permissions.setContinueLoadingState(false);
+    }
 
     router.push(
       debugPreview ? "/debug/onboarding-quick-start" : "/onboarding/quick-start",

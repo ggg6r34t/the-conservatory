@@ -35,7 +35,20 @@ async function getNotificationsModule() {
   return notifications;
 }
 
-export async function ensureNotificationPermissions() {
+export async function requestNotificationPermissionsSystem() {
+  const notifications = await getNotificationsModule();
+  if (!notifications) {
+    return false;
+  }
+
+  const next = await notifications.requestPermissionsAsync();
+  return next.granted;
+}
+
+export async function ensureNotificationPermissions(options?: {
+  /** @default false — OS prompts require an in-app pre-prompt at the UI layer. */
+  requestIfNeeded?: boolean;
+}) {
   const notifications = await getNotificationsModule();
   if (!notifications) {
     return false;
@@ -46,8 +59,11 @@ export async function ensureNotificationPermissions() {
     return true;
   }
 
-  const next = await notifications.requestPermissionsAsync();
-  return next.granted;
+  if (options?.requestIfNeeded !== true) {
+    return false;
+  }
+
+  return requestNotificationPermissionsSystem();
 }
 
 export async function getNotificationPermissionState(): Promise<NotificationPermissionState> {
@@ -89,7 +105,7 @@ export async function scheduleReminderNotification(
     return null;
   }
 
-  const granted = await ensureNotificationPermissions();
+  const granted = await ensureNotificationPermissions({ requestIfNeeded: false });
   if (!granted) {
     return null;
   }

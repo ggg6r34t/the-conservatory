@@ -19,7 +19,9 @@ export async function deliverPendingFeatureReleaseNotifications(userId: string) 
     return [];
   }
 
-  const permissionGranted = await ensureNotificationPermissions();
+  const permissionGranted = await ensureNotificationPermissions({
+    requestIfNeeded: false,
+  });
   const delivered: string[] = [];
 
   for (const notification of pending) {

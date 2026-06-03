@@ -34,7 +34,7 @@ function normalizePickedAsset(asset: ImagePicker.ImagePickerAsset): PlantImageAs
 }
 
 export async function pickPlantImage() {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const permission = await ImagePicker.getMediaLibraryPermissionsAsync();
   if (!permission.granted) {
     throw new Error(
       "Photo library permission is required to add a plant image.",
@@ -55,7 +55,7 @@ export async function pickPlantImage() {
 }
 
 export async function capturePlantImage() {
-  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  const permission = await ImagePicker.getCameraPermissionsAsync();
   if (!permission.granted) {
     throw new Error("Camera permission is required to take a plant photo.");
   }

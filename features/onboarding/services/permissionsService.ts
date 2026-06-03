@@ -1,8 +1,8 @@
 import * as ImagePicker from "expo-image-picker";
 
 import {
-  ensureNotificationPermissions,
   getNotificationPermissionState,
+  requestNotificationPermissionsSystem,
 } from "@/features/notifications/services/notificationService";
 import {
   combinePermissionStates,
@@ -94,7 +94,7 @@ export async function getPermissionSnapshot(): Promise<OnboardingPermissionSnaps
 
 export async function requestNotificationPermission(): Promise<PermissionState> {
   try {
-    const granted = await ensureNotificationPermissions();
+    const granted = await requestNotificationPermissionsSystem();
 
     if (granted) {
       return "granted";

@@ -69,8 +69,11 @@ Not used in production UI. `tests/feedback/no-native-alert.test.ts` scans `app/`
 |----|--------|-------|
 | App Store / Play billing sheet | StoreKit / Play Billing via RevenueCat `purchasePackage` | Required for real IAP after the app’s custom pre-purchase confirm on `subscription-plans`. Sandbox may show a system dialog titled **Test Purchase** — that is not `Alert.alert`. |
 | Mock billing (dev only) | `EXPO_PUBLIC_USE_MOCK_BILLING=true` | Uses `MockBillingAdapter`; no system purchase sheet. |
+| OS permission prompts | iOS / Android after in-app pre-prompt | Camera, notifications, and photo library use `features/permissions/promptAndRequestSystemPermission` (custom `alert.confirm` first). The system sheet that follows cannot be replaced. |
 
 Subscription flow: custom `alert.confirm` → (optional) store sheet → custom success/error `alert.show`.
+
+Permission flow: custom `alert.confirm` (pre-prompt copy in `permissionPromptCopy.ts`) → OS permission sheet → custom post-denial `alert.show` where needed. Background scheduling (`scheduleReminderNotification`, feature-release delivery) only uses already-granted notification permission — it does not trigger the OS prompt. See `docs/design/PERMISSION_SYSTEM.md`. `ensureNotificationPermissions()` does not request by default; UI must pre-prompt first.
 
 Screen migration coverage: `tests/feedback/alert-screen-migrations.test.ts`.
 

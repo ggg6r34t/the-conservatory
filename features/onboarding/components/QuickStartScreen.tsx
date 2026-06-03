@@ -37,6 +37,7 @@ import {
   pickPlantImage,
 } from "@/features/plants/services/photoService";
 import { setPlantDraft } from "@/features/plants/services/plantDraftStorage";
+import { runWithSystemPermission } from "@/features/permissions/runWithSystemPermission";
 import { useAlert } from "@/hooks/useAlert";
 import { trackEvent } from "@/services/analytics/analyticsService";
 import { shadowScale } from "@/styles/shadows";
@@ -148,7 +149,15 @@ export default function QuickStartScreen({
   const handleCapturePhoto = async () => {
     setPhotoPickerVisible(false);
     try {
-      await applyPhotoAsset(await capturePlantImage());
+      await applyPhotoAsset(
+        await runWithSystemPermission({
+          confirm: alert.confirm,
+          show: alert.show,
+          kind: "camera",
+          sourceScreen: "onboarding_quick_start",
+          action: capturePlantImage,
+        }),
+      );
     } catch (error) {
       void alert.show({
         variant: "error",
@@ -167,7 +176,15 @@ export default function QuickStartScreen({
   const handlePickFromLibrary = async () => {
     setPhotoPickerVisible(false);
     try {
-      await applyPhotoAsset(await pickPlantImage());
+      await applyPhotoAsset(
+        await runWithSystemPermission({
+          confirm: alert.confirm,
+          show: alert.show,
+          kind: "mediaLibrary",
+          sourceScreen: "onboarding_quick_start",
+          action: pickPlantImage,
+        }),
+      );
     } catch (error) {
       void alert.show({
         variant: "error",

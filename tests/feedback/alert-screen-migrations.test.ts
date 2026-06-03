@@ -64,6 +64,21 @@ const MIGRATED_SCREENS: {
     patterns: [/useAlert/, /alert\.show/],
     description: "onboarding welcome errors",
   },
+  {
+    file: "features/onboarding/components/PermissionsScreen.tsx",
+    patterns: [/useAlert/, /promptAndRequestSystemPermission/],
+    description: "onboarding permission pre-prompts",
+  },
+  {
+    file: "app/care-reminders.tsx",
+    patterns: [/ensureNotificationsForDelivery/],
+    description: "care reminder notification pre-prompt",
+  },
+  {
+    file: "app/specimen-scan.tsx",
+    patterns: [/confirmBeforeSystemPermission/, /useAlert/],
+    description: "specimen scan camera pre-prompt",
+  },
 ];
 
 function readSource(relativePath: string): string {

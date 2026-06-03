@@ -5,6 +5,9 @@ import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { confirmBeforeSystemPermission } from "@/features/permissions/confirmBeforeSystemPermission";
+import { showSystemPermissionBlockedAlert } from "@/features/permissions/permissionBlockedAlert";
+import { useAlert } from "@/hooks/useAlert";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { resolveSpecimenTagScan } from "@/features/plants/services/specimenTagsService";
@@ -25,6 +28,7 @@ export default function SpecimenScanScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
+  const alert = useAlert();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanState, setScanState] = useState<
     "ready" | "resolving" | "matched"
@@ -115,7 +119,32 @@ export default function SpecimenScanScreen() {
             <Pressable
               accessibilityRole="button"
               onPress={() => {
-                void requestPermission();
+                void (async () => {
+                  const prePrompt = await confirmBeforeSystemPermission(
+                    alert.confirm,
+                    "camera",
+                    "specimen_scan",
+                  );
+                  if (prePrompt === "cancelled") {
+                    return;
+                  }
+                  if (prePrompt === "blocked") {
+                    showSystemPermissionBlockedAlert(
+                      alert.show,
+                      "camera",
+                      "specimen_scan",
+                    );
+                    return;
+                  }
+                  const response = await requestPermission();
+                  if (!response?.granted) {
+                    showSystemPermissionBlockedAlert(
+                      alert.show,
+                      "camera",
+                      "specimen_scan",
+                    );
+                  }
+                })();
               }}
               style={[
                 styles.permissionButton,

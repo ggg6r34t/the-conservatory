@@ -29,6 +29,7 @@ import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateFo
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
+import { ensureNotificationsForDelivery } from "@/features/permissions/ensureNotificationsForDelivery";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
@@ -304,6 +305,17 @@ export default function CareRemindersScreen() {
       return;
     }
 
+    if (draft.enabled && remindersEnabled) {
+      const granted = await ensureNotificationsForDelivery({
+        confirm: alert.confirm,
+        show: alert.show,
+        sourceScreen: "care_reminders",
+      });
+      if (!granted) {
+        return;
+      }
+    }
+
     try {
       await setReminder.mutateAsync({
         plantId: selectedDraftPlant.id,
@@ -400,9 +412,21 @@ export default function CareRemindersScreen() {
             accessibilityRole="switch"
             accessibilityState={{ checked: remindersEnabled }}
             onPress={() => {
-              updateSettings.mutate({
-                remindersEnabled: !remindersEnabled,
-              });
+              void (async () => {
+                if (!remindersEnabled) {
+                  const granted = await ensureNotificationsForDelivery({
+                    confirm: alert.confirm,
+                    show: alert.show,
+                    sourceScreen: "care_reminders",
+                  });
+                  if (!granted) {
+                    return;
+                  }
+                }
+                updateSettings.mutate({
+                  remindersEnabled: !remindersEnabled,
+                });
+              })();
             }}
             style={[
               styles.toggleTrack,
@@ -431,7 +455,17 @@ export default function CareRemindersScreen() {
             screen="care_reminders"
             reason="notifications_disabled"
             onPrimaryAction={() => {
-              updateSettings.mutate({ remindersEnabled: true });
+              void (async () => {
+                const granted = await ensureNotificationsForDelivery({
+                  confirm: alert.confirm,
+                  show: alert.show,
+                  sourceScreen: "care_reminders",
+                });
+                if (!granted) {
+                  return;
+                }
+                updateSettings.mutate({ remindersEnabled: true });
+              })();
             }}
           />
         ) : null}

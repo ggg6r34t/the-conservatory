@@ -148,6 +148,10 @@ jest.mock("@/hooks/useAlert", () => ({
   useAlert: () => ({ show: jest.fn(), confirm: mockConfirm }),
 }));
 
+jest.mock("@/features/permissions/ensureNotificationsForDelivery", () => ({
+  ensureNotificationsForDelivery: jest.fn().mockResolvedValue(true),
+}));
+
 jest.mock("@/hooks/useSnackbar", () => ({
   useSnackbar: () => ({ success: mockSuccess, warning: jest.fn() }),
 }));

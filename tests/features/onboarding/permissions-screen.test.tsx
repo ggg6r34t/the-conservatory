@@ -12,7 +12,11 @@ const mockPermissions = {
   activeKey: null,
   continueLoading: false,
   requestPermission: jest.fn(),
-  requestAllPendingPermissions: jest.fn(),
+  refreshPermissions: jest.fn().mockResolvedValue({
+    notifications: "unknown",
+    media: "unknown",
+  }),
+  setContinueLoadingState: jest.fn(),
 };
 
 jest.mock("expo-router", () => ({

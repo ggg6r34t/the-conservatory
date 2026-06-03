@@ -32,6 +32,7 @@ import {
   getProfileDisplayName,
   getProfileInitials,
 } from "@/features/profile/services/profilePresentationService";
+import { runWithSystemPermission } from "@/features/permissions/runWithSystemPermission";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
@@ -124,7 +125,15 @@ export default function ProfileEditScreen() {
   const handleCapturePhoto = async () => {
     setPhotoPickerVisible(false);
     try {
-      applyAvatarAsset(await capturePlantImage());
+      applyAvatarAsset(
+        await runWithSystemPermission({
+          confirm: alert.confirm,
+          show: alert.show,
+          kind: "camera",
+          sourceScreen: "profile_edit",
+          action: capturePlantImage,
+        }),
+      );
     } catch (error) {
       void alert.show({
         variant: "error",
@@ -138,7 +147,15 @@ export default function ProfileEditScreen() {
   const handlePickFromLibrary = async () => {
     setPhotoPickerVisible(false);
     try {
-      applyAvatarAsset(await pickPlantImage());
+      applyAvatarAsset(
+        await runWithSystemPermission({
+          confirm: alert.confirm,
+          show: alert.show,
+          kind: "mediaLibrary",
+          sourceScreen: "profile_edit",
+          action: pickPlantImage,
+        }),
+      );
     } catch (error) {
       void alert.show({
         variant: "error",

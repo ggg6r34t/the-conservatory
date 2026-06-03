@@ -29,6 +29,7 @@ import {
   pickPlantImage,
   type PlantImageAsset,
 } from "@/features/plants/services/photoService";
+import { runWithSystemPermission } from "@/features/permissions/runWithSystemPermission";
 import { useAlert } from "@/hooks/useAlert";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import { useSnackbar } from "@/hooks/useSnackbar";
@@ -82,7 +83,13 @@ export default function GrowthTimelineScreen() {
     setMediaSheetVisible(false);
 
     try {
-      const asset = await capturePlantImage();
+      const asset = await runWithSystemPermission({
+        confirm: alert.confirm,
+        show: alert.show,
+        kind: "camera",
+        sourceScreen: "plant_timeline",
+        action: capturePlantImage,
+      });
       if (!asset) {
         return;
       }
@@ -101,7 +108,13 @@ export default function GrowthTimelineScreen() {
     setMediaSheetVisible(false);
 
     try {
-      const asset = await pickPlantImage();
+      const asset = await runWithSystemPermission({
+        confirm: alert.confirm,
+        show: alert.show,
+        kind: "mediaLibrary",
+        sourceScreen: "plant_timeline",
+        action: pickPlantImage,
+      });
       if (!asset) {
         return;
       }

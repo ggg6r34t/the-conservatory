@@ -27,6 +27,7 @@ import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import type { LightCondition, SpeciesSuggestion } from "@/features/ai/types/ai";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
+import { runWithSystemPermission } from "@/features/permissions/runWithSystemPermission";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { useAddPlant } from "@/features/plants/hooks/useAddPlant";
@@ -358,7 +359,13 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   const handleCapturePhoto = async () => {
     setPhotoPickerVisible(false);
     try {
-      const asset = await capturePlantImage();
+      const asset = await runWithSystemPermission({
+        confirm: alert.confirm,
+        show: alert.show,
+        kind: "camera",
+        sourceScreen: "plant_form",
+        action: capturePlantImage,
+      });
       applyPhotoAsset(asset);
     } catch (error) {
       void alert.show({
@@ -373,7 +380,13 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
   const handlePickFromLibrary = async () => {
     setPhotoPickerVisible(false);
     try {
-      const asset = await pickPlantImage();
+      const asset = await runWithSystemPermission({
+        confirm: alert.confirm,
+        show: alert.show,
+        kind: "mediaLibrary",
+        sourceScreen: "plant_form",
+        action: pickPlantImage,
+      });
       applyPhotoAsset(asset);
     } catch (error) {
       void alert.show({

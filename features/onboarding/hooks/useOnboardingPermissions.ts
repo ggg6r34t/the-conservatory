@@ -69,20 +69,14 @@ export function useOnboardingPermissions() {
     }
   };
 
-  const requestAllPendingPermissions = async () => {
-    setContinueLoading(true);
+  const refreshPermissions = async () => {
+    const snapshot = await getPermissionSnapshot();
+    setPermissions(snapshot);
+    return snapshot;
+  };
 
-    try {
-      if (permissions.notifications === "undetermined") {
-        await requestPermission("notifications");
-      }
-
-      if (permissions.media === "undetermined") {
-        await requestPermission("media");
-      }
-    } finally {
-      setContinueLoading(false);
-    }
+  const setContinueLoadingState = (loading: boolean) => {
+    setContinueLoading(loading);
   };
 
   return useMemo(
@@ -92,7 +86,8 @@ export function useOnboardingPermissions() {
       activeKey,
       continueLoading,
       requestPermission,
-      requestAllPendingPermissions,
+      refreshPermissions,
+      setContinueLoadingState,
     }),
     [activeKey, continueLoading, isReady, permissions],
   );
