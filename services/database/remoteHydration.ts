@@ -6,6 +6,7 @@ import {
   buildConflictTelemetryMeta,
   resolveConflict,
 } from "@/services/database/conflictResolver";
+import { getLocalEntityId } from "@/services/database/clientIdMapping";
 import { getDatabase } from "@/services/database/sqlite";
 import {
   getStorageAssetUrl,
@@ -16,7 +17,14 @@ import { logger } from "@/utils/logger";
 
 interface MergeableRemoteRow {
   id: string;
+  client_id?: string | null;
   updated_at: string;
+}
+
+function buildRemoteToLocalIdMap<T extends { id: string; client_id?: string | null }>(
+  rows: T[],
+) {
+  return new Map(rows.map((row) => [row.id, getLocalEntityId(row)]));
 }
 
 interface LocalSyncRow {
@@ -75,6 +83,7 @@ interface RemotePhotoRow extends MergeableRemoteRow {
   caption: string | null;
   is_primary: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 interface RemoteCareLogRow extends MergeableRemoteRow {
@@ -246,6 +255,7 @@ async function fetchRemotePhotos(userId: string) {
     "photos",
     [
       "id",
+      "client_id",
       "user_id",
       "plant_id",
       "remote_url",
@@ -345,11 +355,12 @@ async function shouldReplaceLocalUser(
 async function shouldReplaceLocalRow(
   database: SQLiteDatabase,
   table: string,
-  row: MergeableRemoteRow,
+  localEntityId: string,
+  remoteUpdatedAt: string,
 ) {
   const localRow = await database.getFirstAsync<LocalSyncRow>(
     `SELECT pending, updated_at FROM ${table} WHERE id = ? LIMIT 1;`,
-    row.id,
+    localEntityId,
   );
 
   if (!localRow) {
@@ -358,20 +369,20 @@ async function shouldReplaceLocalRow(
 
   const result = resolveConflict({
     entity: table,
-    entityId: row.id,
+    entityId: localEntityId,
     strategy: "last-write-wins",
     localUpdatedAt: localRow.updated_at,
-    remoteUpdatedAt: row.updated_at,
+    remoteUpdatedAt,
     localPending: localRow.pending === 1,
   });
 
   const telemetry = buildConflictTelemetryMeta({
     record: {
       entity: table,
-      entityId: row.id,
+      entityId: localEntityId,
       strategy: "last-write-wins",
       localUpdatedAt: localRow.updated_at,
-      remoteUpdatedAt: row.updated_at,
+      remoteUpdatedAt,
       localPending: localRow.pending === 1,
     },
     result,
@@ -380,7 +391,7 @@ async function shouldReplaceLocalRow(
 
   logRemoteHydrationConflict({
     entity: table,
-    entityId: row.id,
+    entityId: localEntityId,
     winner: result.winner,
     ...telemetry,
     source: "remote-hydration",
@@ -453,6 +464,7 @@ export async function hydrateRemoteUserData(userId: string) {
       "plants",
       [
         "id",
+        "client_id",
         "user_id",
         "name",
         "species_name",
@@ -474,6 +486,7 @@ export async function hydrateRemoteUserData(userId: string) {
       "care_logs",
       [
         "id",
+        "client_id",
         "user_id",
         "plant_id",
         "log_type",
@@ -491,6 +504,7 @@ export async function hydrateRemoteUserData(userId: string) {
       "care_reminders",
       [
         "id",
+        "client_id",
         "user_id",
         "plant_id",
         "reminder_type",
@@ -508,6 +522,7 @@ export async function hydrateRemoteUserData(userId: string) {
       "care_log_tags",
       [
         "id",
+        "client_id",
         "user_id",
         "care_log_id",
         "plant_id",
@@ -522,6 +537,7 @@ export async function hydrateRemoteUserData(userId: string) {
       "plant_status_snapshots",
       [
         "id",
+        "client_id",
         "user_id",
         "plant_id",
         "status",
@@ -537,6 +553,7 @@ export async function hydrateRemoteUserData(userId: string) {
       "specimen_tags",
       [
         "id",
+        "client_id",
         "user_id",
         "plant_id",
         "code",
@@ -552,6 +569,7 @@ export async function hydrateRemoteUserData(userId: string) {
       "archive_curation_overrides",
       [
         "id",
+        "client_id",
         "user_id",
         "plant_id",
         "before_photo_id",
@@ -567,6 +585,7 @@ export async function hydrateRemoteUserData(userId: string) {
       "graveyard_plants",
       [
         "id",
+        "client_id",
         "user_id",
         "plant_id",
         "cause_of_passing",
@@ -592,6 +611,9 @@ export async function hydrateRemoteUserData(userId: string) {
   const archiveOverrides = archiveOverridesResult.rows;
   const graveyardPlants = graveyardResult.rows;
   const remoteUser = usersResult.rows[0] ?? null;
+  const plantIdByRemote = buildRemoteToLocalIdMap(plants);
+  const careLogIdByRemote = buildRemoteToLocalIdMap(careLogs);
+  const photoIdByRemote = buildRemoteToLocalIdMap(photos);
 
   const hydratedPhotos = await Promise.all(
     photos.map(async (row) => {
@@ -612,8 +634,8 @@ export async function hydrateRemoteUserData(userId: string) {
             ? await downloadRemotePhotoAsset({
                 remoteUri: resolvedRemoteUrl,
                 userId: row.user_id,
-                plantId: row.plant_id,
-                photoId: row.id,
+                plantId: plantIdByRemote.get(row.plant_id) ?? row.plant_id,
+                photoId: getLocalEntityId(row),
                 role,
                 mimeType: row.mime_type,
                 storagePath: normalizedStoragePath,
@@ -692,16 +714,18 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of plants) {
-      if (!(await shouldReplaceLocalRow(database, "plants", row))) {
+      const localId = getLocalEntityId(row);
+      if (!(await shouldReplaceLocalRow(database, "plants", localId, row.updated_at))) {
         continue;
       }
 
       await database.runAsync(
         `INSERT OR REPLACE INTO plants (
-          id, user_id, name, species_name, nickname, status, location,
+          id, remote_id, user_id, name, species_name, nickname, status, location,
           watering_interval_days, last_watered_at, next_water_due_at, notes,
           created_at, updated_at, updated_by, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        localId,
         row.id,
         row.user_id,
         row.name,
@@ -723,19 +747,29 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of hydratedPhotos) {
-      if (!(await shouldReplaceLocalRow(database, "photos", row))) {
+      const localId = getLocalEntityId(row);
+      const localPlantId = plantIdByRemote.get(row.plant_id) ?? row.plant_id;
+      if (
+        !(await shouldReplaceLocalRow(
+          database,
+          "photos",
+          localId,
+          row.updated_at,
+        ))
+      ) {
         continue;
       }
 
       await database.runAsync(
         `INSERT OR REPLACE INTO photos (
-          id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type,
+          id, remote_id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type,
           width, height, photo_role, captured_at, taken_at, caption, is_primary, created_at, updated_at, pending,
           synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        localId,
         row.id,
         row.user_id,
-        row.plant_id,
+        localPlantId,
         row.restoredLocalUri,
         row.resolvedRemoteUrl ?? null,
         row.normalizedStoragePath,
@@ -756,18 +790,28 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of careLogs) {
-      if (!(await shouldReplaceLocalRow(database, "care_logs", row))) {
+      const localId = getLocalEntityId(row);
+      const localPlantId = plantIdByRemote.get(row.plant_id) ?? row.plant_id;
+      if (
+        !(await shouldReplaceLocalRow(
+          database,
+          "care_logs",
+          localId,
+          row.updated_at,
+        ))
+      ) {
         continue;
       }
 
       await database.runAsync(
         `INSERT OR REPLACE INTO care_logs (
-          id, user_id, plant_id, log_type, current_condition, notes, tags, logged_at, created_at,
+          id, remote_id, user_id, plant_id, log_type, current_condition, notes, tags, logged_at, created_at,
           updated_at, updated_by, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        localId,
         row.id,
         row.user_id,
-        row.plant_id,
+        localPlantId,
         row.log_type,
         row.current_condition,
         row.notes,
@@ -783,19 +827,29 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of reminders) {
-      if (!(await shouldReplaceLocalRow(database, "care_reminders", row))) {
+      const localId = getLocalEntityId(row);
+      const localPlantId = plantIdByRemote.get(row.plant_id) ?? row.plant_id;
+      if (
+        !(await shouldReplaceLocalRow(
+          database,
+          "care_reminders",
+          localId,
+          row.updated_at,
+        ))
+      ) {
         continue;
       }
 
       await database.runAsync(
         `INSERT OR REPLACE INTO care_reminders (
-          id, user_id, plant_id, reminder_type, frequency_days, enabled,
+          id, remote_id, user_id, plant_id, reminder_type, frequency_days, enabled,
           next_due_at, last_triggered_at, notification_id, created_at,
           updated_at, updated_by, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        localId,
         row.id,
         row.user_id,
-        row.plant_id,
+        localPlantId,
         row.reminder_type,
         row.frequency_days,
         row.enabled ? 1 : 0,
@@ -812,19 +866,31 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of careLogTags) {
-      if (!(await shouldReplaceLocalRow(database, "care_log_tags", row))) {
+      const localId = getLocalEntityId(row);
+      const localPlantId = plantIdByRemote.get(row.plant_id) ?? row.plant_id;
+      const localCareLogId =
+        careLogIdByRemote.get(row.care_log_id) ?? row.care_log_id;
+      if (
+        !(await shouldReplaceLocalRow(
+          database,
+          "care_log_tags",
+          localId,
+          row.updated_at,
+        ))
+      ) {
         continue;
       }
 
       await database.runAsync(
         `INSERT OR REPLACE INTO care_log_tags (
-          id, user_id, care_log_id, plant_id, tag, created_at, updated_at,
+          id, remote_id, user_id, care_log_id, plant_id, tag, created_at, updated_at,
           updated_by, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        localId,
         row.id,
         row.user_id,
-        row.care_log_id,
-        row.plant_id,
+        localCareLogId,
+        localPlantId,
         row.tag,
         row.created_at,
         row.updated_at,
@@ -836,20 +902,28 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of statusSnapshots) {
+      const localId = getLocalEntityId(row);
+      const localPlantId = plantIdByRemote.get(row.plant_id) ?? row.plant_id;
       if (
-        !(await shouldReplaceLocalRow(database, "plant_status_snapshots", row))
+        !(await shouldReplaceLocalRow(
+          database,
+          "plant_status_snapshots",
+          localId,
+          row.updated_at,
+        ))
       ) {
         continue;
       }
 
       await database.runAsync(
         `INSERT OR REPLACE INTO plant_status_snapshots (
-          id, user_id, plant_id, status, reason, captured_at, created_at,
+          id, remote_id, user_id, plant_id, status, reason, captured_at, created_at,
           updated_at, updated_by, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        localId,
         row.id,
         row.user_id,
-        row.plant_id,
+        localPlantId,
         row.status,
         row.reason,
         row.captured_at,
@@ -863,18 +937,28 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of specimenTags) {
-      if (!(await shouldReplaceLocalRow(database, "specimen_tags", row))) {
+      const localId = getLocalEntityId(row);
+      const localPlantId = plantIdByRemote.get(row.plant_id) ?? row.plant_id;
+      if (
+        !(await shouldReplaceLocalRow(
+          database,
+          "specimen_tags",
+          localId,
+          row.updated_at,
+        ))
+      ) {
         continue;
       }
 
       await database.runAsync(
         `INSERT OR REPLACE INTO specimen_tags (
-          id, user_id, plant_id, code, payload, qr_matrix, created_at,
+          id, remote_id, user_id, plant_id, code, payload, qr_matrix, created_at,
           updated_at, updated_by, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        localId,
         row.id,
         row.user_id,
-        row.plant_id,
+        localPlantId,
         row.code,
         row.payload,
         row.qr_matrix,
@@ -888,11 +972,18 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of archiveOverrides) {
+      const localId = getLocalEntityId(row);
+      const localPlantId = plantIdByRemote.get(row.plant_id) ?? row.plant_id;
+      const localBeforePhotoId =
+        photoIdByRemote.get(row.before_photo_id) ?? row.before_photo_id;
+      const localAfterPhotoId =
+        photoIdByRemote.get(row.after_photo_id) ?? row.after_photo_id;
       if (
         !(await shouldReplaceLocalRow(
           database,
           "archive_curation_overrides",
-          row,
+          localId,
+          row.updated_at,
         ))
       ) {
         continue;
@@ -900,14 +991,15 @@ export async function hydrateRemoteUserData(userId: string) {
 
       await database.runAsync(
         `INSERT OR REPLACE INTO archive_curation_overrides (
-          id, user_id, plant_id, before_photo_id, after_photo_id, caption,
+          id, remote_id, user_id, plant_id, before_photo_id, after_photo_id, caption,
           created_at, updated_at, updated_by, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        localId,
         row.id,
         row.user_id,
-        row.plant_id,
-        row.before_photo_id,
-        row.after_photo_id,
+        localPlantId,
+        localBeforePhotoId,
+        localAfterPhotoId,
         row.caption,
         row.created_at,
         row.updated_at,
@@ -919,18 +1011,28 @@ export async function hydrateRemoteUserData(userId: string) {
     }
 
     for (const row of graveyardPlants) {
-      if (!(await shouldReplaceLocalRow(database, "graveyard_plants", row))) {
+      const localId = getLocalEntityId(row);
+      const localPlantId = plantIdByRemote.get(row.plant_id) ?? row.plant_id;
+      if (
+        !(await shouldReplaceLocalRow(
+          database,
+          "graveyard_plants",
+          localId,
+          row.updated_at,
+        ))
+      ) {
         continue;
       }
 
       await database.runAsync(
         `INSERT OR REPLACE INTO graveyard_plants (
-          id, user_id, plant_id, cause_of_passing, memorial_note, archived_at,
+          id, remote_id, user_id, plant_id, cause_of_passing, memorial_note, archived_at,
           created_at, updated_at, updated_by, pending, synced_at, sync_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        localId,
         row.id,
         row.user_id,
-        row.plant_id,
+        localPlantId,
         row.cause_of_passing,
         row.memorial_note,
         row.archived_at,
@@ -948,7 +1050,7 @@ export async function hydrateRemoteUserData(userId: string) {
         database,
         table: "photos",
         userId,
-        remoteIds: hydratedPhotos.map((row) => row.id),
+        remoteIds: hydratedPhotos.map((row) => getLocalEntityId(row)),
       });
     }
 
@@ -957,7 +1059,7 @@ export async function hydrateRemoteUserData(userId: string) {
         database,
         table: "care_logs",
         userId,
-        remoteIds: careLogs.map((row) => row.id),
+        remoteIds: careLogs.map((row) => getLocalEntityId(row)),
       });
     }
 
@@ -966,7 +1068,7 @@ export async function hydrateRemoteUserData(userId: string) {
         database,
         table: "care_reminders",
         userId,
-        remoteIds: reminders.map((row) => row.id),
+        remoteIds: reminders.map((row) => getLocalEntityId(row)),
       });
     }
 
@@ -975,7 +1077,7 @@ export async function hydrateRemoteUserData(userId: string) {
         database,
         table: "graveyard_plants",
         userId,
-        remoteIds: graveyardPlants.map((row) => row.id),
+        remoteIds: graveyardPlants.map((row) => getLocalEntityId(row)),
       });
     }
 
@@ -984,7 +1086,7 @@ export async function hydrateRemoteUserData(userId: string) {
         database,
         table: "care_log_tags",
         userId,
-        remoteIds: careLogTags.map((row) => row.id),
+        remoteIds: careLogTags.map((row) => getLocalEntityId(row)),
       });
     }
 
@@ -993,7 +1095,7 @@ export async function hydrateRemoteUserData(userId: string) {
         database,
         table: "plant_status_snapshots",
         userId,
-        remoteIds: statusSnapshots.map((row) => row.id),
+        remoteIds: statusSnapshots.map((row) => getLocalEntityId(row)),
       });
     }
 
@@ -1002,7 +1104,7 @@ export async function hydrateRemoteUserData(userId: string) {
         database,
         table: "specimen_tags",
         userId,
-        remoteIds: specimenTags.map((row) => row.id),
+        remoteIds: specimenTags.map((row) => getLocalEntityId(row)),
       });
     }
 
@@ -1011,7 +1113,7 @@ export async function hydrateRemoteUserData(userId: string) {
         database,
         table: "archive_curation_overrides",
         userId,
-        remoteIds: archiveOverrides.map((row) => row.id),
+        remoteIds: archiveOverrides.map((row) => getLocalEntityId(row)),
       });
     }
 
@@ -1020,7 +1122,7 @@ export async function hydrateRemoteUserData(userId: string) {
         database,
         table: "plants",
         userId,
-        remoteIds: plants.map((row) => row.id),
+        remoteIds: plants.map((row) => getLocalEntityId(row)),
       });
     }
   });

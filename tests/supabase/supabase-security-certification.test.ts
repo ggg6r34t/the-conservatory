@@ -53,6 +53,19 @@ describe("Supabase security certification (static)", () => {
   );
   const schemaCanonical = read("database/schema.sql");
 
+  it("ships client_id columns for local-first identifier upserts", () => {
+    const clientIdMigration = read(
+      "supabase/migrations/20260603160000_client_id_columns.sql",
+    );
+
+    expect(listMigrations()).toContain("20260603160000_client_id_columns.sql");
+    expect(clientIdMigration).toContain("add column if not exists client_id");
+    expect(clientIdMigration).toContain("idx_plants_user_client_id");
+    expect(clientIdMigration).toContain("idx_care_reminders_user_client_id");
+    expect(schemaCanonical).toContain("client_id text");
+    expect(schemaCanonical).toContain("idx_care_reminders_user_client_id");
+  });
+
   it("ships baseline schema and RLS in supabase migrations", () => {
     expect(listMigrations()).toContain(
       "20260401000000_baseline_conservatory_schema_rls.sql",

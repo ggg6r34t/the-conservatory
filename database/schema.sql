@@ -1,5 +1,6 @@
 -- Canonical remote schema. Supabase migration mirror:
 -- supabase/migrations/20260401000000_baseline_conservatory_schema_rls.sql
+-- App-owned identifiers: supabase/migrations/20260603160000_client_id_columns.sql
 
 create extension if not exists pgcrypto;
 create extension if not exists citext;
@@ -58,6 +59,7 @@ create table if not exists public.user_preferences (
 
 create table if not exists public.plants (
   id uuid primary key default gen_random_uuid(),
+  client_id text,
   user_id uuid not null references public.users(id) on delete cascade,
   name text not null,
   species_name text not null,
@@ -75,6 +77,7 @@ create table if not exists public.plants (
 
 create table if not exists public.photos (
   id uuid primary key default gen_random_uuid(),
+  client_id text,
   user_id uuid not null references public.users(id) on delete cascade,
   plant_id uuid not null references public.plants(id) on delete cascade,
   remote_url text,
@@ -94,6 +97,7 @@ create table if not exists public.photos (
 
 create table if not exists public.care_logs (
   id uuid primary key default gen_random_uuid(),
+  client_id text,
   user_id uuid not null references public.users(id) on delete cascade,
   plant_id uuid not null references public.plants(id) on delete cascade,
   log_type public.care_log_type not null,
@@ -108,6 +112,7 @@ create table if not exists public.care_logs (
 
 create table if not exists public.care_log_tags (
   id uuid primary key default gen_random_uuid(),
+  client_id text,
   user_id uuid not null references public.users(id) on delete cascade,
   care_log_id uuid not null references public.care_logs(id) on delete cascade,
   plant_id uuid not null references public.plants(id) on delete cascade,
@@ -120,6 +125,7 @@ create table if not exists public.care_log_tags (
 
 create table if not exists public.care_reminders (
   id uuid primary key default gen_random_uuid(),
+  client_id text,
   user_id uuid not null references public.users(id) on delete cascade,
   plant_id uuid not null references public.plants(id) on delete cascade,
   reminder_type public.reminder_type not null,
@@ -134,6 +140,7 @@ create table if not exists public.care_reminders (
 
 create table if not exists public.plant_status_snapshots (
   id uuid primary key default gen_random_uuid(),
+  client_id text,
   user_id uuid not null references public.users(id) on delete cascade,
   plant_id uuid not null references public.plants(id) on delete cascade,
   status public.plant_health_status not null,
@@ -146,6 +153,7 @@ create table if not exists public.plant_status_snapshots (
 
 create table if not exists public.specimen_tags (
   id uuid primary key default gen_random_uuid(),
+  client_id text,
   user_id uuid not null references public.users(id) on delete cascade,
   plant_id uuid not null references public.plants(id) on delete cascade,
   code text not null,
@@ -159,6 +167,7 @@ create table if not exists public.specimen_tags (
 
 create table if not exists public.archive_curation_overrides (
   id uuid primary key default gen_random_uuid(),
+  client_id text,
   user_id uuid not null references public.users(id) on delete cascade,
   plant_id uuid not null references public.plants(id) on delete cascade,
   before_photo_id uuid not null references public.photos(id) on delete cascade,
@@ -172,6 +181,7 @@ create table if not exists public.archive_curation_overrides (
 
 create table if not exists public.graveyard_plants (
   id uuid primary key default gen_random_uuid(),
+  client_id text,
   user_id uuid not null references public.users(id) on delete cascade,
   plant_id uuid not null unique references public.plants(id) on delete cascade,
   cause_of_passing text,
@@ -181,6 +191,25 @@ create table if not exists public.graveyard_plants (
   updated_at timestamptz not null default timezone('utc', now()),
   updated_by uuid references auth.users(id)
 );
+
+create unique index if not exists idx_plants_user_client_id
+  on public.plants (user_id, client_id);
+create unique index if not exists idx_photos_user_client_id
+  on public.photos (user_id, client_id);
+create unique index if not exists idx_care_logs_user_client_id
+  on public.care_logs (user_id, client_id);
+create unique index if not exists idx_care_log_tags_user_client_id
+  on public.care_log_tags (user_id, client_id);
+create unique index if not exists idx_care_reminders_user_client_id
+  on public.care_reminders (user_id, client_id);
+create unique index if not exists idx_plant_status_snapshots_user_client_id
+  on public.plant_status_snapshots (user_id, client_id);
+create unique index if not exists idx_specimen_tags_user_client_id
+  on public.specimen_tags (user_id, client_id);
+create unique index if not exists idx_archive_curation_overrides_user_client_id
+  on public.archive_curation_overrides (user_id, client_id);
+create unique index if not exists idx_graveyard_plants_user_client_id
+  on public.graveyard_plants (user_id, client_id);
 
 create index if not exists idx_plants_user_id_created_at on public.plants (user_id, created_at desc);
 create index if not exists idx_plants_user_id_status on public.plants (user_id, status);

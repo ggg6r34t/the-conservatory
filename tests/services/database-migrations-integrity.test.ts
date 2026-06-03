@@ -1,5 +1,6 @@
 import {
   bootstrapSql,
+  CURRENT_SCHEMA_VERSION,
   runDatabaseMigrations,
 } from "@/services/database/migrations";
 
@@ -110,5 +111,24 @@ describe("database migrations integrity", () => {
       .join("\n");
 
     expect(executedSql).not.toContain("_v2");
+  });
+
+  it("adds remote_id columns for cloud uuid mapping at schema version 2", async () => {
+    const database = createMigrationDatabase({
+      photos: true,
+      care_logs: true,
+      care_reminders: true,
+      graveyard_plants: true,
+    });
+
+    await runDatabaseMigrations(database as never);
+
+    const alterCalls = database.execAsync.mock.calls
+      .map((call) => String(call[0]))
+      .filter((sql) => sql.includes("remote_id"));
+
+    expect(alterCalls.some((sql) => sql.includes("plants"))).toBe(true);
+    expect(alterCalls.some((sql) => sql.includes("care_reminders"))).toBe(true);
+    expect(CURRENT_SCHEMA_VERSION).toBe(2);
   });
 });

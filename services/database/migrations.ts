@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export const bootstrapSql = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -723,6 +723,23 @@ CREATE INDEX IF NOT EXISTS idx_care_logs_user_id ON care_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_photos_user_id ON photos(user_id);
 CREATE INDEX IF NOT EXISTS idx_care_reminders_user_id ON care_reminders(user_id);
 `);
+
+  const remoteIdTables = [
+    "plants",
+    "photos",
+    "care_logs",
+    "care_log_tags",
+    "care_reminders",
+    "plant_status_snapshots",
+    "specimen_tags",
+    "archive_curation_overrides",
+    "graveyard_plants",
+    "feature_usage",
+  ] as const;
+
+  for (const table of remoteIdTables) {
+    await ensureColumn(database, table, "remote_id", "TEXT");
+  }
 
   await recordSchemaMigrationVersion(database);
 }

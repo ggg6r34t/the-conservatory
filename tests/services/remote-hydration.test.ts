@@ -350,6 +350,7 @@ describe("remoteHydration care logs", () => {
     expect(runAsync).toHaveBeenCalledWith(
       expect.stringContaining("INSERT OR REPLACE INTO care_logs"),
       "log-1",
+      "log-1",
       "user-1",
       "plant-1",
       "inspect",
@@ -435,6 +436,7 @@ describe("remoteHydration photos", () => {
     );
     expect(runAsync).toHaveBeenCalledWith(
       expect.stringContaining("INSERT OR REPLACE INTO photos"),
+      "photo-1",
       "photo-1",
       "user-1",
       "plant-1",

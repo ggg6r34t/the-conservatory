@@ -1,6 +1,13 @@
 import { STORAGE_BUCKET } from "@/config/constants";
 import { supabase } from "@/config/supabase";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
+import {
+  buildParentNotSyncedOutcome,
+  deleteByClientId,
+  isClientIdEntity,
+  resolveRemoteId,
+  upsertByClientId,
+} from "@/services/database/clientIdMapping";
 import { getDatabase } from "@/services/database/sqlite";
 import type { SyncProcessResult, SyncQueueItem } from "@/services/database/sync";
 import {
@@ -64,7 +71,7 @@ async function mergeFeatureUsageRecordWithRemote(row: Awaited<ReturnType<typeof 
   const remote = await supabase!
     .from("feature_usage")
     .select("count")
-    .eq("id", row.id)
+    .eq("client_id", row.id)
     .maybeSingle();
 
   if (remote.error) {
@@ -426,9 +433,20 @@ async function uploadPhotoAsset(
     return row;
   }
 
-  const response = await fetch(row.local_uri);
+  let response: Response;
+  try {
+    response = await fetch(row.local_uri);
+  } catch (cause) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    throw new Error(
+      `Photo upload failed while reading local file for ${row.id}: ${detail}`,
+    );
+  }
+
   if (!response.ok) {
-    throw new Error("Unable to read local photo for upload.");
+    throw new Error(
+      `Photo upload failed: local file for ${row.id} could not be read (HTTP ${response.status}).`,
+    );
   }
 
   const blob = await response.blob();
@@ -492,6 +510,11 @@ async function deleteRemoteRecord(item: SyncQueueItem) {
     }
   }
 
+  if (isClientIdEntity(item.entity)) {
+    await deleteByClientId(item.entity, item.entityId, userId);
+    return;
+  }
+
   const baseDelete = supabase
     .from(item.entity)
     .delete()
@@ -517,12 +540,8 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("plants");
     }
-    const { error } = await supabase
-      .from("plants")
-      .upsert(row, { onConflict: "id" });
-    if (error) {
-      throw new Error(error.message);
-    }
+    const { id: _localId, ...plantPayload } = row;
+    await upsertByClientId("plants", item.entityId, plantPayload);
     return;
   }
 
@@ -545,12 +564,15 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("care_logs");
     }
-    const { error } = await supabase
-      .from("care_logs")
-      .upsert(row, { onConflict: "id" });
-    if (error) {
-      throw new Error(error.message);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    if (!remotePlantId) {
+      return buildParentNotSyncedOutcome("plants");
     }
+    const { id: _localId, plant_id: _localPlantId, ...careLogPayload } = row;
+    await upsertByClientId("care_logs", item.entityId, {
+      ...careLogPayload,
+      plant_id: remotePlantId,
+    });
     return;
   }
 
@@ -559,12 +581,15 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("care_reminders");
     }
-    const { error } = await supabase
-      .from("care_reminders")
-      .upsert(row, { onConflict: "id" });
-    if (error) {
-      throw new Error(error.message);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    if (!remotePlantId) {
+      return buildParentNotSyncedOutcome("plants");
     }
+    const { id: _localId, plant_id: _localPlantId, ...reminderPayload } = row;
+    await upsertByClientId("care_reminders", item.entityId, {
+      ...reminderPayload,
+      plant_id: remotePlantId,
+    });
     return;
   }
 
@@ -573,10 +598,25 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("care_log_tags");
     }
-    const { error } = await supabase
-      .from("care_log_tags")
-      .upsert(row, { onConflict: "id" });
-    if (error) throw new Error(error.message);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    const remoteCareLogId = await resolveRemoteId("care_logs", row.care_log_id);
+    if (!remotePlantId) {
+      return buildParentNotSyncedOutcome("plants");
+    }
+    if (!remoteCareLogId) {
+      return buildParentNotSyncedOutcome("care_logs");
+    }
+    const {
+      id: _localId,
+      plant_id: _localPlantId,
+      care_log_id: _localCareLogId,
+      ...tagPayload
+    } = row;
+    await upsertByClientId("care_log_tags", item.entityId, {
+      ...tagPayload,
+      plant_id: remotePlantId,
+      care_log_id: remoteCareLogId,
+    });
     return;
   }
 
@@ -585,10 +625,15 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("plant_status_snapshots");
     }
-    const { error } = await supabase
-      .from("plant_status_snapshots")
-      .upsert(row, { onConflict: "id" });
-    if (error) throw new Error(error.message);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    if (!remotePlantId) {
+      return buildParentNotSyncedOutcome("plants");
+    }
+    const { id: _localId, plant_id: _localPlantId, ...snapshotPayload } = row;
+    await upsertByClientId("plant_status_snapshots", item.entityId, {
+      ...snapshotPayload,
+      plant_id: remotePlantId,
+    });
     return;
   }
 
@@ -597,10 +642,15 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("specimen_tags");
     }
-    const { error } = await supabase
-      .from("specimen_tags")
-      .upsert(row, { onConflict: "id" });
-    if (error) throw new Error(error.message);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    if (!remotePlantId) {
+      return buildParentNotSyncedOutcome("plants");
+    }
+    const { id: _localId, plant_id: _localPlantId, ...tagPayload } = row;
+    await upsertByClientId("specimen_tags", item.entityId, {
+      ...tagPayload,
+      plant_id: remotePlantId,
+    });
     return;
   }
 
@@ -609,10 +659,34 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("archive_curation_overrides");
     }
-    const { error } = await supabase
-      .from("archive_curation_overrides")
-      .upsert(row, { onConflict: "id" });
-    if (error) throw new Error(error.message);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    const remoteBeforePhotoId = await resolveRemoteId(
+      "photos",
+      row.before_photo_id,
+    );
+    const remoteAfterPhotoId = await resolveRemoteId(
+      "photos",
+      row.after_photo_id,
+    );
+    if (!remotePlantId) {
+      return buildParentNotSyncedOutcome("plants");
+    }
+    if (!remoteBeforePhotoId || !remoteAfterPhotoId) {
+      return buildParentNotSyncedOutcome("photos");
+    }
+    const {
+      id: _localId,
+      plant_id: _localPlantId,
+      before_photo_id: _beforePhotoId,
+      after_photo_id: _afterPhotoId,
+      ...overridePayload
+    } = row;
+    await upsertByClientId("archive_curation_overrides", item.entityId, {
+      ...overridePayload,
+      plant_id: remotePlantId,
+      before_photo_id: remoteBeforePhotoId,
+      after_photo_id: remoteAfterPhotoId,
+    });
     return;
   }
 
@@ -632,29 +706,15 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("photos");
     }
-    const { error } = await supabase.from("photos").upsert(
-      {
-        id: row.id,
-        user_id: row.user_id,
-        plant_id: row.plant_id,
-        storage_path: row.storage_path,
-        mime_type: row.mime_type,
-        width: row.width,
-        height: row.height,
-        photo_role: row.photo_role,
-        captured_at: row.captured_at,
-        taken_at: row.taken_at,
-        caption: row.caption,
-        is_primary: row.is_primary,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        updated_by: row.updated_by,
-      },
-      { onConflict: "id" },
-    );
-    if (error) {
-      throw new Error(error.message);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    if (!remotePlantId) {
+      return buildParentNotSyncedOutcome("plants");
     }
+    const { id: _localId, plant_id: _localPlantId, ...photoPayload } = row;
+    await upsertByClientId("photos", item.entityId, {
+      ...photoPayload,
+      plant_id: remotePlantId,
+    });
     return;
   }
 
@@ -663,12 +723,15 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("graveyard_plants");
     }
-    const { error } = await supabase
-      .from("graveyard_plants")
-      .upsert(row, { onConflict: "id" });
-    if (error) {
-      throw new Error(error.message);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    if (!remotePlantId) {
+      return buildParentNotSyncedOutcome("plants");
     }
+    const { id: _localId, plant_id: _localPlantId, ...graveyardPayload } = row;
+    await upsertByClientId("graveyard_plants", item.entityId, {
+      ...graveyardPayload,
+      plant_id: remotePlantId,
+    });
     return;
   }
 
@@ -679,10 +742,8 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("feature_usage");
     }
-    const { error } = await supabase
-      .from("feature_usage")
-      .upsert(row, { onConflict: "id" });
-    if (error) throw new Error(error.message);
+    const { id: _localId, ...usagePayload } = row;
+    await upsertByClientId("feature_usage", item.entityId, usagePayload);
     return;
   }
 

@@ -1,4 +1,5 @@
 import { env } from "@/config/env";
+import { compareSyncQueueItems } from "@/services/database/syncEntityPriority";
 import { processSyncQueueItemWithSupabase } from "@/services/database/supabaseSyncAdapter";
 import { getDatabase } from "@/services/database/sqlite";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
@@ -158,7 +159,7 @@ class SQLiteSyncQueueStorage implements SyncQueueStorage {
       limit,
     );
 
-    return rows.map(mapRow);
+    return rows.map(mapRow).sort(compareSyncQueueItems);
   }
 
   async countProcessable(nowIso: string) {
