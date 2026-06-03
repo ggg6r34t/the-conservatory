@@ -63,6 +63,15 @@ Properties: `variant`, `analytics_key`, `source_screen` — never message body o
 
 Not used in production UI. `tests/feedback/no-native-alert.test.ts` scans `app/`, `features/`, `hooks/`, `providers/`, `components/`, and `services/` for `Alert.alert` and `import { Alert } from "react-native"`.
 
+### Documented platform exceptions
+
+| UI | Source | Notes |
+|----|--------|-------|
+| App Store / Play billing sheet | StoreKit / Play Billing via RevenueCat `purchasePackage` | Required for real IAP after the app’s custom pre-purchase confirm on `subscription-plans`. Sandbox may show a system dialog titled **Test Purchase** — that is not `Alert.alert`. |
+| Mock billing (dev only) | `EXPO_PUBLIC_USE_MOCK_BILLING=true` | Uses `MockBillingAdapter`; no system purchase sheet. |
+
+Subscription flow: custom `alert.confirm` → (optional) store sheet → custom success/error `alert.show`.
+
 Screen migration coverage: `tests/feedback/alert-screen-migrations.test.ts`.
 
 Per-theme destructive readability: `tests/feedback/alert-theme-rendering.test.tsx`.

@@ -35,8 +35,14 @@ const MIGRATED_SCREENS: {
   },
   {
     file: "app/subscription-plans.tsx",
-    patterns: [/useAlert/, /subscription_purchase_failed/],
-    description: "purchase failure dialog",
+    patterns: [
+      /useAlert/,
+      /subscription_purchase_confirm/,
+      /subscription_purchase_failed/,
+      /subscription_purchase_success/,
+      /buildSubscriptionPurchaseConfirmMessage/,
+    ],
+    description: "purchase confirm, success, and failure dialogs",
   },
   {
     file: "app/export-collection-data.tsx",

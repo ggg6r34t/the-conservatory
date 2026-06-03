@@ -14,6 +14,7 @@ import { LegalFooterLinks } from "@/features/legal/components/LegalFooterLinks";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { getMembershipNameForPackageType } from "@/features/billing/membershipNames";
 import { resolvePremiumOfferingPackages } from "@/features/billing/services/offeringPackageResolution";
+import { buildSubscriptionPurchaseConfirmMessage } from "@/features/billing/services/subscriptionPurchaseCopy";
 import { formatAnnualSavingsLabel } from "@/features/billing/services/subscriptionPricingCopy";
 import { EmptyState } from "@/features/empty-states/components/EmptyState";
 import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
@@ -60,7 +61,28 @@ export default function SubscriptionPlansScreen() {
   }, [isLoading, isPremium, offerings]);
 
   async function handlePurchase() {
-    if (!selectedPackage) return;
+    if (!selectedPackage || purchasing) return;
+
+    const planName =
+      getMembershipNameForPackageType(selectedPackage.packageType) ??
+      "Premium";
+
+    const confirmed = await alert.confirm({
+      variant: "confirm",
+      title: `Subscribe to ${planName}?`,
+      message: buildSubscriptionPurchaseConfirmMessage(selectedPackage),
+      confirmLabel: selectedPackage.introductoryPrice
+        ? "Start trial"
+        : "Subscribe",
+      cancelLabel: "Not now",
+      analyticsKey: "subscription_purchase_confirm",
+      sourceScreen: "subscription_plans",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     setPurchasing(true);
     trackMonetizationEvent("purchase_started", {
       packageType: selectedPackage.packageType,
@@ -70,6 +92,14 @@ export default function SubscriptionPlansScreen() {
     if (result.success) {
       trackMonetizationEvent("purchase_completed", {
         packageType: selectedPackage.packageType,
+      });
+      void alert.show({
+        variant: "success",
+        title: "Subscription active",
+        message: `Your ${planName} membership is ready. Premium features unlock on this device after sync completes.`,
+        primaryAction: { label: "Close" },
+        analyticsKey: "subscription_purchase_success",
+        sourceScreen: "subscription_plans",
       });
     } else if (result.userCancelled) {
       trackMonetizationEvent("purchase_cancelled");
