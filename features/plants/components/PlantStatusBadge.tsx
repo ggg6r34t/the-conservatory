@@ -19,8 +19,12 @@ export function PlantStatusBadge({
   variant = "compact",
   style,
 }: PlantStatusBadgeProps) {
-  const { colors } = useTheme();
-  const presentation = getPlantStatusBadgePresentation({ healthState, colors });
+  const { colors, themeId } = useTheme();
+  const presentation = getPlantStatusBadgePresentation({
+    healthState,
+    colors,
+    themeId,
+  });
 
   if (variant === "detail") {
     return (
@@ -59,7 +63,7 @@ export function PlantStatusBadge({
     <View
       style={[
         styles.compactCard,
-        { backgroundColor: colors.surfaceContainerLowest },
+        { backgroundColor: presentation.badgeBackgroundColor },
         style,
       ]}
     >
@@ -75,7 +79,9 @@ export function PlantStatusBadge({
           color={presentation.iconColor}
         />
       </View>
-      <Text style={[styles.compactLabel, { color: presentation.labelColor }]}>
+      <Text
+        style={[styles.compactLabel, { color: presentation.badgeForegroundColor }]}
+      >
         {presentation.label}
       </Text>
     </View>

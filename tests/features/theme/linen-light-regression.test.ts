@@ -123,6 +123,22 @@ describe("Linen Light regression", () => {
     );
   });
 
+  it("shows the white thriving pill on the interface-theme preview card", () => {
+    expect(linenLightTheme.preview.surfaces.statusBackground).toBe("#ffffff");
+    expect(linenLightTheme.preview.surfaces.statusForeground).toBe("#1b1c19");
+
+    const thriving = getPlantStatusBadgePresentation({
+      healthState: "thriving",
+      colors: linen.colors,
+    });
+    expect(linenLightTheme.preview.surfaces.statusBackground).toBe(
+      thriving.badgeBackgroundColor,
+    );
+    expect(linenLightTheme.preview.surfaces.statusForeground).toBe(
+      thriving.badgeForegroundColor,
+    );
+  });
+
   it("maps status badge presentation to the pre-expansion linen appearance", () => {
     const thriving = getPlantStatusBadgePresentation({
       healthState: "thriving",
@@ -130,8 +146,8 @@ describe("Linen Light regression", () => {
     });
     expect(thriving.iconColor).toBe("#163828");
     expect(thriving.iconBackgroundColor).toBe("#c5ebd4");
-    expect(thriving.badgeBackgroundColor).toBe("#ffdbcf");
-    expect(thriving.badgeForegroundColor).toBe("#163828");
+    expect(thriving.badgeBackgroundColor).toBe("#ffffff");
+    expect(thriving.badgeForegroundColor).toBe("#1b1c19");
 
     const stable = getPlantStatusBadgePresentation({
       healthState: "stable",

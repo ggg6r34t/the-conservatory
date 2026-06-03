@@ -3,6 +3,7 @@ import {
   buildThemeTokens,
   clearThemeTokenCache,
   formatThemeName,
+  getThemeDefinition,
   resolveThemeId,
   themeCatalog,
 } from "@/features/theme/registry";
@@ -60,5 +61,19 @@ describe("theme registry", () => {
     expect(linen.colors.primary).toBe("#163828");
     expect(linen.colors.surface).toBe("#fbf9f4");
     expect(linen.colors.onSurface).toBe("#1b1c19");
+  });
+
+  it("gives terracotta-dusk its own palette (not linen-light core)", () => {
+    const linen = buildThemeTokens("linen-light");
+    const terracotta = buildThemeTokens("terracotta-dusk");
+    const definition = getThemeDefinition("terracotta-dusk");
+
+    expect(terracotta.colors.primary).not.toBe(linen.colors.primary);
+    expect(terracotta.colors.background).not.toBe(linen.colors.background);
+    expect(terracotta.colors.surface).not.toBe(linen.colors.surface);
+    expect(definition.card.background).toBe("#ffdbcf");
+    expect(definition.preview.surfaces.statusBackground).toBe(
+      terracotta.colors.statusThriving,
+    );
   });
 });

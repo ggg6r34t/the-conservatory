@@ -1,9 +1,14 @@
 import type { BotanicalThemeValue } from "@/components/design-system/Theme";
+import type { ThemeId } from "@/features/theme/types";
 
 import type { PlantHealthState } from "./plantStatusService";
 import { getPlantStatusLabel } from "./plantStatusService";
 
 type ThemeColors = BotanicalThemeValue["colors"];
+
+function usesWarmThrivingCompactBadge(themeId?: ThemeId): boolean {
+  return themeId === "terracotta-dusk";
+}
 
 export type PlantStatusBadgeLabel = "THRIVING" | "STABLE" | "NEEDS WATER";
 
@@ -24,9 +29,11 @@ export interface PlantStatusBadgePresentation {
 export function getPlantStatusBadgePresentation(input: {
   healthState: PlantHealthState;
   colors: ThemeColors;
+  themeId?: ThemeId;
 }): PlantStatusBadgePresentation {
   const label = getPlantStatusLabel(input.healthState);
-  const { colors } = input;
+  const { colors, themeId } = input;
+  const warmThrivingBadge = usesWarmThrivingCompactBadge(themeId);
 
   if (input.healthState === "needs_attention") {
     return {
@@ -37,8 +44,8 @@ export function getPlantStatusBadgePresentation(input: {
       iconColor: colors.error,
       iconBackgroundColor: colors.errorContainer,
       labelColor: colors.onSurface,
-      badgeBackgroundColor: colors.errorContainer,
-      badgeForegroundColor: colors.onErrorContainer,
+      badgeBackgroundColor: colors.surfaceContainerLowest,
+      badgeForegroundColor: colors.onSurface,
       emphasisColor: colors.error,
     };
   }
@@ -52,8 +59,10 @@ export function getPlantStatusBadgePresentation(input: {
       iconColor: colors.primary,
       iconBackgroundColor: colors.primaryFixed,
       labelColor: colors.onSurface,
-      badgeBackgroundColor: colors.secondaryFixed,
-      badgeForegroundColor: colors.primary,
+      badgeBackgroundColor: warmThrivingBadge
+        ? colors.secondaryFixed
+        : colors.surfaceContainerLowest,
+      badgeForegroundColor: warmThrivingBadge ? colors.primary : colors.onSurface,
       emphasisColor: colors.primary,
     };
   }
@@ -66,8 +75,8 @@ export function getPlantStatusBadgePresentation(input: {
     iconColor: colors.onSurfaceVariant,
     iconBackgroundColor: colors.surfaceContainerHigh,
     labelColor: colors.onSurface,
-    badgeBackgroundColor: colors.surfaceContainerHigh,
-    badgeForegroundColor: colors.onSurfaceVariant,
+    badgeBackgroundColor: colors.surfaceContainerLowest,
+    badgeForegroundColor: colors.onSurface,
     emphasisColor: colors.onSurfaceVariant,
   };
 }

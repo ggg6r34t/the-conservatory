@@ -1,8 +1,7 @@
 import type { ThemeDefinition } from "@/features/theme/types";
 import { buildThemePalette } from "@/features/theme/tokens/deriveSemanticTokens";
 
-/** Linen Light core palette — also used for Terracotta Dusk picker presentation per mockup. */
-export const linenLightCore = {
+const linenLightCore = {
   primary: "#163828",
   primaryContainer: "#2d4f3e",
   primaryFixed: "#c5ebd4",
@@ -78,8 +77,8 @@ export const linenLightTheme: ThemeDefinition = {
       background: linenLightCore.surface,
       border: "rgba(193, 200, 194, 0.1)",
       plantTitle: linenLightCore.primary,
-      statusBackground: linenLightCore.tertiaryContainer,
-      statusForeground: linenLightCore.onTertiaryContainer,
+      statusBackground: linenLightCore.surfaceContainerLowest,
+      statusForeground: linenLightCore.onSurface,
       placeholderPrimary: linenLightCore.surfaceContainer,
       placeholderSecondary: linenLightCore.surfaceContainer,
     },

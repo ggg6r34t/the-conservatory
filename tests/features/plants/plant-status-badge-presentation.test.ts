@@ -1,4 +1,5 @@
 import { tokens } from "@/styles/tokens";
+import { buildThemeTokens } from "@/features/theme/registry";
 
 import { getPlantStatusBadgePresentation } from "@/features/plants/services/plantStatusBadgePresentation";
 
@@ -16,8 +17,10 @@ describe("plantStatusBadgePresentation", () => {
     expect(presentation.iconBackgroundColor).toBe(
       tokens.colors.primaryFixed,
     );
-    expect(presentation.badgeBackgroundColor).toBe(tokens.colors.secondaryFixed);
-    expect(presentation.badgeForegroundColor).toBe(tokens.colors.primary);
+    expect(presentation.badgeBackgroundColor).toBe(
+      tokens.colors.surfaceContainerLowest,
+    );
+    expect(presentation.badgeForegroundColor).toBe(tokens.colors.onSurface);
   });
 
   it("returns the canonical stable presentation", () => {
@@ -33,6 +36,18 @@ describe("plantStatusBadgePresentation", () => {
     expect(presentation.iconBackgroundColor).toBe(
       tokens.colors.surfaceContainerHigh,
     );
+  });
+
+  it("uses clay peach compact fill for terracotta-dusk thriving", () => {
+    const terracotta = buildThemeTokens("terracotta-dusk");
+    const presentation = getPlantStatusBadgePresentation({
+      healthState: "thriving",
+      colors: terracotta.colors,
+      themeId: "terracotta-dusk",
+    });
+
+    expect(presentation.badgeBackgroundColor).toBe("#f0b8a0");
+    expect(presentation.badgeForegroundColor).toBe("#3d5348");
   });
 
   it("returns the canonical needs-attention presentation", () => {

@@ -4,7 +4,7 @@
 
 ## Interface Theme card surface
 
-Each theme defines `selectionCardBackground` in its core palette (e.g. Terracotta Dusk `#ffdbcf`), referenced by `ThemeDefinition.card.background`.
+Each theme defines `selectionCardBackground` in its core palette, referenced by `ThemeDefinition.card.background`. Terracotta Dusk uses the same tokens for the Interface Theme card, in-app surfaces, and preview chips (`features/theme/definitions/terracottaDusk.ts`) — not Linen Light imports.
 
 ## Access model
 
