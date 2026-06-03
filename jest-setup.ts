@@ -4,6 +4,16 @@ jest.mock("@/components/common/Icon/Icon", () => ({
   Icon: () => null,
 }));
 
+jest.mock("@/features/theme/services/themeCacheStorage", () => ({
+  readCachedThemeId: jest.fn().mockResolvedValue(null),
+  writeCachedThemeId: jest.fn().mockResolvedValue(undefined),
+  clearCachedThemeId: jest.fn().mockResolvedValue(undefined),
+  getBootstrapThemeId: jest.fn(
+    (_cached: string | null, preferred?: string | null) =>
+      preferred ?? "linen-light",
+  ),
+}));
+
 const originalConsoleLog = console.log;
 
 type AnimationCallback = ((result: { finished: boolean }) => void) | undefined;

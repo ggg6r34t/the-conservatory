@@ -21,6 +21,7 @@ import { AlertProvider } from "@/providers/AlertProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { SnackbarProvider } from "@/providers/SnackbarProvider";
 import { BillingBootstrapProvider } from "@/providers/BillingBootstrapProvider";
+import { ThemeBootstrapProvider } from "@/providers/ThemeBootstrapProvider";
 import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
 import {
   getDatabaseBootstrapState,
@@ -88,16 +89,18 @@ export function Providers({ children }: PropsWithChildren) {
           <AlertProvider>
             <SnackbarProvider>
               <QueryProvider>
-                <DatabaseBootstrapGate>
-                  <ReleaseConfigGate>
-                    <SyncBootstrapProvider>
-                      <BillingBootstrapProvider>
+                <ThemeBootstrapProvider>
+                  <DatabaseBootstrapGate>
+                    <ReleaseConfigGate>
+                      <SyncBootstrapProvider>
+                        <BillingBootstrapProvider>
                         <SyncAutoFailureNotifier />
                         {children}
-                      </BillingBootstrapProvider>
-                    </SyncBootstrapProvider>
-                  </ReleaseConfigGate>
-                </DatabaseBootstrapGate>
+                        </BillingBootstrapProvider>
+                      </SyncBootstrapProvider>
+                    </ReleaseConfigGate>
+                  </DatabaseBootstrapGate>
+                </ThemeBootstrapProvider>
               </QueryProvider>
             </SnackbarProvider>
           </AlertProvider>

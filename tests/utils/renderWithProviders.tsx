@@ -29,7 +29,12 @@ export function renderWithProviders(ui: ReactElement) {
   function TestProviders({ children }: PropsWithChildren) {
     return (
       <BotanicalThemeContext.Provider
-        value={{ ...tokens, paperTheme: botanicalPaperTheme }}
+        value={{
+          ...tokens,
+          paperTheme: botanicalPaperTheme,
+          themeId: "linen-light",
+          isDark: false,
+        }}
       >
         <AlertProvider>
           <SnackbarProvider>

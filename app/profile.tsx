@@ -33,6 +33,7 @@ import {
 } from "@/features/profile/services/profilePresentationService";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
+import { formatThemeName } from "@/features/theme/registry";
 
 type ProfileRowProps = {
   icon: string;
@@ -49,14 +50,7 @@ type StatItemProps = {
 };
 
 function formatThemeLabel(theme: string | undefined) {
-  if (!theme) {
-    return "Linen Light";
-  }
-
-  return theme
-    .split("-")
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ");
+  return formatThemeName(theme);
 }
 
 function StatItem({ value, label }: StatItemProps) {

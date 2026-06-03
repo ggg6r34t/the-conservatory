@@ -1,34 +1,47 @@
-import { MD3LightTheme, type MD3Theme } from "react-native-paper";
+import { MD3DarkTheme, MD3LightTheme, type MD3Theme } from "react-native-paper";
 
-import { tokens } from "@/styles/tokens";
+import { linenLightTheme } from "@/features/theme/definitions/linenLight";
+import type { BotanicalColorTokens } from "@/features/theme/tokens/colorTokens";
 
-export const botanicalPaperTheme: MD3Theme = {
-  ...MD3LightTheme,
-  roundness: tokens.radius.md,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: tokens.colors.primary,
-    onPrimary: tokens.colors.onPrimary,
-    primaryContainer: tokens.colors.primaryContainer,
-    onPrimaryContainer: tokens.colors.onPrimaryContainer,
-    secondary: tokens.colors.secondary,
-    onSecondary: tokens.colors.onSecondary,
-    secondaryContainer: tokens.colors.secondaryContainer,
-    onSecondaryContainer: tokens.colors.onSecondaryContainer,
-    background: tokens.colors.background,
-    surface: tokens.colors.surface,
-    surfaceVariant: tokens.colors.surfaceVariant,
-    surfaceDisabled: tokens.colors.surfaceContainerHigh,
-    onSurface: tokens.colors.onSurface,
-    onSurfaceVariant: tokens.colors.onSurfaceVariant,
-    outline: tokens.colors.outline,
-    error: tokens.colors.error,
-    onError: tokens.colors.onError,
-    errorContainer: tokens.colors.errorContainer,
-    onErrorContainer: tokens.colors.onErrorContainer,
-    inverseSurface: tokens.colors.inverseSurface,
-    inverseOnSurface: tokens.colors.inverseOnSurface,
-    inversePrimary: tokens.colors.inversePrimary,
-    backdrop: tokens.colors.backdrop,
-  },
-};
+export function createBotanicalPaperTheme(
+  colors: BotanicalColorTokens,
+  isDark = false,
+): MD3Theme {
+  const base = isDark ? MD3DarkTheme : MD3LightTheme;
+
+  return {
+    ...base,
+    dark: base.dark,
+    roundness: 20,
+    colors: {
+      ...base.colors,
+      primary: colors.primary,
+      onPrimary: colors.onPrimary,
+      primaryContainer: colors.primaryContainer,
+      onPrimaryContainer: colors.onPrimaryContainer,
+      secondary: colors.secondary,
+      onSecondary: colors.onSecondary,
+      secondaryContainer: colors.secondaryContainer,
+      onSecondaryContainer: colors.onSecondaryContainer,
+      background: colors.background,
+      surface: colors.surface,
+      surfaceVariant: colors.surfaceVariant,
+      surfaceDisabled: colors.surfaceContainerHigh,
+      onSurface: colors.onSurface,
+      onSurfaceVariant: colors.onSurfaceVariant,
+      outline: colors.outline,
+      error: colors.error,
+      onError: colors.onError,
+      errorContainer: colors.errorContainer,
+      onErrorContainer: colors.onErrorContainer,
+      inverseSurface: colors.inverseSurface,
+      inverseOnSurface: colors.inverseOnSurface,
+      inversePrimary: colors.inversePrimary,
+      backdrop: colors.backdrop,
+    },
+  };
+}
+
+export const botanicalPaperTheme = createBotanicalPaperTheme(
+  linenLightTheme.colors,
+);

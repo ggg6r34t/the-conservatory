@@ -11,6 +11,9 @@ interface ProfileScreenScaffoldProps {
   title: string;
   subtitle: string;
   description?: string;
+  /** Defaults to "Settings" for existing drill-in screens. */
+  navigationTitle?: string;
+  headerRight?: ReactNode;
   children: ReactNode;
 }
 
@@ -18,6 +21,8 @@ export function ProfileScreenScaffold({
   title,
   subtitle,
   description,
+  navigationTitle = "Settings",
+  headerRight,
   children,
 }: ProfileScreenScaffoldProps) {
   const router = useRouter();
@@ -55,9 +60,12 @@ export function ProfileScreenScaffold({
               />
             </Pressable>
             <Text style={[styles.topBarTitle, { color: colors.primary }]}>
-              Settings
+              {navigationTitle}
             </Text>
           </View>
+          {headerRight ? (
+            <View style={styles.topBarRight}>{headerRight}</View>
+          ) : null}
         </View>
         <View style={styles.hero}>
           <Text style={[styles.eyebrow, { color: colors.secondary }]}>
@@ -93,9 +101,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   topBarLeft: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  topBarRight: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    minWidth: 56,
   },
   backButton: {
     width: 32,

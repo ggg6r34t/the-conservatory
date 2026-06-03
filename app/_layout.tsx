@@ -6,10 +6,10 @@ import {
   useSegments,
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
 
+import { ThemedStatusBar } from "@/app/ThemedStatusBar";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding";
@@ -49,7 +49,7 @@ function RootLayout() {
         isAuthenticated={isAuthenticated}
         onboardingStatus={onboarding.status}
       />
-      <StatusBar style="dark" />
+      <ThemedStatusBar />
     </Providers>
   );
 }

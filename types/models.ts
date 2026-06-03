@@ -1,3 +1,5 @@
+import type { ThemeId } from "@/features/theme/types";
+
 export type EntitySyncState = "synced" | "pending" | "error";
 export type PlantStatus = "active" | "graveyard";
 export type CareLogType =
@@ -26,7 +28,7 @@ export interface UserPreferences {
   userId: string;
   remindersEnabled: boolean;
   autoSyncEnabled: boolean;
-  preferredTheme: "linen-light";
+  preferredTheme: ThemeId;
   timezone: string;
   defaultWateringHour: number;
   createdAt: string;

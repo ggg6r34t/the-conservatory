@@ -7,6 +7,7 @@ import {
   resolveExportMode,
   type ExportMode,
 } from "@/features/export/services/exportAccessPolicy";
+import { resolveThemeId } from "@/features/theme/registry";
 import type {
   AppUser,
   CareLog,
@@ -295,7 +296,7 @@ function mapPreferences(row: PreferencesRow): UserPreferences {
     userId: row.user_id,
     remindersEnabled: Boolean(row.reminders_enabled),
     autoSyncEnabled: Boolean(row.auto_sync_enabled),
-    preferredTheme: row.preferred_theme,
+    preferredTheme: resolveThemeId(row.preferred_theme),
     timezone: row.timezone,
     defaultWateringHour: row.default_watering_hour,
     createdAt: row.created_at,

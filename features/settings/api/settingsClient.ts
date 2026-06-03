@@ -3,6 +3,8 @@ import {
   runAtomicMutationWithSyncOutbox,
   type SyncOutboxOperation,
 } from "@/services/database/syncOutbox";
+import { resolveThemeId } from "@/features/theme/registry";
+import type { ThemeId } from "@/features/theme/types";
 import type { UserPreferences } from "@/types/models";
 
 function defaultPreferences(userId: string): UserPreferences {
@@ -33,7 +35,7 @@ function mapPreferences(row: {
   user_id: string;
   reminders_enabled: number;
   auto_sync_enabled: number;
-  preferred_theme: "linen-light";
+  preferred_theme: string;
   timezone: string;
   default_watering_hour: number;
   created_at: string;
@@ -47,7 +49,7 @@ function mapPreferences(row: {
     userId: row.user_id,
     remindersEnabled: Boolean(row.reminders_enabled),
     autoSyncEnabled: Boolean(row.auto_sync_enabled),
-    preferredTheme: row.preferred_theme,
+    preferredTheme: resolveThemeId(row.preferred_theme),
     timezone: row.timezone,
     defaultWateringHour: row.default_watering_hour,
     createdAt: row.created_at,
@@ -67,7 +69,7 @@ async function readPreferencesRow(
     user_id: string;
     reminders_enabled: number;
     auto_sync_enabled: number;
-    preferred_theme: "linen-light";
+    preferred_theme: string;
     timezone: string;
     default_watering_hour: number;
     created_at: string;
@@ -133,12 +135,60 @@ export async function getUserPreferences(userId: string) {
   return preferences;
 }
 
+export async function updatePreferredTheme(userId: string, themeId: ThemeId) {
+  assertValidUserId(userId);
+  const database = await getDatabase();
+  const current = await getUserPreferences(userId);
+  const operation: SyncOutboxOperation = {
+    entity: "user_preferences",
+    entityId: userId,
+    operation: current.syncedAt ? "update" : "insert",
+    payload: {
+      userId,
+    },
+  };
+  const next = {
+    ...current,
+    preferredTheme: themeId,
+    updatedAt: new Date().toISOString(),
+    updatedBy: userId,
+    pending: 1,
+    syncError: null,
+  };
+
+  await runAtomicMutationWithSyncOutbox(database, {
+    nowIso: next.updatedAt,
+    perform: async (transactionNowIso) => {
+      await database.runAsync(
+        `UPDATE user_preferences
+         SET preferred_theme = ?, updated_at = ?, updated_by = ?, pending = 1, sync_error = NULL
+         WHERE user_id = ?;`,
+        themeId,
+        transactionNowIso,
+        userId,
+        userId,
+      );
+
+      return {
+        result: undefined,
+        operations: [operation],
+      };
+    },
+  });
+
+  return next;
+}
+
 export async function updateUserPreferences(
   userId: string,
   patch: Partial<
     Pick<
       UserPreferences,
-      "remindersEnabled" | "autoSyncEnabled" | "defaultWateringHour" | "timezone"
+      | "remindersEnabled"
+      | "autoSyncEnabled"
+      | "defaultWateringHour"
+      | "timezone"
+      | "preferredTheme"
     >
   >,
 ) {
@@ -171,11 +221,12 @@ export async function updateUserPreferences(
     perform: async (transactionNowIso) => {
       await database.runAsync(
         `UPDATE user_preferences
-         SET reminders_enabled = ?, auto_sync_enabled = ?, timezone = ?, default_watering_hour = ?, updated_at = ?, updated_by = ?,
+         SET reminders_enabled = ?, auto_sync_enabled = ?, preferred_theme = ?, timezone = ?, default_watering_hour = ?, updated_at = ?, updated_by = ?,
              pending = 1, sync_error = NULL
          WHERE user_id = ?;`,
         Number(next.remindersEnabled),
         Number(next.autoSyncEnabled),
+        next.preferredTheme,
         next.timezone,
         next.defaultWateringHour,
         transactionNowIso,

@@ -50,6 +50,7 @@ describe("settingsClient", () => {
       expect.stringContaining("UPDATE user_preferences"),
       0,
       0,
+      "linen-light",
       "America/New_York",
       7,
       expect.any(String),
@@ -150,5 +151,47 @@ describe("settingsClient", () => {
     expect(result.pending).toBe(1);
     expect(result.autoSyncEnabled).toBe(true);
     expect(result.syncedAt).toBeNull();
+  });
+
+  it("updates preferred theme locally and enqueues sync replay", async () => {
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
+    const getFirstAsync = jest.fn().mockResolvedValue({
+      user_id: "user-1",
+      reminders_enabled: 1,
+      auto_sync_enabled: 1,
+      preferred_theme: "linen-light",
+      timezone: "UTC",
+      default_watering_hour: 9,
+      created_at: "2026-03-21T10:00:00.000Z",
+      updated_at: "2026-03-21T10:00:00.000Z",
+      updated_by: null,
+      pending: 0,
+      synced_at: "2026-03-21T10:05:00.000Z",
+      sync_error: null,
+    });
+
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync,
+      runAsync,
+      withTransactionAsync,
+    });
+
+    const {
+      updatePreferredTheme,
+    } = require("@/features/settings/api/settingsClient");
+
+    const result = await updatePreferredTheme("user-1", "deep-forest");
+
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("SET preferred_theme = ?"),
+      "deep-forest",
+      expect.any(String),
+      "user-1",
+      "user-1",
+    );
+    expect(result.preferredTheme).toBe("deep-forest");
   });
 });
