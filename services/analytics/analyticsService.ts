@@ -1,9 +1,12 @@
 import { Platform } from 'react-native';
-import PostHog from 'posthog-react-native';
 
 import { env } from '@/config/env';
 
 type AnalyticsMode = 'disabled' | 'debug-log' | 'production';
+
+type PostHogClient = InstanceType<
+  Awaited<typeof import('posthog-react-native')>['default']
+>;
 
 export function getAnalyticsMode(): AnalyticsMode {
   if (!env.posthogApiKey) return 'disabled';
@@ -11,17 +14,48 @@ export function getAnalyticsMode(): AnalyticsMode {
   return 'production';
 }
 
-let posthog: PostHog | null = null;
+let posthog: PostHogClient | null = null;
+let posthogInitPromise: Promise<void> | null = null;
 
-export function initializeAnalytics(distinctId: string): void {
-  const mode = getAnalyticsMode();
-  if (mode !== 'production') return;
-
+async function loadPostHogClient(distinctId: string): Promise<void> {
+  const { default: PostHog } = await import('posthog-react-native');
   posthog = new PostHog(env.posthogApiKey!, {
     host: env.posthogHost,
     captureAppLifecycleEvents: false,
   });
   posthog.identify(distinctId, { platform: Platform.OS });
+}
+
+export function initializeAnalytics(distinctId: string): void {
+  const mode = getAnalyticsMode();
+  if (mode !== 'production') return;
+
+  if (!posthogInitPromise) {
+    posthogInitPromise = loadPostHogClient(distinctId).catch((error) => {
+      posthogInitPromise = null;
+      if (__DEV__) {
+        console.warn('[Analytics] PostHog init failed:', error);
+      }
+    });
+  }
+}
+
+function captureWithPostHog(
+  name: string,
+  properties?: Record<string, string | number | boolean | null>,
+): void {
+  if (posthog) {
+    posthog.capture(name, properties ?? {});
+    return;
+  }
+
+  if (!posthogInitPromise) {
+    return;
+  }
+
+  void posthogInitPromise.then(() => {
+    posthog?.capture(name, properties ?? {});
+  });
 }
 
 export function trackEvent(
@@ -38,7 +72,7 @@ export function trackEvent(
     return;
   }
 
-  posthog?.capture(name, properties ?? {});
+  captureWithPostHog(name, properties);
 }
 
 export function trackStreakEvent(
@@ -123,7 +157,14 @@ export function trackGtmEvent(
 }
 
 export function resetAnalyticsUser(): void {
-  posthog?.reset();
+  if (posthog) {
+    posthog.reset();
+    return;
+  }
+
+  void posthogInitPromise?.then(() => {
+    posthog?.reset();
+  });
 }
 
 export function getAnalyticsStatus() {

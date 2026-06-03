@@ -2,8 +2,12 @@ import {
   replaceCareLogTagsInTransaction,
   serializeCareLogTags,
 } from "@/features/care-logs/services/careLogTagsService";
-import { FREE_PLANT_LIMIT } from "@/features/billing/constants";
+import {
+  FREE_PLANT_LIMIT,
+  FREE_PROGRESS_PHOTOS_PER_PLANT,
+} from "@/features/billing/constants";
 import { downloadRemotePhotoAsset } from "@/features/plants/services/photoStorageService";
+import { getEntitlementState } from "@/services/entitlementState";
 import { getDatabase } from "@/services/database/sqlite";
 import { insertSyncOutboxOperationInTransaction } from "@/services/database/syncOutbox";
 import type {
@@ -76,10 +80,97 @@ function requireString(value: unknown, field: string) {
   return value;
 }
 
+async function assertFreeImportQuotas(
+  database: Awaited<ReturnType<typeof getDatabase>>,
+  userId: string,
+  payload: CollectionImportPayload,
+) {
+  const activePlantsInImport = payload.plants.filter(
+    (plant) => !plant.status || plant.status === "active",
+  );
+
+  if (activePlantsInImport.length > 0) {
+    const existingActiveRows = await database.getAllAsync<{ id: string }>(
+      `SELECT id FROM plants WHERE user_id = ? AND status = 'active'`,
+      userId,
+    );
+    const projectedActiveIds = new Set(
+      existingActiveRows.map((row) => row.id),
+    );
+
+    for (const plant of activePlantsInImport) {
+      if (typeof plant.id === "string" && plant.id.trim()) {
+        projectedActiveIds.add(plant.id);
+      }
+    }
+
+    if (projectedActiveIds.size > FREE_PLANT_LIMIT) {
+      throw Object.assign(
+        new Error(
+          `Plant limit reached. Free accounts can hold up to ${FREE_PLANT_LIMIT} plants. Upgrade to Premium to import your full collection.`,
+        ),
+        {
+          code: "PLANT_LIMIT_REACHED" as const,
+          limit: FREE_PLANT_LIMIT,
+          current: projectedActiveIds.size,
+        },
+      );
+    }
+  }
+
+  const existingProgressRows = await database.getAllAsync<{
+    id: string;
+    plant_id: string;
+  }>(
+    `SELECT id, plant_id FROM photos
+     WHERE user_id = ? AND photo_role = 'progress'`,
+    userId,
+  );
+  const progressPhotoIdsByPlant = new Map<string, Set<string>>();
+
+  for (const row of existingProgressRows) {
+    const existing = progressPhotoIdsByPlant.get(row.plant_id) ?? new Set<string>();
+    existing.add(row.id);
+    progressPhotoIdsByPlant.set(row.plant_id, existing);
+  }
+
+  for (const photo of payload.photos) {
+    const role =
+      photo.photoRole ?? (photo.isPrimary ? "primary" : "progress");
+    if (
+      role !== "progress" ||
+      typeof photo.id !== "string" ||
+      typeof photo.plantId !== "string"
+    ) {
+      continue;
+    }
+
+    const existing =
+      progressPhotoIdsByPlant.get(photo.plantId) ?? new Set<string>();
+    existing.add(photo.id);
+    progressPhotoIdsByPlant.set(photo.plantId, existing);
+  }
+
+  for (const [plantId, photoIds] of progressPhotoIdsByPlant) {
+    if (photoIds.size > FREE_PROGRESS_PHOTOS_PER_PLANT) {
+      throw Object.assign(
+        new Error(
+          `Photo limit reached for plant ${plantId}. Free accounts can keep up to ${FREE_PROGRESS_PHOTOS_PER_PLANT} progress photos per plant.`,
+        ),
+        {
+          code: "PHOTO_LIMIT_REACHED" as const,
+          limit: FREE_PROGRESS_PHOTOS_PER_PLANT,
+          current: photoIds.size,
+          plantId,
+        },
+      );
+    }
+  }
+}
+
 export async function restoreCollectionImport(input: {
   userId: string;
   payload: CollectionImportPayload;
-  isPremium?: boolean;
 }) {
   validateCollectionImportPayload(input.payload);
   const database = await getDatabase();
@@ -87,29 +178,8 @@ export async function restoreCollectionImport(input: {
   const importRunId = createId("import");
   const summary = previewCollectionImport(input.payload);
 
-  if (!input.isPremium) {
-    const activePlantsInImport = input.payload.plants.filter(
-      (p) => !p.status || p.status === "active",
-    );
-    if (activePlantsInImport.length > 0) {
-      const row = await database.getFirstAsync<{ count: number }>(
-        `SELECT COUNT(*) as count FROM plants WHERE user_id = ? AND status = 'active'`,
-        [input.userId],
-      );
-      const currentCount = row?.count ?? 0;
-      if (currentCount >= FREE_PLANT_LIMIT) {
-        throw Object.assign(
-          new Error(
-            `Plant limit reached. Free accounts can hold up to ${FREE_PLANT_LIMIT} plants. Upgrade to Premium to import your full collection.`,
-          ),
-          {
-            code: "PLANT_LIMIT_REACHED" as const,
-            limit: FREE_PLANT_LIMIT,
-            current: currentCount,
-          },
-        );
-      }
-    }
+  if (!getEntitlementState()) {
+    await assertFreeImportQuotas(database, input.userId, input.payload);
   }
 
   await database.withTransactionAsync(async () => {

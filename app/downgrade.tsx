@@ -28,7 +28,7 @@ export default function DowngradeScreen() {
       />
       <Row
         title="What pauses"
-        body="New premium photo backup, unlimited photo uploads, premium AI, specimen tag creation, archive curation, smart reminder optimization, and enhanced export pause until Premium is active again."
+        body="New premium photo backup, unlimited photo uploads, premium AI, specimen tag creation, archive curation, and enhanced export pause until Premium is active again."
       />
       <Row
         title="What is not deleted"

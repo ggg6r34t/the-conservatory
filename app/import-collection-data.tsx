@@ -4,7 +4,6 @@ import { StyleSheet, Text, TextInput, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import {
   previewCollectionImport,
   restoreCollectionImport,
@@ -19,7 +18,6 @@ import { trackGtmEvent } from "@/services/analytics/analyticsService";
 export default function ImportCollectionDataScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const { isPremium } = useSubscription();
   const alert = useAlert();
   const snackbar = useSnackbar();
   const [rawPayload, setRawPayload] = useState("");
@@ -92,7 +90,7 @@ export default function ImportCollectionDataScreen() {
             trackGtmEvent("import_collection_started", {
               plants: preview?.plants ?? 0,
             });
-            restoreCollectionImport({ userId: user.id, payload, isPremium })
+            restoreCollectionImport({ userId: user.id, payload })
               .then((result) => {
                 trackGtmEvent("import_collection_completed", {
                   plants: result.summary.plants,

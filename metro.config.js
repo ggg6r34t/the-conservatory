@@ -1,4 +1,5 @@
 const path = require("path");
+const fs = require("fs");
 const { getDefaultConfig } = require("expo/metro-config");
 
 const projectRoot = __dirname;
@@ -13,6 +14,39 @@ const SENTRY_CJS_ENTRIES = {
 
 config.resolver.resolverMainFields = ["react-native", "browser", "main"];
 config.resolver.unstable_conditionNames = ["require", "import", "react-native"];
+
+function resolveBabelRuntimeHelper(moduleName) {
+  if (!moduleName.startsWith("@babel/runtime/")) {
+    return null;
+  }
+
+  const helperPath = path.resolve(projectRoot, "node_modules", `${moduleName}.js`);
+  if (fs.existsSync(helperPath)) {
+    return helperPath;
+  }
+
+  return null;
+}
+
+function resolvePostHogCjs(moduleName) {
+  if (moduleName === "posthog-react-native") {
+    return path.resolve(projectRoot, "node_modules/posthog-react-native/dist/index.js");
+  }
+
+  if (moduleName.startsWith("posthog-react-native/")) {
+    const relativePath = moduleName.replace("posthog-react-native/", "");
+    const candidate = path.resolve(
+      projectRoot,
+      "node_modules/posthog-react-native",
+      `${relativePath}.js`,
+    );
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
 
 function resolveSentryCjs(moduleName) {
   const normalized = moduleName.replace(/\\/g, "/");
@@ -41,6 +75,22 @@ function resolveSentryCjs(moduleName) {
 const defaultResolveRequest = config.resolver.resolveRequest;
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  const babelRuntimeHelper = resolveBabelRuntimeHelper(moduleName);
+  if (babelRuntimeHelper) {
+    return {
+      type: "sourceFile",
+      filePath: babelRuntimeHelper,
+    };
+  }
+
+  const posthogCjs = resolvePostHogCjs(moduleName);
+  if (posthogCjs && fs.existsSync(posthogCjs)) {
+    return {
+      type: "sourceFile",
+      filePath: posthogCjs,
+    };
+  }
+
   const sentryCjs = resolveSentryCjs(moduleName);
   if (sentryCjs) {
     return {

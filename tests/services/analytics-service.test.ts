@@ -4,6 +4,21 @@ describe("analyticsService", () => {
     jest.clearAllMocks();
   });
 
+  it("lazy-loads PostHog instead of importing it at module scope", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        process.cwd(),
+        "services/analytics/analyticsService.ts",
+      ),
+      "utf8",
+    );
+
+    expect(source).toContain("import('posthog-react-native')");
+    expect(source).not.toMatch(
+      /^import\s+PostHog\s+from\s+['"]posthog-react-native['"]/m,
+    );
+  });
+
   it("does not emit events when posthogApiKey is absent", () => {
     const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
 

@@ -20,6 +20,7 @@ import {
 } from '@/features/export/services/importService';
 import { getDatabase } from '@/services/database/sqlite';
 import { downloadRemotePhotoAsset } from '@/features/plants/services/photoStorageService';
+import { setEntitlementState } from '@/services/entitlementState';
 
 const mockGetDatabase = getDatabase as jest.Mock;
 const mockDownloadRemotePhotoAsset = downloadRemotePhotoAsset as jest.Mock;
@@ -37,9 +38,30 @@ function makeMinimalPayload(overrides: Partial<CollectionImportPayload> = {}): C
   } as CollectionImportPayload;
 }
 
+function mockImportDatabase(
+  overrides: Partial<{
+    runAsync: jest.Mock;
+    withTransactionAsync: jest.Mock;
+    getFirstAsync: jest.Mock;
+    getAllAsync: jest.Mock;
+  }> = {},
+) {
+  mockGetDatabase.mockResolvedValue({
+    runAsync: overrides.runAsync ?? jest.fn().mockResolvedValue(undefined),
+    withTransactionAsync:
+      overrides.withTransactionAsync ??
+      jest.fn(async (callback: () => Promise<void>) => callback()),
+    getFirstAsync: overrides.getFirstAsync ?? jest.fn(),
+    getAllAsync:
+      overrides.getAllAsync ??
+      jest.fn(async () => []),
+  });
+}
+
 describe('importService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    setEntitlementState(true);
     mockDownloadRemotePhotoAsset.mockResolvedValue({
       localUri: 'file://documents/photos/user-1/plant-1/progress/photo-1.jpg',
       storagePath: 'user-1/plant-1/photo-1.jpg',
@@ -86,14 +108,7 @@ describe('importService', () => {
 
   it('restores imported remote photo metadata into durable local storage', async () => {
     const runAsync = jest.fn().mockResolvedValue(undefined);
-    const withTransactionAsync = jest.fn(
-      async (callback: () => Promise<void>) => callback(),
-    );
-    mockGetDatabase.mockResolvedValue({
-      runAsync,
-      withTransactionAsync,
-      getFirstAsync: jest.fn().mockResolvedValue({ count: 0 }),
-    });
+    mockImportDatabase({ runAsync });
 
     await restoreCollectionImport({
       userId: 'user-1',
@@ -154,14 +169,7 @@ describe('importService', () => {
 
   it('does not attempt a remote download for storage paths without a remote URL', async () => {
     const runAsync = jest.fn().mockResolvedValue(undefined);
-    const withTransactionAsync = jest.fn(
-      async (callback: () => Promise<void>) => callback(),
-    );
-    mockGetDatabase.mockResolvedValue({
-      runAsync,
-      withTransactionAsync,
-      getFirstAsync: jest.fn().mockResolvedValue({ count: 0 }),
-    });
+    mockImportDatabase({ runAsync });
 
     await restoreCollectionImport({
       userId: 'user-1',
@@ -234,11 +242,20 @@ describe('validateCollectionImportPayload', () => {
 describe('restoreCollectionImport plant quota', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    setEntitlementState(false);
   });
 
   it('throws when free user already has 10 plants and import contains active plants', async () => {
     mockGetDatabase.mockResolvedValue({
-      getFirstAsync: jest.fn().mockResolvedValue({ count: 10 }),
+      getFirstAsync: jest.fn(),
+      getAllAsync: jest.fn(async (sql: string) => {
+        if (sql.includes("FROM plants")) {
+          return Array.from({ length: 10 }, (_, index) => ({
+            id: `existing-${index}`,
+          }));
+        }
+        return [];
+      }),
       withTransactionAsync: jest.fn(),
       runAsync: jest.fn().mockResolvedValue(undefined),
     });
@@ -250,7 +267,7 @@ describe('restoreCollectionImport plant quota', () => {
     });
 
     await expect(
-      restoreCollectionImport({ userId: 'user-1', payload, isPremium: false }),
+      restoreCollectionImport({ userId: 'user-1', payload }),
     ).rejects.toMatchObject({ code: 'PLANT_LIMIT_REACHED' });
   });
 
@@ -258,7 +275,16 @@ describe('restoreCollectionImport plant quota', () => {
     const runAsync = jest.fn().mockResolvedValue(undefined);
     const withTransactionAsync = jest.fn(async (cb: () => Promise<void>) => cb());
     mockGetDatabase.mockResolvedValue({
-      getFirstAsync: jest.fn().mockResolvedValue({ count: 5 }),
+      getFirstAsync: jest.fn(),
+      getAllAsync: jest.fn(async (sql: string) => {
+        if (sql.includes("FROM plants")) {
+          return [{ id: 'existing-1' }, { id: 'existing-2' }];
+        }
+        if (sql.includes("FROM photos")) {
+          return [];
+        }
+        return [];
+      }),
       withTransactionAsync,
       runAsync,
     });
@@ -270,15 +296,134 @@ describe('restoreCollectionImport plant quota', () => {
     });
 
     await expect(
-      restoreCollectionImport({ userId: 'user-1', payload, isPremium: false }),
+      restoreCollectionImport({ userId: 'user-1', payload }),
     ).resolves.not.toThrow();
   });
 
+  it('throws when import would exceed the free plant limit', async () => {
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn(),
+      getAllAsync: jest.fn(async (sql: string) => {
+        if (sql.includes("FROM plants")) {
+          return Array.from({ length: 5 }, (_, index) => ({
+            id: `existing-${index}`,
+          }));
+        }
+        return [];
+      }),
+      withTransactionAsync: jest.fn(),
+      runAsync: jest.fn().mockResolvedValue(undefined),
+    });
+
+    const payload = makeMinimalPayload({
+      plants: Array.from({ length: 6 }, (_, index) => ({
+        id: `import-${index}`,
+        name: `Plant ${index}`,
+        speciesName: 'S',
+        status: 'active' as const,
+      })),
+    });
+
+    await expect(
+      restoreCollectionImport({ userId: 'user-1', payload }),
+    ).rejects.toMatchObject({ code: 'PLANT_LIMIT_REACHED' });
+  });
+
+  it('throws when import would exceed the free progress photo limit', async () => {
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn(),
+      getAllAsync: jest.fn(async (sql: string) => {
+        if (sql.includes("FROM plants")) {
+          return [];
+        }
+        if (sql.includes("FROM photos")) {
+          return [];
+        }
+        return [];
+      }),
+      withTransactionAsync: jest.fn(),
+      runAsync: jest.fn().mockResolvedValue(undefined),
+    });
+
+    const payload = makeMinimalPayload({
+      photos: Array.from({ length: 4 }, (_, index) => ({
+        id: `photo-${index}`,
+        plantId: 'plant-1',
+        photoRole: 'progress' as const,
+      })),
+    });
+
+    await expect(
+      restoreCollectionImport({ userId: 'user-1', payload }),
+    ).rejects.toMatchObject({ code: 'PHOTO_LIMIT_REACHED' });
+  });
+
+  it('throws when existing and imported progress photos exceed the free limit', async () => {
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn(),
+      getAllAsync: jest.fn(async (sql: string) => {
+        if (sql.includes("FROM plants")) {
+          return [];
+        }
+        if (sql.includes("FROM photos")) {
+          return [
+            { id: 'existing-1', plant_id: 'plant-1' },
+            { id: 'existing-2', plant_id: 'plant-1' },
+          ];
+        }
+        return [];
+      }),
+      withTransactionAsync: jest.fn(),
+      runAsync: jest.fn().mockResolvedValue(undefined),
+    });
+
+    const payload = makeMinimalPayload({
+      photos: [
+        { id: 'import-1', plantId: 'plant-1', photoRole: 'progress' as const },
+        { id: 'import-2', plantId: 'plant-1', photoRole: 'progress' as const },
+      ],
+    });
+
+    await expect(
+      restoreCollectionImport({ userId: 'user-1', payload }),
+    ).rejects.toMatchObject({ code: 'PHOTO_LIMIT_REACHED' });
+  });
+
+  it('enforces quotas from entitlement state even when caller context is premium', async () => {
+    setEntitlementState(false);
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync: jest.fn(),
+      getAllAsync: jest.fn(async (sql: string) => {
+        if (sql.includes("FROM plants")) {
+          return [];
+        }
+        return [];
+      }),
+      withTransactionAsync: jest.fn(),
+      runAsync: jest.fn().mockResolvedValue(undefined),
+    });
+
+    const payload = makeMinimalPayload({
+      plants: Array.from({ length: 11 }, (_, index) => ({
+        id: `import-${index}`,
+        name: `Plant ${index}`,
+        speciesName: 'S',
+        status: 'active' as const,
+      })),
+    });
+
+    await expect(
+      restoreCollectionImport({ userId: 'user-1', payload }),
+    ).rejects.toMatchObject({ code: 'PLANT_LIMIT_REACHED' });
+  });
+
   it('never blocks a premium user regardless of plant count', async () => {
+    setEntitlementState(true);
     const runAsync = jest.fn().mockResolvedValue(undefined);
     const withTransactionAsync = jest.fn(async (cb: () => Promise<void>) => cb());
     mockGetDatabase.mockResolvedValue({
-      getFirstAsync: jest.fn().mockResolvedValue({ count: 99 }),
+      getFirstAsync: jest.fn(),
+      getAllAsync: jest.fn().mockResolvedValue([]),
       withTransactionAsync,
       runAsync,
     });
@@ -290,7 +435,7 @@ describe('restoreCollectionImport plant quota', () => {
     });
 
     await expect(
-      restoreCollectionImport({ userId: 'user-1', payload, isPremium: true }),
+      restoreCollectionImport({ userId: 'user-1', payload }),
     ).resolves.not.toThrow();
   });
 
@@ -298,7 +443,15 @@ describe('restoreCollectionImport plant quota', () => {
     const runAsync = jest.fn().mockResolvedValue(undefined);
     const withTransactionAsync = jest.fn(async (cb: () => Promise<void>) => cb());
     mockGetDatabase.mockResolvedValue({
-      getFirstAsync: jest.fn().mockResolvedValue({ count: 10 }),
+      getFirstAsync: jest.fn(),
+      getAllAsync: jest.fn(async (sql: string) => {
+        if (sql.includes("FROM plants")) {
+          return Array.from({ length: 10 }, (_, index) => ({
+            id: `existing-${index}`,
+          }));
+        }
+        return [];
+      }),
       withTransactionAsync,
       runAsync,
     });
@@ -310,7 +463,7 @@ describe('restoreCollectionImport plant quota', () => {
     });
 
     await expect(
-      restoreCollectionImport({ userId: 'user-1', payload, isPremium: false }),
+      restoreCollectionImport({ userId: 'user-1', payload }),
     ).resolves.not.toThrow();
   });
 });
