@@ -75,5 +75,7 @@ describe("theme registry", () => {
     expect(definition.preview.surfaces.statusBackground).toBe(
       terracotta.colors.statusThriving,
     );
+    expect(definition.card.selectionRing).toBe("#9a583c");
+    expect(definition.card.selectionRing).not.toBe(linen.colors.primary);
   });
 });

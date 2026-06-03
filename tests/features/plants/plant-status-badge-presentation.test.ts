@@ -46,8 +46,8 @@ describe("plantStatusBadgePresentation", () => {
       themeId: "terracotta-dusk",
     });
 
-    expect(presentation.badgeBackgroundColor).toBe("#f0b8a0");
-    expect(presentation.badgeForegroundColor).toBe("#3d5348");
+    expect(presentation.badgeBackgroundColor).toBe("#f5ebe3");
+    expect(presentation.badgeForegroundColor).toBe("#3a2216");
   });
 
   it("returns the canonical needs-attention presentation", () => {

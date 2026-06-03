@@ -62,7 +62,9 @@ export function getPlantStatusBadgePresentation(input: {
       badgeBackgroundColor: warmThrivingBadge
         ? colors.secondaryFixed
         : colors.surfaceContainerLowest,
-      badgeForegroundColor: warmThrivingBadge ? colors.primary : colors.onSurface,
+      badgeForegroundColor: warmThrivingBadge
+        ? colors.onSecondaryFixed
+        : colors.onSurface,
       emphasisColor: colors.primary,
     };
   }
