@@ -8,7 +8,7 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import "react-native-reanimated";
 
-import { ThemedStatusBar } from "@/app/ThemedStatusBar";
+import { ThemedStatusBar } from "@/components/design-system/ThemedStatusBar";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding";
