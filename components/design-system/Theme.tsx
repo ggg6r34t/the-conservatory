@@ -17,6 +17,10 @@ import {
 import { blendThemeColors } from "@/features/theme/services/themeColorTransition";
 import { useThemeRuntimeStore } from "@/features/theme/stores/useThemeRuntimeStore";
 import type { BotanicalTokens, ThemeId } from "@/features/theme/types";
+import {
+  readThemeSubscriptionSnapshot,
+  resolveAccessibleThemeId,
+} from "@/features/theme/services/themeApplication";
 import { readCachedThemeId } from "@/features/theme/services/themeCacheStorage";
 
 export interface BotanicalThemeValue extends BotanicalTokens {
@@ -41,11 +45,15 @@ export function BotanicalThemeProvider({ children }: PropsWithChildren) {
   const activeThemeId = useThemeRuntimeStore((state) => state.activeThemeId);
 
   useEffect(() => {
-    void readCachedThemeId().then((cachedThemeId) => {
+    void (async () => {
+      const [cachedThemeId, subscription] = await Promise.all([
+        readCachedThemeId(),
+        readThemeSubscriptionSnapshot(),
+      ]);
       if (cachedThemeId) {
-        setActiveThemeId(cachedThemeId);
+        setActiveThemeId(resolveAccessibleThemeId(cachedThemeId, subscription));
       }
-    });
+    })();
   }, [setActiveThemeId]);
   const transitionProgress = useThemeRuntimeStore(
     (state) => state.transitionProgress,

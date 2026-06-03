@@ -22,6 +22,7 @@ import { QueryProvider } from "@/providers/QueryProvider";
 import { SnackbarProvider } from "@/providers/SnackbarProvider";
 import { BillingBootstrapProvider } from "@/providers/BillingBootstrapProvider";
 import { ThemeBootstrapProvider } from "@/providers/ThemeBootstrapProvider";
+import { ThemeEntitlementSync } from "@/providers/ThemeEntitlementSync";
 import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
 import {
   getDatabaseBootstrapState,
@@ -94,8 +95,10 @@ export function Providers({ children }: PropsWithChildren) {
                     <ReleaseConfigGate>
                       <SyncBootstrapProvider>
                         <BillingBootstrapProvider>
-                        <SyncAutoFailureNotifier />
-                        {children}
+                          <ThemeEntitlementSync>
+                            <SyncAutoFailureNotifier />
+                            {children}
+                          </ThemeEntitlementSync>
                         </BillingBootstrapProvider>
                       </SyncBootstrapProvider>
                     </ReleaseConfigGate>

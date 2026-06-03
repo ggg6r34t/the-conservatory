@@ -63,6 +63,7 @@ export const linenLightTheme: ThemeDefinition = {
   id: "linen-light",
   name: "Linen Light",
   description: "Inspired by sun-drenched conservatories.",
+  access: "free",
   category: "light",
   isDark: false,
   quote: "Nature does not hurry, yet everything is accomplished.",

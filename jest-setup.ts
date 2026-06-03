@@ -11,6 +11,10 @@ jest.mock("@/features/theme/analytics", () => ({
   trackThemePreviewViewed: jest.fn(),
   trackThemeContrastIssueDetected: jest.fn(),
   trackThemeFallbackApplied: jest.fn(),
+  trackPremiumThemeTapped: jest.fn(),
+  trackPremiumThemeBlocked: jest.fn(),
+  trackPremiumThemeUnlocked: jest.fn(),
+  trackThemeRevertedAfterDowngrade: jest.fn(),
 }));
 
 jest.mock("@/features/theme/services/themeCacheStorage", () => ({

@@ -11,11 +11,13 @@ import type { ThemeDefinition } from "@/features/theme/types";
 
 interface ThemeSelectionIndicatorProps {
   selected: boolean;
+  locked?: boolean;
   theme: ThemeDefinition;
 }
 
 export const ThemeSelectionIndicator = memo(function ThemeSelectionIndicator({
   selected,
+  locked = false,
   theme,
 }: ThemeSelectionIndicatorProps) {
   const scale = useSharedValue(selected ? 1 : 0.92);
@@ -30,6 +32,25 @@ export const ThemeSelectionIndicator = memo(function ThemeSelectionIndicator({
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
+
+  if (locked) {
+    return (
+      <Animated.View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={[
+          styles.locked,
+          animatedStyle,
+          {
+            borderColor: theme.card.unselectedRing,
+            backgroundColor: theme.card.background,
+          },
+        ]}
+      >
+        <Icon name="lock" size={16} color={theme.card.title} />
+      </Animated.View>
+    );
+  }
 
   if (selected) {
     return (
@@ -73,5 +94,13 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 2,
+  },
+  locked: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

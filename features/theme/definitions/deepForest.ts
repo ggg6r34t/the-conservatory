@@ -69,6 +69,7 @@ export const deepForestTheme: ThemeDefinition = {
   id: "deep-forest",
   name: "Deep Forest",
   description: "The quiet serenity of a midnight woods.",
+  access: "premium",
   category: "dark",
   isDark: true,
   quote: "In every walk with nature one receives far more than he seeks.",

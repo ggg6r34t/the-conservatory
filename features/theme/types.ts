@@ -17,6 +17,8 @@ export type ThemeId = (typeof THEME_IDS)[number];
 
 export type ThemeCategory = "light" | "dark" | "warm";
 
+export type ThemeAccess = "free" | "premium";
+
 export interface ThemeAccessibilityProfile {
   passesWcagAa: boolean;
   bodyContrastRatio: number;
@@ -60,6 +62,8 @@ export interface ThemeDefinition {
   id: ThemeId;
   name: string;
   description: string;
+  /** Canonical access — non-default themes default to premium in definitions. */
+  access: ThemeAccess;
   category: ThemeCategory;
   isDark: boolean;
   quote: string;

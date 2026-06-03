@@ -68,6 +68,7 @@ export const terracottaDuskTheme: ThemeDefinition = {
   id: "terracotta-dusk",
   name: "Terracotta Dusk",
   description: "The warmth of a Mediterranean garden at twilight.",
+  access: "premium",
   category: "warm",
   isDark: false,
   quote: "Earth and clay remember the sun long after it has set.",

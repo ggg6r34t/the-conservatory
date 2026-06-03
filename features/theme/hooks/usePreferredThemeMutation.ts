@@ -2,14 +2,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/config/constants";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { updatePreferredTheme } from "@/features/settings/api/settingsClient";
-import {
-  trackThemeChanged,
-  trackThemeSelected,
-} from "@/features/theme/analytics";
+import { useBillingStore } from "@/features/billing/stores/useBillingStore";
 import { useSettingsStore } from "@/features/settings/stores/useSettingsStore";
-import { writeCachedThemeId } from "@/features/theme/services/themeCacheStorage";
+import {
+  trackPremiumThemeUnlocked,
+} from "@/features/theme/analytics";
+import {
+  applyTheme,
+  ThemeApplicationError,
+} from "@/features/theme/services/themeApplication";
 import { useThemeRuntimeStore } from "@/features/theme/stores/useThemeRuntimeStore";
+import { getThemeAccess } from "@/features/theme/themeAccess";
 import type { ThemeId } from "@/features/theme/types";
 
 export function usePreferredThemeMutation() {
@@ -18,6 +21,8 @@ export function usePreferredThemeMutation() {
   const activeThemeId = useThemeRuntimeStore((state) => state.activeThemeId);
   const setActiveThemeId = useThemeRuntimeStore((state) => state.setActiveThemeId);
   const setSettingsStoreTheme = useSettingsStore((state) => state.setTheme);
+  const tier = useBillingStore((state) => state.tier);
+  const period = useBillingStore((state) => state.period);
 
   return useMutation({
     mutationFn: async (nextThemeId: ThemeId) => {
@@ -25,28 +30,30 @@ export function usePreferredThemeMutation() {
         throw new Error("A signed-in user is required.");
       }
 
-      const previousTheme = activeThemeId;
-      if (previousTheme === nextThemeId) {
-        return { previousTheme, nextThemeId, changed: false };
+      const subscription = { tier, period };
+      const result = await applyTheme({
+        userId: user.id,
+        themeId: nextThemeId,
+        subscription,
+        previousThemeId: activeThemeId,
+        source: "theme_screen",
+      });
+
+      if (result.changed) {
+        setActiveThemeId(result.appliedThemeId);
+        setSettingsStoreTheme(result.appliedThemeId);
+
+        if (getThemeAccess(result.appliedThemeId) === "premium") {
+          trackPremiumThemeUnlocked({
+            theme_id: result.appliedThemeId,
+            previous_theme_id: result.previousThemeId,
+            subscription_tier: tier,
+            source: "theme_screen",
+          });
+        }
       }
 
-      await updatePreferredTheme(user.id, nextThemeId);
-      await writeCachedThemeId(nextThemeId);
-      setActiveThemeId(nextThemeId);
-      setSettingsStoreTheme(nextThemeId);
-
-      trackThemeSelected({
-        theme_id: nextThemeId,
-        previous_theme: previousTheme,
-        new_theme: nextThemeId,
-      });
-      trackThemeChanged({
-        theme_id: nextThemeId,
-        previous_theme: previousTheme,
-        new_theme: nextThemeId,
-      });
-
-      return { previousTheme, nextThemeId, changed: true };
+      return result;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -55,3 +62,5 @@ export function usePreferredThemeMutation() {
     },
   });
 }
+
+export { ThemeApplicationError };

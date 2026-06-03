@@ -21,4 +21,28 @@ describe("theme bootstrap resolution", () => {
       "midnight-ivy",
     );
   });
+
+  it("reverts premium themes for free users when subscription snapshot is provided", () => {
+    const free = { tier: "free" as const, period: null };
+    expect(resolveBootstrapThemeId("deep-forest", null, free)).toBe(
+      DEFAULT_THEME_ID,
+    );
+    expect(resolveBootstrapThemeId(null, "midnight-ivy", free)).toBe(
+      DEFAULT_THEME_ID,
+    );
+  });
+
+  it("allows premium themes for recurring subscribers", () => {
+    const recurring = { tier: "premium" as const, period: "annual" as const };
+    expect(resolveBootstrapThemeId(null, "deep-forest", recurring)).toBe(
+      "deep-forest",
+    );
+  });
+
+  it("blocks premium themes for lifetime entitlement", () => {
+    const lifetime = { tier: "premium" as const, period: "lifetime" as const };
+    expect(resolveBootstrapThemeId(null, "terracotta-dusk", lifetime)).toBe(
+      DEFAULT_THEME_ID,
+    );
+  });
 });

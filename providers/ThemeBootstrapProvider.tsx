@@ -3,7 +3,11 @@ import { type PropsWithChildren, useEffect } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import {
-  getBootstrapThemeId,
+  readThemeSubscriptionSnapshot,
+  resolveAccessibleThemeId,
+  resolveBootstrapAccessibleTheme,
+} from "@/features/theme/services/themeApplication";
+import {
   readCachedThemeId,
   writeCachedThemeId,
 } from "@/features/theme/services/themeCacheStorage";
@@ -18,11 +22,14 @@ export function ThemeBootstrapProvider({ children }: PropsWithChildren) {
     let cancelled = false;
 
     async function hydrateTheme() {
+      const subscription = await readThemeSubscriptionSnapshot();
       const cachedThemeId = await readCachedThemeId();
 
       if (!isAuthenticated || !user?.id) {
+        const themeId = resolveAccessibleThemeId(cachedThemeId, subscription);
+        await writeCachedThemeId(themeId);
         if (!cancelled) {
-          setActiveThemeId(getBootstrapThemeId(cachedThemeId));
+          setActiveThemeId(themeId);
           setHydrated(true);
         }
         return;
@@ -30,18 +37,23 @@ export function ThemeBootstrapProvider({ children }: PropsWithChildren) {
 
       try {
         const preferences = await getUserPreferences(user.id);
-        const themeId = getBootstrapThemeId(
+        const { themeId } = await resolveBootstrapAccessibleTheme({
           cachedThemeId,
-          preferences.preferredTheme,
-        );
+          preferredTheme: preferences.preferredTheme,
+          subscription,
+          userId: user.id,
+          source: "theme_bootstrap",
+        });
         await writeCachedThemeId(themeId);
         if (!cancelled) {
           setActiveThemeId(themeId);
           setHydrated(true);
         }
       } catch {
+        const themeId = resolveAccessibleThemeId(cachedThemeId, subscription);
+        await writeCachedThemeId(themeId);
         if (!cancelled) {
-          setActiveThemeId(getBootstrapThemeId(cachedThemeId));
+          setActiveThemeId(themeId);
           setHydrated(true);
         }
       }

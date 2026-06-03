@@ -10,14 +10,16 @@ jest.mock("@/features/theme/services/themeCacheStorage", () => ({
   ),
 }));
 
-import InterfaceThemeScreen from "@/app/interface-theme";
-import { renderWithProviders } from "@/tests/utils/renderWithProviders";
-
+const mockPush = jest.fn();
 const mockMutateAsync = jest.fn();
 const mockTrackThemeScreenViewed = jest.fn();
 const mockTrackThemePreviewViewed = jest.fn();
-const mockTrackThemeSelected = jest.fn();
-const mockTrackThemeChanged = jest.fn();
+const mockTrackPremiumThemeTapped = jest.fn();
+const mockTrackPremiumThemeBlocked = jest.fn();
+
+jest.mock("expo-router", () => ({
+  useRouter: () => ({ back: jest.fn(), push: mockPush }),
+}));
 
 jest.mock("@/features/settings/hooks/useSettings", () => ({
   useSettings: () => ({
@@ -26,11 +28,20 @@ jest.mock("@/features/settings/hooks/useSettings", () => ({
   }),
 }));
 
+jest.mock("@/features/billing/hooks/useSubscription", () => ({
+  useSubscription: () => ({
+    tier: "free",
+    period: null,
+    isPremium: false,
+  }),
+}));
+
 jest.mock("@/features/theme/hooks/usePreferredThemeMutation", () => ({
   usePreferredThemeMutation: () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
+  ThemeApplicationError: class ThemeApplicationError extends Error {},
 }));
 
 const mockSetActiveThemeId = jest.fn();
@@ -53,12 +64,10 @@ jest.mock("@/features/theme/analytics", () => ({
     mockTrackThemeScreenViewed(...args),
   trackThemePreviewViewed: (...args: unknown[]) =>
     mockTrackThemePreviewViewed(...args),
-  trackThemeSelected: (...args: unknown[]) => mockTrackThemeSelected(...args),
-  trackThemeChanged: (...args: unknown[]) => mockTrackThemeChanged(...args),
-}));
-
-jest.mock("expo-router", () => ({
-  useRouter: () => ({ back: jest.fn() }),
+  trackPremiumThemeTapped: (...args: unknown[]) =>
+    mockTrackPremiumThemeTapped(...args),
+  trackPremiumThemeBlocked: (...args: unknown[]) =>
+    mockTrackPremiumThemeBlocked(...args),
 }));
 
 jest.mock("expo-haptics", () => ({
@@ -78,14 +87,17 @@ jest.mock("@/components/common/Icon/Icon", () => ({
   },
 }));
 
+import InterfaceThemeScreen from "@/app/interface-theme";
+import { renderWithProviders } from "@/tests/utils/renderWithProviders";
+
 describe("InterfaceThemeScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSetActiveThemeId.mockClear();
     mockMutateAsync.mockResolvedValue({
-      previousTheme: "linen-light",
-      nextThemeId: "deep-forest",
+      appliedThemeId: "deep-forest",
       changed: true,
+      previousThemeId: "linen-light",
     });
   });
 
@@ -98,16 +110,26 @@ describe("InterfaceThemeScreen", () => {
     expect(screen.getByText("Deep Forest")).toBeTruthy();
     expect(screen.getByText("Midnight Ivy")).toBeTruthy();
     expect(screen.getByText("Terracotta Dusk")).toBeTruthy();
-    expect(screen.getAllByText("EDITORIAL PREVIEW").length).toBe(4);
   });
 
-  it("applies a new theme when an unselected card is pressed", async () => {
+  it("routes free users to Premium when tapping a locked theme", () => {
     renderWithProviders(<InterfaceThemeScreen />);
 
-    fireEvent.press(screen.getByLabelText(/Deep Forest/i));
+    fireEvent.press(screen.getByLabelText(/Deep Forest, Premium theme/i));
 
-    expect(mockSetActiveThemeId).toHaveBeenCalledWith("deep-forest");
-    expect(mockMutateAsync).toHaveBeenCalledWith("deep-forest");
-    expect(mockTrackThemeScreenViewed).toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: "/premium",
+      params: { source: "theme_screen", theme_id: "deep-forest" },
+    });
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+    expect(mockTrackPremiumThemeTapped).toHaveBeenCalled();
+  });
+
+  it("applies linen-light when selected by a free user", async () => {
+    renderWithProviders(<InterfaceThemeScreen />);
+
+    fireEvent.press(screen.getByLabelText(/Linen Light/i));
+
+    expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 });

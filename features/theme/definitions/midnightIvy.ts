@@ -68,6 +68,7 @@ export const midnightIvyTheme: ThemeDefinition = {
   id: "midnight-ivy",
   name: "Midnight Ivy",
   description: "A deep, nocturnal sanctuary for high-contrast focus.",
+  access: "premium",
   category: "dark",
   isDark: true,
   quote: "In the heart of the night, the garden breathes its deepest secrets.",
