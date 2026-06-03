@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
 interface WaterNowNoteSheetProps {
@@ -95,7 +96,7 @@ export function WaterNowNoteSheet({
             {
               backgroundColor: colors.surfaceContainerLowest,
               paddingBottom: Math.max(20, insets.bottom + 8),
-              borderColor: "rgba(255, 255, 255, 0.72)",
+              borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
               opacity: sheetOpacity,
               transform: [{ translateY: sheetTranslateY }],
             },

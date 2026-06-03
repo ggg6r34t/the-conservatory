@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
@@ -128,7 +129,7 @@ export function MemorialEntrySheet({
               {
                 backgroundColor: colors.surfaceContainerLowest,
                 paddingBottom: Math.max(24, insets.bottom + 12),
-                borderColor: "rgba(255, 255, 255, 0.72)",
+                borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
                 opacity: sheetOpacity,
                 transform: [{ translateY: sheetTranslateY }],
               },
@@ -151,7 +152,10 @@ export function MemorialEntrySheet({
                 <View
                   style={[
                     styles.heroImageShell,
-                    { backgroundColor: colors.surfaceContainerLow },
+                    {
+                      backgroundColor: colors.surfaceContainerLow,
+                      borderColor: withAlpha(colors.surfaceContainerLowest, 0.44),
+                    },
                   ]}
                 >
                   {memorial?.primaryPhotoUri ? (
@@ -210,7 +214,9 @@ export function MemorialEntrySheet({
                       style={[
                         styles.selectValue,
                         {
-                          color: causeOfPassing ? colors.onSurface : "#9ea49f",
+                          color: causeOfPassing
+                            ? colors.onSurface
+                            : colors.onSurfaceVariant,
                         },
                       ]}
                     >
@@ -282,7 +288,7 @@ export function MemorialEntrySheet({
                     <TextInput
                       multiline
                       placeholder="What do you want preserved in this memorial?"
-                      placeholderTextColor="#c6cbc5"
+                      placeholderTextColor={colors.outlineVariant}
                       style={[styles.textArea, { color: colors.onSurface }]}
                       textAlignVertical="top"
                       value={memorialNote}
@@ -344,7 +350,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.44)",
     ...shadowScale.elevatedCard,
   },
   heroImage: {

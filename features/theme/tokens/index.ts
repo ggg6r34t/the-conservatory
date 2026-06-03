@@ -1,3 +1,4 @@
+export type { BotanicalCoreTokens } from "./coreTokens";
+export type { BotanicalSemanticTokens } from "./semanticTokens";
 export type { BotanicalColorTokens } from "../types";
-export type { BotanicalSharedTokens } from "./shared";
-export { botanicalSharedTokens } from "./shared";
+export { buildThemePalette, deriveSemanticTokens } from "./deriveSemanticTokens";

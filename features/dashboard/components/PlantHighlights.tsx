@@ -105,7 +105,12 @@ export function PlantHighlights({
       <Link href={`/plant/${featuredPlant.id}` as const} asChild>
         <Pressable style={styles.featuredLink}>
           <View style={styles.featuredCard}>
-            <View style={styles.featuredMedia}>
+            <View
+              style={[
+                styles.featuredMedia,
+                { backgroundColor: colors.primaryContainer },
+              ]}
+            >
               <PlantImage plant={featuredPlant} style={styles.featuredImage} />
               <PlantStatusBadge
                 healthState={featuredStatus.healthState}
@@ -158,6 +163,7 @@ export function PlantHighlights({
                   style={[
                     styles.secondaryMedia,
                     styles.secondaryCardCompactMedia,
+                    { backgroundColor: colors.surfaceContainerHigh },
                   ]}
                 >
                   <PlantImage
@@ -197,7 +203,11 @@ export function PlantHighlights({
             <Link href={`/plant/${rightSecondaryPlant.id}` as const} asChild>
               <Pressable style={styles.secondaryCard}>
                 <View
-                  style={[styles.secondaryMedia, styles.secondaryCardTallMedia]}
+                  style={[
+                    styles.secondaryMedia,
+                    styles.secondaryCardTallMedia,
+                    { backgroundColor: colors.surfaceContainerHigh },
+                  ]}
                 >
                   <PlantImage
                     plant={rightSecondaryPlant}
@@ -314,7 +324,6 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     overflow: "hidden",
     justifyContent: "flex-start",
-    backgroundColor: "#1f4e46",
   },
   featuredImage: {
     width: "100%",
@@ -382,7 +391,6 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     overflow: "hidden",
     position: "relative",
-    backgroundColor: "#f6f4ef",
   },
   secondaryCardCompactMedia: {
     height: 176,

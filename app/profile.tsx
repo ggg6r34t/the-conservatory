@@ -211,7 +211,7 @@ export default function ProfileScreen() {
                 styles.editBadge,
                 {
                   backgroundColor: colors.primary,
-                  shadowColor: "rgba(27, 28, 25, 0.1)",
+                  shadowColor: colors.shadowElevated,
                 },
               ]}
             >

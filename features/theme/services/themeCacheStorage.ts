@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { DEFAULT_THEME_ID, resolveThemeId } from "@/features/theme/registry";
+import { resolveThemeId } from "@/features/theme/registry";
+import { resolveBootstrapThemeId } from "@/features/theme/services/themeBootstrap";
 import type { ThemeId } from "@/features/theme/types";
 
 const THEME_CACHE_KEY = "@conservatory/preferred-theme";
@@ -30,13 +31,4 @@ export async function clearCachedThemeId(): Promise<void> {
   }
 }
 
-export function getBootstrapThemeId(
-  cachedThemeId: ThemeId | null,
-  preferredTheme?: string | null,
-): ThemeId {
-  if (preferredTheme) {
-    return resolveThemeId(preferredTheme);
-  }
-
-  return cachedThemeId ?? DEFAULT_THEME_ID;
-}
+export const getBootstrapThemeId = resolveBootstrapThemeId;

@@ -24,6 +24,7 @@ import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { SpeciesSuggestionBanner } from "@/features/ai/components/SpeciesSuggestionBanner";
 import { useSpeciesSuggestion } from "@/features/ai/hooks/useSpeciesSuggestion";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
@@ -239,6 +240,7 @@ export default function QuickStartScreen({
           contentContainerStyle={[
             styles.content,
             {
+              backgroundColor: colors.surface,
               paddingHorizontal: spacing.lg,
               paddingTop: spacing.lg,
               paddingBottom: 80,
@@ -320,7 +322,10 @@ export default function QuickStartScreen({
             <View
               style={[
                 styles.searchField,
-                { backgroundColor: colors.surfaceContainerLow },
+                {
+                  backgroundColor: colors.surfaceContainerLow,
+                  borderColor: withAlpha(colors.outlineVariant, 0.35),
+                },
               ]}
             >
               <Icon
@@ -332,7 +337,7 @@ export default function QuickStartScreen({
               <TextInput
                 accessibilityLabel="Scientific or common name"
                 placeholder="e.g. Monstera Deliciosa"
-                placeholderTextColor="#c6cbc5"
+                placeholderTextColor={colors.outlineVariant}
                 value={speciesName}
                 onChangeText={(value) => {
                   setSpeciesName(value);
@@ -381,14 +386,17 @@ export default function QuickStartScreen({
                       <View
                         style={[
                           styles.lightCard,
-                          { backgroundColor: colors.primary },
+                          {
+                            backgroundColor: colors.primary,
+                            borderColor: withAlpha(colors.onPrimary, 0.7),
+                          },
                         ]}
                       >
                         <View
                           style={[
                             styles.lightIconWrap,
                             {
-                              backgroundColor: "rgba(255,255,255,0.18)",
+                              backgroundColor: withAlpha(colors.onPrimary, 0.18),
                             },
                           ]}
                         >
@@ -414,6 +422,7 @@ export default function QuickStartScreen({
                           styles.lightCard,
                           {
                             backgroundColor: colors.surfaceContainerLowest,
+                            borderColor: withAlpha(colors.outlineVariant, 0.35),
                           },
                         ]}
                       >
@@ -508,6 +517,7 @@ export default function QuickStartScreen({
               styles.pickerSheet,
               {
                 backgroundColor: colors.surfaceContainerLowest,
+                borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
                 paddingBottom: Math.max(20, insets.bottom + 8),
                 opacity: sheetOpacity,
                 transform: [{ translateY: sheetTranslateY }],
@@ -649,7 +659,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    backgroundColor: "#fbf9f4",
     gap: 20,
   },
   heroSection: {
@@ -718,7 +727,6 @@ const styles = StyleSheet.create({
     minHeight: 56,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.72)",
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -746,7 +754,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.7)",
     ...shadowScale.elevatedCard,
   },
   lightIconWrap: {
@@ -792,7 +799,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     gap: 18,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.72)",
   },
   pickerHandle: {
     width: 64,

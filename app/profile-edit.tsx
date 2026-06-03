@@ -18,6 +18,7 @@ import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   capturePlantImage,
@@ -183,7 +184,12 @@ export default function ProfileEditScreen() {
             </View>
 
             {uploadAvatar.isPending ? (
-              <View style={styles.avatarLoadingOverlay}>
+              <View
+                style={[
+                  styles.avatarLoadingOverlay,
+                  { backgroundColor: withAlpha(colors.scrim, 0.45) },
+                ]}
+              >
                 <ActivityIndicator color="white" size="small" />
               </View>
             ) : (
@@ -289,6 +295,7 @@ export default function ProfileEditScreen() {
               styles.pickerSheet,
               {
                 backgroundColor: colors.surfaceContainerLowest,
+                borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
                 paddingBottom: Math.max(20, insets.bottom + 8),
                 opacity: sheetOpacity,
                 transform: [{ translateY: sheetTranslateY }],
@@ -429,7 +436,6 @@ const styles = StyleSheet.create({
   avatarLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 42,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -492,7 +498,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     gap: 18,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.72)",
   },
   pickerHandle: {
     width: 64,

@@ -64,7 +64,12 @@ export function MemorialHero({
           cachePolicy="memory-disk"
         />
       ) : (
-        <View style={[styles.heroImage, styles.heroFallback]} />
+        <View
+          style={[
+            styles.heroImage,
+            { backgroundColor: colors.inverseSurface },
+          ]}
+        />
       )}
       <LinearGradient
         colors={heroGradientColors}
@@ -129,9 +134,6 @@ const styles = StyleSheet.create({
     height: "100%",
     filter: [{ grayscale: 1 }, { contrast: 1.1 }],
   } as object,
-  heroFallback: {
-    backgroundColor: "#20201d",
-  },
   heroGradient: {
     position: "absolute",
     bottom: 0,

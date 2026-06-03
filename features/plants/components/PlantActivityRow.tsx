@@ -26,8 +26,8 @@ function getIconTone(
       };
     case "inspect":
       return {
-        backgroundColor: "#e5ebe0",
-        iconColor: colors.primary,
+        backgroundColor: colors.tertiaryFixed,
+        iconColor: colors.tertiary,
       };
     case "prune":
     case "pest":

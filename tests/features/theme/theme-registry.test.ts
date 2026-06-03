@@ -1,12 +1,17 @@
 import {
   DEFAULT_THEME_ID,
   buildThemeTokens,
+  clearThemeTokenCache,
   formatThemeName,
   resolveThemeId,
   themeCatalog,
 } from "@/features/theme/registry";
 
 describe("theme registry", () => {
+  beforeEach(() => {
+    clearThemeTokenCache();
+  });
+
   it("exposes all mockup themes", () => {
     expect(themeCatalog.map((theme) => theme.id)).toEqual([
       "linen-light",
@@ -23,7 +28,8 @@ describe("theme registry", () => {
 
   it("builds tokens from a single source of truth per theme", () => {
     const deepForest = buildThemeTokens("deep-forest");
-    expect(deepForest.colors.primaryContainer).toBe("#2d4f3e");
+    expect(deepForest.colors.primaryContainer).toBe("#2f4f41");
+    expect(deepForest.colors.statusThriving).toBe("#55694c");
     expect(deepForest.spacing.md).toBe(16);
   });
 
@@ -35,5 +41,23 @@ describe("theme registry", () => {
     for (const theme of themeCatalog) {
       expect(theme.accessibility.passesWcagAa).toBe(true);
     }
+  });
+
+  it("includes semantic tokens on every theme palette", () => {
+    for (const theme of themeCatalog) {
+      const palette = buildThemeTokens(theme.id);
+      expect(palette.colors.statusThriving).toBeTruthy();
+      expect(palette.colors.syncHealthy).toBeTruthy();
+      expect(palette.colors.journalAccent).toBeTruthy();
+      expect(palette.colors.shadow).toBeTruthy();
+      expect(palette.colors.shadowElevated).toBeTruthy();
+    }
+  });
+
+  it("keeps linen-light core colors unchanged", () => {
+    const linen = buildThemeTokens("linen-light");
+    expect(linen.colors.primary).toBe("#163828");
+    expect(linen.colors.surface).toBe("#fbf9f4");
+    expect(linen.colors.onSurface).toBe("#1b1c19");
   });
 });

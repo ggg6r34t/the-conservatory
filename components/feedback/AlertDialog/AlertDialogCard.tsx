@@ -3,6 +3,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
 import type { AlertDialogCardProps } from "./alert.types";
@@ -47,8 +48,18 @@ export function AlertDialogCard({
         style={StyleSheet.absoluteFill}
       >
         <BlurView intensity={58} tint="light" style={StyleSheet.absoluteFill}>
-          <View style={styles.backdropTint} />
-          <View style={styles.backdropShade} />
+          <View
+            style={[
+              styles.backdropTint,
+              { backgroundColor: withAlpha(colors.surface, 0.38) },
+            ]}
+          />
+          <View
+            style={[
+              styles.backdropShade,
+              { backgroundColor: withAlpha(colors.onSurface, 0.06) },
+            ]}
+          />
         </BlurView>
       </Pressable>
 
@@ -62,12 +73,18 @@ export function AlertDialogCard({
           shadowWithColor(shadowScale.modalCard, colors.backdrop),
           {
             backgroundColor: colors.surfaceContainerLowest,
-            borderColor: "rgba(255, 255, 255, 0.74)",
+            borderColor: withAlpha(colors.surfaceContainerLowest, 0.74),
           },
         ]}
         testID={alert.testID}
       >
-        <View pointerEvents="none" style={styles.cardGlow} />
+        <View
+          pointerEvents="none"
+          style={[
+            styles.cardGlow,
+            { backgroundColor: withAlpha(colors.surfaceContainerLowest, 0.14) },
+          ]}
+        />
 
         {alert.icon ? (
           <View style={styles.iconWrap}>
@@ -159,11 +176,9 @@ const styles = StyleSheet.create({
   },
   backdropTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(251, 249, 244, 0.38)",
   },
   backdropShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(48, 49, 46, 0.06)",
   },
   card: {
     width: "100%",
@@ -179,7 +194,6 @@ const styles = StyleSheet.create({
   cardGlow: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 32,
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
   },
   iconWrap: {
     marginBottom: -2,

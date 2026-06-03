@@ -20,6 +20,7 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { SpeciesSuggestionBanner } from "@/features/ai/components/SpeciesSuggestionBanner";
 import { useSpeciesSuggestion } from "@/features/ai/hooks/useSpeciesSuggestion";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
@@ -111,7 +112,7 @@ function PlantInput({
         <TextInput
           multiline={multiline}
           placeholder={placeholder}
-          placeholderTextColor="#c6cbc5"
+          placeholderTextColor={colors.outlineVariant}
           style={[
             styles.input,
             multiline && styles.inputMultiline,
@@ -503,7 +504,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
           styles.imagePicker,
           {
             backgroundColor: colors.surface,
-            borderColor: "#d8d4cb",
+            borderColor: colors.outlineVariant,
           },
         ]}
       >
@@ -756,7 +757,9 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
               color={colors.secondary}
             />
           </View>
-          <View style={[styles.protocolTag, { backgroundColor: "#fff3ec" }]}>
+          <View
+            style={[styles.protocolTag, { backgroundColor: colors.secondaryFixed }]}
+          >
             <Text style={[styles.protocolTagText, { color: colors.secondary }]}>
               EXPOSURE
             </Text>
@@ -873,6 +876,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
             styles.pickerSheet,
             {
               backgroundColor: colors.surfaceContainerLowest,
+              borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
               paddingBottom: Math.max(20, insets.bottom + 8),
               opacity: sheetOpacity,
               transform: [{ translateY: sheetTranslateY }],
@@ -1286,7 +1290,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     gap: 18,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.72)",
   },
   pickerHandle: {
     width: 64,

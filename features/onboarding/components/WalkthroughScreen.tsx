@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { WalkthroughProgress } from "@/features/onboarding/components/WalkthroughProgress";
 import { WalkthroughSlidePanel } from "@/features/onboarding/components/WalkthroughSlidePanel";
 import { walkthroughSlides } from "@/features/onboarding/constants/walkthroughSlides";
@@ -119,17 +120,19 @@ export function WalkthroughScreen({
       { pressed }: PressableStateCallbackType,
     ) => [
       baseStyle,
-      styles.headerControl,
+      {
+        backgroundColor: withAlpha(colors.surfaceContainerLowest, 0.82),
+      },
       pressed && styles.headerControlPressed,
     ],
-    [],
+    [colors.surfaceContainerLowest],
   );
 
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.surface }]}>
         <View style={styles.header}>
           <View style={styles.headerLead}>
             {activeIndex > 0 ? (
@@ -221,7 +224,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#fbf9f4",
   },
   header: {
     position: "absolute",
@@ -246,9 +248,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-  },
-  headerControl: {
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
   },
   headerControlPressed: {
     opacity: 0.9,

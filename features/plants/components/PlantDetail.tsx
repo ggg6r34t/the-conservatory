@@ -7,6 +7,7 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHealthInsight";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import { AddProgressPhotoSheet } from "@/features/plants/components/AddProgressPhotoSheet";
@@ -207,13 +208,13 @@ function getActivityBadgeStyle(
       };
     case "pest":
       return {
-        backgroundColor: "#dae7c9",
-        iconColor: "#2a3521",
+        backgroundColor: colors.tertiaryFixed,
+        iconColor: colors.tertiary,
       };
     case "inspect":
       return {
-        backgroundColor: "#dae7c9",
-        iconColor: "#2a3521",
+        backgroundColor: colors.tertiaryFixed,
+        iconColor: colors.tertiary,
       };
     case "repot":
       return {
@@ -531,9 +532,7 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
                   {
                     backgroundColor: darkCard
                       ? colors.primary
-                      : card.key === "humidity"
-                        ? "#f1eee8"
-                        : colors.surfaceContainerLow,
+                      : colors.surfaceContainerLow,
                   },
                 ]}
               >
@@ -544,7 +543,7 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
                       backgroundColor:
                         card.tileColor ??
                         (darkCard
-                          ? "rgba(255,255,255,0.12)"
+                          ? withAlpha(colors.onPrimary, 0.12)
                           : colors.secondaryContainer),
                     },
                   ]}
@@ -555,9 +554,9 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
                     size={20}
                     color={
                       darkCard
-                        ? "#d9ead8"
+                        ? colors.primaryFixed
                         : card.key === "humidity"
-                          ? "#5c625d"
+                          ? colors.onSurfaceVariant
                           : colors.secondary
                     }
                   />
@@ -576,7 +575,9 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
                   style={[
                     styles.guideBody,
                     {
-                      color: darkCard ? "#a9cfb9" : colors.onSurfaceVariant,
+                      color: darkCard
+                        ? colors.primaryFixedDim
+                        : colors.onSurfaceVariant,
                     },
                   ]}
                 >
@@ -804,6 +805,7 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
               styles.addPhotoTile,
               {
                 backgroundColor: colors.surfaceContainerLow,
+                borderColor: colors.outlineVariant,
                 opacity: pressed ? 0.92 : 1,
                 transform: [{ scale: pressed ? 0.985 : 1 }],
               },
@@ -1086,7 +1088,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#ddd7cd",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,

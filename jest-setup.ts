@@ -9,8 +9,20 @@ jest.mock("@/features/theme/services/themeCacheStorage", () => ({
   writeCachedThemeId: jest.fn().mockResolvedValue(undefined),
   clearCachedThemeId: jest.fn().mockResolvedValue(undefined),
   getBootstrapThemeId: jest.fn(
-    (_cached: string | null, preferred?: string | null) =>
-      preferred ?? "linen-light",
+    (_cached: string | null, preferred?: string | null) => {
+      if (preferred) {
+        const valid = [
+          "linen-light",
+          "deep-forest",
+          "midnight-ivy",
+          "terracotta-dusk",
+        ] as const;
+        return valid.includes(preferred as (typeof valid)[number])
+          ? preferred
+          : "linen-light";
+      }
+      return _cached ?? "linen-light";
+    },
   ),
 }));
 

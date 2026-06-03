@@ -1,6 +1,7 @@
 import type { ThemeDefinition } from "@/features/theme/types";
+import { buildThemePalette } from "@/features/theme/tokens/deriveSemanticTokens";
 
-const linenLightColors = {
+const linenLightCore = {
   primary: "#163828",
   primaryContainer: "#2d4f3e",
   primaryFixed: "#c5ebd4",
@@ -53,6 +54,8 @@ const linenLightColors = {
   transparent: "transparent",
 } as const;
 
+const linenLightColors = buildThemePalette(linenLightCore, { isDark: false });
+
 export const linenLightTheme: ThemeDefinition = {
   id: "linen-light",
   name: "Linen Light",
@@ -66,26 +69,26 @@ export const linenLightTheme: ThemeDefinition = {
     statusLabel: "Thriving",
     image: require("@/assets/images/lush-green-monstera-deliciosa.png"),
     surfaces: {
-      background: linenLightColors.surface,
+      background: linenLightCore.surface,
       border: "rgba(193, 200, 194, 0.1)",
-      plantTitle: linenLightColors.primary,
-      statusBackground: linenLightColors.tertiaryContainer,
-      statusForeground: linenLightColors.onTertiaryContainer,
-      placeholderPrimary: linenLightColors.surfaceContainer,
-      placeholderSecondary: linenLightColors.surfaceContainer,
+      plantTitle: linenLightCore.primary,
+      statusBackground: linenLightCore.tertiaryContainer,
+      statusForeground: linenLightCore.onTertiaryContainer,
+      placeholderPrimary: linenLightCore.surfaceContainer,
+      placeholderSecondary: linenLightCore.surfaceContainer,
     },
   },
   card: {
-    background: linenLightColors.surfaceContainerLowest,
-    title: linenLightColors.primary,
-    description: linenLightColors.onSurfaceVariant,
-    editorialLabel: linenLightColors.secondary,
-    editorialQuote: linenLightColors.onSurfaceVariant,
-    selectionRing: linenLightColors.primary,
-    selectionFill: linenLightColors.primary,
-    selectionIcon: linenLightColors.onPrimary,
+    background: linenLightCore.surfaceContainerLowest,
+    title: linenLightCore.primary,
+    description: linenLightCore.onSurfaceVariant,
+    editorialLabel: linenLightCore.secondary,
+    editorialQuote: linenLightCore.onSurfaceVariant,
+    selectionRing: linenLightCore.primary,
+    selectionFill: linenLightCore.primary,
+    selectionIcon: linenLightCore.onPrimary,
     unselectedRing: "rgba(22, 56, 40, 0.3)",
-    editorialDivider: linenLightColors.surfaceContainer,
+    editorialDivider: linenLightCore.surfaceContainer,
   },
   accessibility: {
     passesWcagAa: true,

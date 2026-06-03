@@ -29,6 +29,7 @@ import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
 import type { CareReminder, ReminderType } from "@/types/models";
 
@@ -622,8 +623,18 @@ export default function CareRemindersScreen() {
                   tint="light"
                   style={StyleSheet.absoluteFill}
                 >
-                  <View style={styles.dialogBackdropTint} />
-                  <View style={styles.dialogBackdropShade} />
+                  <View
+                    style={[
+                      styles.dialogBackdropTint,
+                      { backgroundColor: withAlpha(colors.surface, 0.38) },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.dialogBackdropShade,
+                      { backgroundColor: withAlpha(colors.onSurface, 0.06) },
+                    ]}
+                  />
                 </BlurView>
               </Pressable>
 
@@ -637,11 +648,22 @@ export default function CareRemindersScreen() {
                   shadowWithColor(shadowScale.modalCard, colors.backdrop),
                   {
                     backgroundColor: colors.surfaceContainerLowest,
-                    borderColor: "rgba(255, 255, 255, 0.74)",
+                    borderColor: withAlpha(colors.surfaceContainerLowest, 0.74),
                   },
             ]}
           >
-                <View pointerEvents="none" style={styles.cardGlow} />
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.cardGlow,
+                    {
+                      backgroundColor: withAlpha(
+                        colors.surfaceContainerLowest,
+                        0.14,
+                      ),
+                    },
+                  ]}
+                />
                 <ScrollView
                   contentContainerStyle={styles.editorScrollContent}
                   showsVerticalScrollIndicator={false}
@@ -1076,11 +1098,9 @@ const styles = StyleSheet.create({
   },
   dialogBackdropTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(251, 249, 244, 0.38)",
   },
   dialogBackdropShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(48, 49, 46, 0.06)",
   },
   editorCard: {
     width: "100%",
@@ -1097,7 +1117,6 @@ const styles = StyleSheet.create({
   cardGlow: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 32,
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
   },
   editorScrollContent: {
     gap: 18,

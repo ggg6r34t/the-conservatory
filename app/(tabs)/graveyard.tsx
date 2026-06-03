@@ -28,6 +28,7 @@ import {
 import { useAlert } from "@/hooks/useAlert";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { shadowScale } from "@/styles/shadows";
 
 function formatYearRange(memorial: GraveyardPlantListItem) {
@@ -78,8 +79,14 @@ function GrayscaleImage({
   uri?: string | null;
   style: object;
 }) {
+  const { colors } = useTheme();
+
   if (!uri) {
-    return <View style={[style, styles.imageFallback]} />;
+    return (
+      <View
+        style={[style, { backgroundColor: colors.surfaceContainerHigh }]}
+      />
+    );
   }
 
   return (
@@ -220,7 +227,12 @@ export default function GraveyardScreen() {
               pressed && styles.cardPressed,
             ]}
           >
-            <View style={styles.featuredImageWrap}>
+            <View
+              style={[
+                styles.featuredImageWrap,
+                { backgroundColor: colors.inverseSurface },
+              ]}
+            >
               <GrayscaleImage
                 uri={featuredMemorial.primaryPhotoUri}
                 style={styles.featuredImage}
@@ -284,8 +296,8 @@ export default function GraveyardScreen() {
             style={({ pressed }) => [
               styles.reflectionCard,
               {
-                backgroundColor: "#fde8de",
-                borderColor: "rgba(148, 73, 46, 0.12)",
+                backgroundColor: colors.secondaryFixed,
+                borderColor: withAlpha(colors.secondary, 0.12),
               },
               pressed && styles.cardPressed,
             ]}
@@ -334,6 +346,10 @@ export default function GraveyardScreen() {
                 }
                 style={({ pressed }) => [
                   styles.avatarFrame,
+                  {
+                    backgroundColor: colors.inverseSurface,
+                    borderColor: colors.surfaceContainerLowest,
+                  },
                   pressed && styles.cardPressed,
                 ]}
               >
@@ -355,7 +371,10 @@ export default function GraveyardScreen() {
                   style={({ pressed }) => [
                     styles.avatarFrame,
                     styles.avatarFrameOffset,
-                    { backgroundColor: colors.surfaceContainerLowest },
+                    {
+                      backgroundColor: colors.surfaceContainerLowest,
+                      borderColor: colors.surfaceContainerLowest,
+                    },
                     pressed && styles.cardPressed,
                   ]}
                 >
@@ -409,6 +428,7 @@ export default function GraveyardScreen() {
                 }
                 style={({ pressed }) => [
                   styles.compactImageFrame,
+                  { backgroundColor: colors.surfaceContainerLowest },
                   pressed && styles.cardPressed,
                 ]}
               >
@@ -547,9 +567,6 @@ const styles = StyleSheet.create({
     height: "100%",
     filter: [{ grayscale: 1 }, { sepia: 0.2 }, { brightness: 0.62 }],
   },
-  imageFallback: {
-    backgroundColor: "#e9e6df",
-  },
   featuredCard: {
     borderRadius: 28,
     paddingHorizontal: 24,
@@ -563,7 +580,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     height: 336,
     position: "relative",
-    backgroundColor: "#20201d",
   },
   featuredImage: {
     width: "100%",
@@ -659,9 +675,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     overflow: "hidden",
-    backgroundColor: "#1e211d",
     borderWidth: 2,
-    borderColor: "#ffffff",
   },
   avatarFrameOffset: {
     position: "absolute",
@@ -713,7 +727,6 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 18,
     padding: 4,
-    backgroundColor: "#ffffff",
     ...shadowScale.subtleSurface,
   },
   compactCopy: {

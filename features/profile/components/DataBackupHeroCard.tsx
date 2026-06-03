@@ -1,6 +1,7 @@
 import { ImageBackground, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 
 export function DataBackupHeroCard() {
   const { colors } = useTheme();
@@ -11,7 +12,12 @@ export function DataBackupHeroCard() {
       imageStyle={styles.image}
       style={styles.card}
     >
-      <View style={styles.overlay} />
+      <View
+        style={[
+          styles.overlay,
+          { backgroundColor: withAlpha(colors.primary, 0.42) },
+        ]}
+      />
       <View style={styles.content}>
         <Text style={[styles.eyebrow, { color: colors.surfaceBright }]}>
           SECURITY & PRESERVATION
@@ -36,7 +42,6 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(16, 50, 32, 0.42)",
   },
   content: {
     gap: 10,

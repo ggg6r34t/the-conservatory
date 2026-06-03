@@ -303,7 +303,12 @@ export default function JournalScreen() {
                           contentFit="cover"
                         />
                         <View style={styles.highlightDateWrap}>
-                          <Text style={styles.highlightDate}>
+                          <Text
+                            style={[
+                              styles.highlightDate,
+                              { color: colors.onPrimary },
+                            ]}
+                          >
                             {highlight.dateLabel}
                           </Text>
                         </View>
@@ -513,7 +518,6 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_700Bold",
     fontSize: 10,
     letterSpacing: 1.6,
-    color: "#ffffff",
   },
   sections: {
     gap: 24,

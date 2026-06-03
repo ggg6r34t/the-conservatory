@@ -1,8 +1,4 @@
-import {
-  buildThemeTokens,
-  clearThemeTokenCache,
-  themeCatalog,
-} from "@/features/theme/registry";
+import { clearThemeTokenCache, buildThemeTokens, themeCatalog } from "@/features/theme/registry";
 
 describe("theme performance guardrails", () => {
   beforeEach(() => {

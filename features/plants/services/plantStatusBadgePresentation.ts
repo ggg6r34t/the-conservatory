@@ -20,11 +20,13 @@ export interface PlantStatusBadgePresentation {
   emphasisColor: string;
 }
 
+/** Linen Light baseline mappings; core tokens preserve pre–multi-theme appearance. */
 export function getPlantStatusBadgePresentation(input: {
   healthState: PlantHealthState;
   colors: ThemeColors;
 }): PlantStatusBadgePresentation {
   const label = getPlantStatusLabel(input.healthState);
+  const { colors } = input;
 
   if (input.healthState === "needs_attention") {
     return {
@@ -32,12 +34,12 @@ export function getPlantStatusBadgePresentation(input: {
       label,
       labelLines: ["NEEDS", "WATER"],
       icon: "water-alert",
-      iconColor: input.colors.error,
-      iconBackgroundColor: input.colors.errorContainer,
-      labelColor: input.colors.onSurface,
-      badgeBackgroundColor: input.colors.errorContainer,
-      badgeForegroundColor: input.colors.onErrorContainer,
-      emphasisColor: input.colors.error,
+      iconColor: colors.error,
+      iconBackgroundColor: colors.errorContainer,
+      labelColor: colors.onSurface,
+      badgeBackgroundColor: colors.errorContainer,
+      badgeForegroundColor: colors.onErrorContainer,
+      emphasisColor: colors.error,
     };
   }
 
@@ -47,12 +49,12 @@ export function getPlantStatusBadgePresentation(input: {
       label,
       labelLines: [label, ""],
       icon: "leaf",
-      iconColor: input.colors.primary,
-      iconBackgroundColor: input.colors.primaryFixed,
-      labelColor: input.colors.onSurface,
-      badgeBackgroundColor: input.colors.secondaryFixed,
-      badgeForegroundColor: input.colors.primary,
-      emphasisColor: input.colors.primary,
+      iconColor: colors.primary,
+      iconBackgroundColor: colors.primaryFixed,
+      labelColor: colors.onSurface,
+      badgeBackgroundColor: colors.secondaryFixed,
+      badgeForegroundColor: colors.primary,
+      emphasisColor: colors.primary,
     };
   }
 
@@ -61,11 +63,11 @@ export function getPlantStatusBadgePresentation(input: {
     label,
     labelLines: [label, ""],
     icon: "leaf",
-    iconColor: input.colors.onSurfaceVariant,
-    iconBackgroundColor: input.colors.surfaceContainerHigh,
-    labelColor: input.colors.onSurface,
-    badgeBackgroundColor: input.colors.surfaceContainerHigh,
-    badgeForegroundColor: input.colors.onSurfaceVariant,
-    emphasisColor: input.colors.onSurfaceVariant,
+    iconColor: colors.onSurfaceVariant,
+    iconBackgroundColor: colors.surfaceContainerHigh,
+    labelColor: colors.onSurface,
+    badgeBackgroundColor: colors.surfaceContainerHigh,
+    badgeForegroundColor: colors.onSurfaceVariant,
+    emphasisColor: colors.onSurfaceVariant,
   };
 }

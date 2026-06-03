@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { resolveSpecimenTagScan } from "@/features/plants/services/specimenTagsService";
@@ -85,7 +86,12 @@ export default function SpecimenScanScreen() {
               barcodeScannerSettings={{ barcodeTypes: [...barcodeTypes] }}
               onBarcodeScanned={scanState === "ready" ? handleScan : undefined}
             />
-            <View style={styles.overlay}>
+            <View
+              style={[
+                styles.overlay,
+                { backgroundColor: withAlpha(colors.backdrop, 0.18) },
+              ]}
+            >
               <View style={[styles.scanFrame, { borderColor: colors.surface }]} />
               <Text style={[styles.scanLabel, { color: colors.surface }]}>
                 {scanState === "resolving"
@@ -158,7 +164,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 18,
-    backgroundColor: "rgba(0, 0, 0, 0.18)",
   },
   scanFrame: {
     width: 230,

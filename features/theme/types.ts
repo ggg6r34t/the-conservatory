@@ -1,59 +1,10 @@
 import type { ImageSourcePropType } from "react-native";
 
+import type { BotanicalCoreTokens } from "@/features/theme/tokens/coreTokens";
+import type { BotanicalSemanticTokens } from "@/features/theme/tokens/semanticTokens";
 import type { BotanicalSharedTokens } from "./tokens/shared";
 
-export type BotanicalColorTokens = {
-  primary: string;
-  primaryContainer: string;
-  primaryFixed: string;
-  primaryFixedDim: string;
-  onPrimary: string;
-  onPrimaryContainer: string;
-  onPrimaryFixed: string;
-  onPrimaryFixedVariant: string;
-  secondary: string;
-  secondaryContainer: string;
-  secondaryOnContainer: string;
-  secondaryFixed: string;
-  secondaryFixedDim: string;
-  onSecondary: string;
-  onSecondaryContainer: string;
-  onSecondaryFixed: string;
-  onSecondaryFixedVariant: string;
-  tertiary: string;
-  tertiaryContainer: string;
-  tertiaryFixed: string;
-  tertiaryFixedDim: string;
-  onTertiary: string;
-  onTertiaryContainer: string;
-  onTertiaryFixed: string;
-  onTertiaryFixedVariant: string;
-  background: string;
-  onBackground: string;
-  surface: string;
-  surfaceDim: string;
-  surfaceBright: string;
-  surfaceVariant: string;
-  surfaceContainer: string;
-  surfaceContainerLow: string;
-  surfaceContainerLowest: string;
-  surfaceContainerHigh: string;
-  surfaceContainerHighest: string;
-  surfaceTint: string;
-  onSurface: string;
-  onSurfaceVariant: string;
-  inverseSurface: string;
-  inverseOnSurface: string;
-  inversePrimary: string;
-  outline: string;
-  outlineVariant: string;
-  error: string;
-  errorContainer: string;
-  onError: string;
-  onErrorContainer: string;
-  backdrop: string;
-  transparent: string;
-};
+export type BotanicalColorTokens = BotanicalCoreTokens & BotanicalSemanticTokens;
 
 export const THEME_IDS = [
   "linen-light",

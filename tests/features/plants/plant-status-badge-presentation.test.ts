@@ -16,6 +16,8 @@ describe("plantStatusBadgePresentation", () => {
     expect(presentation.iconBackgroundColor).toBe(
       tokens.colors.primaryFixed,
     );
+    expect(presentation.badgeBackgroundColor).toBe(tokens.colors.secondaryFixed);
+    expect(presentation.badgeForegroundColor).toBe(tokens.colors.primary);
   });
 
   it("returns the canonical stable presentation", () => {

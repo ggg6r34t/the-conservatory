@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
 const CAUSE_OPTIONS = [
@@ -140,7 +141,7 @@ export function MoveToGraveyardSheet({
                 {
                   backgroundColor: colors.surfaceContainerLowest,
                   paddingBottom: Math.max(24, insets.bottom + 12),
-                  borderColor: "rgba(255, 255, 255, 0.72)",
+                  borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
                   opacity: sheetOpacity,
                   transform: [{ translateY: sheetTranslateY }],
               },
@@ -163,7 +164,10 @@ export function MoveToGraveyardSheet({
                 <View
                   style={[
                     styles.heroImageShell,
-                    { backgroundColor: colors.surfaceContainerLow },
+                    {
+                      backgroundColor: colors.surfaceContainerLow,
+                      borderColor: withAlpha(colors.surfaceContainerLowest, 0.44),
+                    },
                   ]}
                 >
                   {photoUri ? (
@@ -175,8 +179,8 @@ export function MoveToGraveyardSheet({
                       />
                       <LinearGradient
                         colors={[
-                          "rgba(245, 242, 236, 0)",
-                          "rgba(245, 242, 236, 0.86)",
+                          withAlpha(colors.surface, 0),
+                          withAlpha(colors.surface, 0.86),
                           colors.surfaceContainerLowest,
                         ]}
                         locations={[0, 0.58, 1]}
@@ -232,7 +236,9 @@ export function MoveToGraveyardSheet({
                       style={[
                         styles.selectValue,
                         {
-                          color: causeOfPassing ? colors.onSurface : "#9ea49f",
+                          color: causeOfPassing
+                            ? colors.onSurface
+                            : colors.onSurfaceVariant,
                         },
                       ]}
                     >
@@ -304,7 +310,7 @@ export function MoveToGraveyardSheet({
                     <TextInput
                       multiline
                       placeholder="What did this specimen teach you about care or resilience?"
-                      placeholderTextColor="#c6cbc5"
+                      placeholderTextColor={colors.outlineVariant}
                       style={[styles.textArea, { color: colors.onSurface }]}
                       textAlignVertical="top"
                       value={memorialNote}
@@ -366,7 +372,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.44)",
     ...shadowScale.elevatedCard,
   },
   heroImage: {

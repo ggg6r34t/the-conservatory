@@ -56,7 +56,7 @@ export function DashboardHeader({ isOffline }: DashboardHeaderProps) {
               accessibilityRole="button"
               accessibilityLabel="Open profile"
               hitSlop={10}
-              style={[styles.avatar, { backgroundColor: "#bfd8d4" }]}
+              style={[styles.avatar, { backgroundColor: colors.primaryFixedDim }]}
             >
               <View style={styles.avatarImageWrap}>
                 {avatarFailed ? (

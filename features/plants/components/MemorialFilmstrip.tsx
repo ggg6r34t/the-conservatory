@@ -47,7 +47,12 @@ export function MemorialFilmstrip({ photos }: MemorialFilmstripProps) {
           const uri = resolvePhotoUri(photo);
           return (
             <View key={photo.id} style={styles.filmCell}>
-              <View style={styles.filmImageWrap}>
+              <View
+                style={[
+                  styles.filmImageWrap,
+                  { backgroundColor: colors.inverseSurface },
+                ]}
+              >
                 {uri ? (
                   <Image
                     source={{ uri }}
@@ -104,7 +109,6 @@ const styles = StyleSheet.create({
     height: 266,
     borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: "#20201d",
   },
   filmImage: {
     width: "100%",

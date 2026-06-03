@@ -194,7 +194,7 @@ export function CareLogForm({ plantId }: CareLogFormProps) {
             setSuggestedRefinement(null);
           }}
           placeholder="How is your plant doing today?"
-          placeholderTextColor="#c6cbc5"
+          placeholderTextColor={colors.outlineVariant}
           textAlignVertical="top"
           style={[
             styles.notesInput,

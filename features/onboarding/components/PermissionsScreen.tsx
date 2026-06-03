@@ -15,6 +15,7 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { useOnboardingPermissions } from "@/features/onboarding/hooks/useOnboardingPermissions";
 import {
   markOnboardingAction,
@@ -62,7 +63,13 @@ function PermissionCard({
 
   return (
     <View
-      style={[styles.card, { backgroundColor: colors.surfaceContainerLow }]}
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.surfaceContainerLow,
+          borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
+        },
+      ]}
     >
       <View
         style={[
@@ -190,6 +197,7 @@ export function PermissionsScreen({
         contentContainerStyle={[
           styles.content,
           {
+            backgroundColor: colors.surface,
             paddingHorizontal: spacing.lg,
             paddingTop: spacing.lg,
             paddingBottom: 80,
@@ -243,7 +251,10 @@ export function PermissionsScreen({
         <View
           style={[
             styles.bottomPanel,
-            { backgroundColor: colors.surfaceContainerLow },
+            {
+              backgroundColor: colors.surfaceContainerLow,
+              borderColor: withAlpha(colors.surfaceContainerLowest, 0.7),
+            },
           ]}
         >
           <View style={styles.bottomActions}>
@@ -287,7 +298,6 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 20,
-    backgroundColor: "#fbf9f4",
   },
   description: {
     fontFamily: "Manrope_500Medium",
@@ -305,7 +315,6 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     gap: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.72)",
     ...shadowScale.elevatedCard,
   },
   iconWrap: {
@@ -358,7 +367,6 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.7)",
     ...shadowScale.elevatedCard,
   },
   secondaryAction: {

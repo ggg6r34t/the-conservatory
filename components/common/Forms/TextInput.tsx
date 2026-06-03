@@ -68,7 +68,7 @@ export function TextInputField({
         ]}
       >
         <TextInput
-          placeholderTextColor="#c6cbc5"
+          placeholderTextColor={colors.outlineVariant}
           onBlur={(event) => {
             setIsFocused(false);
             props.onBlur?.(event);
