@@ -28,8 +28,9 @@ describe("theme registry", () => {
 
   it("builds tokens from a single source of truth per theme", () => {
     const deepForest = buildThemeTokens("deep-forest");
-    expect(deepForest.colors.primaryContainer).toBe("#2f4f41");
-    expect(deepForest.colors.statusThriving).toBe("#55694c");
+    expect(deepForest.colors.primaryContainer).toBe("#2a4a3c");
+    expect(deepForest.colors.statusThriving).toBe("#c8e2d4");
+    expect(deepForest.colors.sheetBorder).toBeTruthy();
     expect(deepForest.spacing.md).toBe(16);
   });
 

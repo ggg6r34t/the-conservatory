@@ -15,7 +15,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { WalkthroughProgress } from "@/features/onboarding/components/WalkthroughProgress";
 import { WalkthroughSlidePanel } from "@/features/onboarding/components/WalkthroughSlidePanel";
 import { walkthroughSlides } from "@/features/onboarding/constants/walkthroughSlides";
@@ -121,11 +120,11 @@ export function WalkthroughScreen({
     ) => [
       baseStyle,
       {
-        backgroundColor: withAlpha(colors.surfaceContainerLowest, 0.82),
+        backgroundColor: colors.highlightChipBackground,
       },
       pressed && styles.headerControlPressed,
     ],
-    [colors.surfaceContainerLowest],
+    [colors.highlightChipBackground],
   );
 
   return (

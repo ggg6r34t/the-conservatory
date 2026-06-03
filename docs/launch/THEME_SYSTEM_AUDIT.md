@@ -29,8 +29,31 @@
 - `features/theme/tokens/deriveSemanticTokens.ts`
 - `features/theme/tokens/buildPalette` via `buildThemePalette()`
 
-## Verification
+## App-wide migration (semantic overlays)
+
+Component `withAlpha(...)` usage migrated to derived semantic tokens (`sheetBorder`, `overlayTint`, `premiumHeroOverlay`, `memorialReflectionBorder`, etc.). `withAlpha` remains only in `deriveSemanticTokens.ts`.
+
+**Intentionally unchanged:** `ConservatoryTabBar`, `WelcomeGateway`, `WalkthroughSlidePanel`, `OnboardingDebugScreen`.
+
+## Analytics
+
+- `theme_screen_viewed`, `theme_selected`, `theme_preview_viewed`
+- `theme_contrast_issue_detected` (catalog enrichment when WCAG AA fails)
+- `theme_fallback_applied` (`resolveThemeId` invalid persisted value)
+
+## Final verification (2026-06-03)
+
+| Theme | Visual quality | Token completeness | Contrast | Component migration | Preview accuracy | Production readiness |
+|-------|----------------|-------------------|----------|---------------------|------------------|----------------------|
+| Linen Light | FULLY (unchanged core) | FULLY | FULLY | FULLY | PARTIAL (legacy preview border chip) | FULLY |
+| Deep Forest | FULLY | FULLY | FULLY | FULLY | FULLY | FULLY |
+| Midnight Ivy | FULLY | FULLY | FULLY | FULLY | FULLY | FULLY |
+| Terracotta Dusk | FULLY | FULLY | FULLY | FULLY | FULLY | FULLY |
+
+Evidence: `tests/features/theme/theme-token-completeness.test.ts`, `theme-semantic-contrast.test.ts`, `linen-light-regression.test.ts`, `theme-registry.test.ts`.
+
+## Verification commands
 
 - `npm run typecheck`
-- `tests/features/theme/*.test.ts`
-- `tests/features/plants/plant-status-badge-presentation.test.ts`
+- `npm test -- --testPathPattern="tests/features/theme"`
+- `npm run lint`

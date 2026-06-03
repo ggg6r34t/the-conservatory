@@ -1,7 +1,6 @@
 import { ImageBackground, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 
 export function DataBackupHeroCard() {
   const { colors } = useTheme();
@@ -15,7 +14,7 @@ export function DataBackupHeroCard() {
       <View
         style={[
           styles.overlay,
-          { backgroundColor: withAlpha(colors.primary, 0.42) },
+          { backgroundColor: colors.backupHeroOverlay },
         ]}
       />
       <View style={styles.content}>

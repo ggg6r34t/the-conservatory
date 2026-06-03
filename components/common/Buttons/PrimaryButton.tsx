@@ -48,7 +48,7 @@ export function PrimaryButton({
     tone === "memorial"
       ? ([colors.secondary, colors.onSecondaryFixedVariant] as const)
       : tone === "danger"
-        ? ([colors.error, "#8c1414"] as const)
+        ? ([colors.error, colors.dangerGradientEnd] as const)
         : ([colors.primary, colors.primaryContainer] as const);
   const foregroundColor =
     tone === "memorial"

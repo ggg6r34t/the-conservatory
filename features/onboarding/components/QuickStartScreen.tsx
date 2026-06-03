@@ -24,7 +24,6 @@ import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { SpeciesSuggestionBanner } from "@/features/ai/components/SpeciesSuggestionBanner";
 import { useSpeciesSuggestion } from "@/features/ai/hooks/useSpeciesSuggestion";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
@@ -324,7 +323,7 @@ export default function QuickStartScreen({
                 styles.searchField,
                 {
                   backgroundColor: colors.surfaceContainerLow,
-                  borderColor: withAlpha(colors.outlineVariant, 0.35),
+                  borderColor: colors.borderSubtle,
                 },
               ]}
             >
@@ -388,7 +387,7 @@ export default function QuickStartScreen({
                           styles.lightCard,
                           {
                             backgroundColor: colors.primary,
-                            borderColor: withAlpha(colors.onPrimary, 0.7),
+                            borderColor: colors.onPrimaryBorder,
                           },
                         ]}
                       >
@@ -396,7 +395,7 @@ export default function QuickStartScreen({
                           style={[
                             styles.lightIconWrap,
                             {
-                              backgroundColor: withAlpha(colors.onPrimary, 0.18),
+                              backgroundColor: colors.onPrimaryHighlight,
                             },
                           ]}
                         >
@@ -422,7 +421,7 @@ export default function QuickStartScreen({
                           styles.lightCard,
                           {
                             backgroundColor: colors.surfaceContainerLowest,
-                            borderColor: withAlpha(colors.outlineVariant, 0.35),
+                            borderColor: colors.borderSubtle,
                           },
                         ]}
                       >
@@ -517,7 +516,7 @@ export default function QuickStartScreen({
               styles.pickerSheet,
               {
                 backgroundColor: colors.surfaceContainerLowest,
-                borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
+                borderColor: colors.sheetBorder,
                 paddingBottom: Math.max(20, insets.bottom + 8),
                 opacity: sheetOpacity,
                 transform: [{ translateY: sheetTranslateY }],

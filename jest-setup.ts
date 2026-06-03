@@ -4,6 +4,15 @@ jest.mock("@/components/common/Icon/Icon", () => ({
   Icon: () => null,
 }));
 
+jest.mock("@/features/theme/analytics", () => ({
+  trackThemeScreenViewed: jest.fn(),
+  trackThemeSelected: jest.fn(),
+  trackThemeChanged: jest.fn(),
+  trackThemePreviewViewed: jest.fn(),
+  trackThemeContrastIssueDetected: jest.fn(),
+  trackThemeFallbackApplied: jest.fn(),
+}));
+
 jest.mock("@/features/theme/services/themeCacheStorage", () => ({
   readCachedThemeId: jest.fn().mockResolvedValue(null),
   writeCachedThemeId: jest.fn().mockResolvedValue(undefined),

@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 
 interface SecondaryButtonProps {
   label: string;
@@ -41,7 +40,7 @@ export function SecondaryButton({
                 styles.surfaceButton,
                 {
                   backgroundColor: colors.surfaceContainerLowest,
-                  borderColor: withAlpha(colors.outlineVariant, 0.35),
+                  borderColor: colors.borderSubtle,
                   shadowColor: colors.shadow,
                 },
               ]

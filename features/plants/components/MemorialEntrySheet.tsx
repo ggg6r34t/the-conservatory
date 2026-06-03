@@ -19,7 +19,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
@@ -129,7 +128,7 @@ export function MemorialEntrySheet({
               {
                 backgroundColor: colors.surfaceContainerLowest,
                 paddingBottom: Math.max(24, insets.bottom + 12),
-                borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
+                borderColor: colors.sheetBorder,
                 opacity: sheetOpacity,
                 transform: [{ translateY: sheetTranslateY }],
               },
@@ -154,7 +153,7 @@ export function MemorialEntrySheet({
                     styles.heroImageShell,
                     {
                       backgroundColor: colors.surfaceContainerLow,
-                      borderColor: withAlpha(colors.surfaceContainerLowest, 0.44),
+                      borderColor: colors.sheetBorderMuted,
                     },
                   ]}
                 >

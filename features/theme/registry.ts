@@ -3,6 +3,7 @@ import {
   themeCatalog,
   themeCatalogById,
 } from "@/features/theme/catalog";
+import { trackThemeFallbackApplied } from "@/features/theme/analytics";
 import type { BotanicalTokens } from "@/features/theme/types";
 import { THEME_IDS, type ThemeDefinition, type ThemeId } from "@/features/theme/types";
 import { botanicalSharedTokens } from "@/features/theme/tokens/shared";
@@ -21,7 +22,16 @@ export function resolveThemeId(
     return value;
   }
 
-  return options?.fallback ?? DEFAULT_THEME_ID;
+  const fallback = options?.fallback ?? DEFAULT_THEME_ID;
+  if (value) {
+    trackThemeFallbackApplied({
+      theme_id: fallback,
+      previous_theme_id: value,
+      source: "resolve_theme_id",
+    });
+  }
+
+  return fallback;
 }
 
 export function getThemeDefinition(themeId: ThemeId): ThemeDefinition {

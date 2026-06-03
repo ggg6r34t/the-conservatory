@@ -20,7 +20,6 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { SpeciesSuggestionBanner } from "@/features/ai/components/SpeciesSuggestionBanner";
 import { useSpeciesSuggestion } from "@/features/ai/hooks/useSpeciesSuggestion";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
@@ -876,7 +875,7 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
             styles.pickerSheet,
             {
               backgroundColor: colors.surfaceContainerLowest,
-              borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
+              borderColor: colors.sheetBorder,
               paddingBottom: Math.max(20, insets.bottom + 8),
               opacity: sheetOpacity,
               transform: [{ translateY: sheetTranslateY }],

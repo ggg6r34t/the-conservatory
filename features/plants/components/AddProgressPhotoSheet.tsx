@@ -15,7 +15,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
 interface AddProgressPhotoSheetProps {
@@ -85,7 +84,7 @@ export function AddProgressPhotoSheet({
             {
               backgroundColor: colors.surfaceContainerLowest,
               paddingBottom: Math.max(20, insets.bottom + 8),
-              borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
+              borderColor: colors.sheetBorder,
               opacity: sheetOpacity,
               transform: [{ translateY: sheetTranslateY }],
             },

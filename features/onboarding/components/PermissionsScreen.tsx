@@ -15,7 +15,6 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { useOnboardingPermissions } from "@/features/onboarding/hooks/useOnboardingPermissions";
 import {
   markOnboardingAction,
@@ -67,7 +66,7 @@ function PermissionCard({
         styles.card,
         {
           backgroundColor: colors.surfaceContainerLow,
-          borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
+          borderColor: colors.sheetBorder,
         },
       ]}
     >
@@ -253,7 +252,7 @@ export function PermissionsScreen({
             styles.bottomPanel,
             {
               backgroundColor: colors.surfaceContainerLow,
-              borderColor: withAlpha(colors.surfaceContainerLowest, 0.7),
+              borderColor: colors.sheetBorder,
             },
           ]}
         >

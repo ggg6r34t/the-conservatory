@@ -5,7 +5,6 @@ import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { resolveSpecimenTagScan } from "@/features/plants/services/specimenTagsService";
@@ -89,7 +88,7 @@ export default function SpecimenScanScreen() {
             <View
               style={[
                 styles.overlay,
-                { backgroundColor: withAlpha(colors.backdrop, 0.18) },
+                { backgroundColor: colors.overlayLight },
               ]}
             >
               <View style={[styles.scanFrame, { borderColor: colors.surface }]} />

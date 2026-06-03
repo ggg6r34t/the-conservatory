@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import type { SpeciesSuggestion } from "@/features/ai/types/ai";
 
 interface SpeciesSuggestionBannerProps {
@@ -45,7 +44,7 @@ export function SpeciesSuggestionBanner({
         styles.card,
         {
           backgroundColor: colors.surfaceContainerLow,
-          borderColor: withAlpha(colors.outlineVariant, 0.25),
+          borderColor: colors.suggestionCardBorder,
         },
       ]}
     >

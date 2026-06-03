@@ -27,3 +27,24 @@ export function trackThemeChanged(properties: {
 export function trackThemePreviewViewed(properties: { theme_id: ThemeId }) {
   trackEvent("theme_preview_viewed", properties);
 }
+
+export function trackThemeContrastIssueDetected(properties: {
+  theme_id: ThemeId;
+  previous_theme_id?: ThemeId;
+  source?: string;
+  notes?: string[];
+}) {
+  const { notes, ...rest } = properties;
+  trackEvent("theme_contrast_issue_detected", {
+    ...rest,
+    notes: notes?.join(" | ") ?? null,
+  });
+}
+
+export function trackThemeFallbackApplied(properties: {
+  theme_id: ThemeId;
+  previous_theme_id?: string | null;
+  source?: string;
+}) {
+  trackEvent("theme_fallback_applied", properties);
+}

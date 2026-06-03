@@ -20,7 +20,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
 const CAUSE_OPTIONS = [
@@ -141,7 +140,7 @@ export function MoveToGraveyardSheet({
                 {
                   backgroundColor: colors.surfaceContainerLowest,
                   paddingBottom: Math.max(24, insets.bottom + 12),
-                  borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
+                  borderColor: colors.sheetBorder,
                   opacity: sheetOpacity,
                   transform: [{ translateY: sheetTranslateY }],
               },
@@ -166,7 +165,7 @@ export function MoveToGraveyardSheet({
                     styles.heroImageShell,
                     {
                       backgroundColor: colors.surfaceContainerLow,
-                      borderColor: withAlpha(colors.surfaceContainerLowest, 0.44),
+                      borderColor: colors.sheetBorderMuted,
                     },
                   ]}
                 >
@@ -179,8 +178,8 @@ export function MoveToGraveyardSheet({
                       />
                       <LinearGradient
                         colors={[
-                          withAlpha(colors.surface, 0),
-                          withAlpha(colors.surface, 0.86),
+                          colors.transparent,
+                          colors.heroImageFadeEnd,
                           colors.surfaceContainerLowest,
                         ]}
                         locations={[0, 0.58, 1]}

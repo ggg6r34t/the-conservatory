@@ -28,7 +28,6 @@ import {
 import { useAlert } from "@/hooks/useAlert";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import { useSnackbar } from "@/hooks/useSnackbar";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { shadowScale } from "@/styles/shadows";
 
 function formatYearRange(memorial: GraveyardPlantListItem) {
@@ -297,7 +296,7 @@ export default function GraveyardScreen() {
               styles.reflectionCard,
               {
                 backgroundColor: colors.secondaryFixed,
-                borderColor: withAlpha(colors.secondary, 0.12),
+                borderColor: colors.memorialReflectionBorder,
               },
               pressed && styles.cardPressed,
             ]}

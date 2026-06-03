@@ -10,7 +10,6 @@ import {
 } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import type { MonthlyHighlightCardItem } from "@/features/journal/services/monthlyHighlightsService";
 
 export function MonthlyHighlightCard({
@@ -49,7 +48,7 @@ export function MonthlyHighlightCard({
             style={[
               styles.dateChip,
               {
-                backgroundColor: withAlpha(colors.surfaceContainerLowest, 0.88),
+                backgroundColor: colors.highlightChipBackground,
               },
             ]}
           >

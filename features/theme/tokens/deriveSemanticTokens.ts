@@ -1,5 +1,6 @@
 import type { BotanicalCoreTokens } from "@/features/theme/tokens/coreTokens";
 import type { BotanicalSemanticTokens } from "@/features/theme/tokens/semanticTokens";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 
 export function deriveSemanticTokens(
   core: BotanicalCoreTokens,
@@ -54,6 +55,31 @@ export function deriveSemanticTokens(
     memorialAccent: core.secondary,
     journalAccent: core.tertiary,
     timelineAccent: core.primaryFixedDim,
+
+    sheetBorder: withAlpha(core.surfaceContainerLowest, 0.72),
+    sheetBorderMuted: withAlpha(core.surfaceContainerLowest, 0.44),
+    overlayTint: withAlpha(core.surface, 0.38),
+    overlayShade: withAlpha(core.onSurface, 0.06),
+    overlayLight: withAlpha(core.backdrop, 0.18),
+    surfaceGlow: withAlpha(core.surfaceContainerLowest, 0.14),
+    borderSubtle: withAlpha(core.outlineVariant, 0.35),
+    borderFrosted: withAlpha(core.surfaceContainerLowest, 0.74),
+
+    onPrimaryOverlay: withAlpha(core.onPrimary, 0.12),
+    onPrimaryHighlight: withAlpha(core.onPrimary, 0.18),
+    onPrimaryBorder: withAlpha(core.onPrimary, 0.7),
+
+    imageOverlay: withAlpha(core.surface, 0.5),
+    heroImageFadeEnd: withAlpha(core.surface, 0.86),
+
+    premiumHeroOverlay: withAlpha(core.primary, 0.58),
+    premiumPanelOverlay: withAlpha(core.primaryContainer, 0.42),
+    backupHeroOverlay: withAlpha(core.primary, 0.42),
+    highlightChipBackground: withAlpha(core.surfaceContainerLowest, 0.88),
+    memorialReflectionBorder: withAlpha(core.secondary, 0.12),
+    suggestionCardBorder: withAlpha(core.outlineVariant, 0.25),
+
+    dangerGradientEnd: core.onErrorContainer,
   };
 
   return { ...base, ...overrides };

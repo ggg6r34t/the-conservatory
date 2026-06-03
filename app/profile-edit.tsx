@@ -18,7 +18,6 @@ import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   capturePlantImage,
@@ -187,10 +186,10 @@ export default function ProfileEditScreen() {
               <View
                 style={[
                   styles.avatarLoadingOverlay,
-                  { backgroundColor: withAlpha(colors.scrim, 0.45) },
+                  { backgroundColor: colors.imageOverlay },
                 ]}
               >
-                <ActivityIndicator color="white" size="small" />
+                <ActivityIndicator color={colors.onPrimary} size="small" />
               </View>
             ) : (
               <View
@@ -295,7 +294,7 @@ export default function ProfileEditScreen() {
               styles.pickerSheet,
               {
                 backgroundColor: colors.surfaceContainerLowest,
-                borderColor: withAlpha(colors.surfaceContainerLowest, 0.72),
+                borderColor: colors.sheetBorder,
                 paddingBottom: Math.max(20, insets.bottom + 8),
                 opacity: sheetOpacity,
                 transform: [{ translateY: sheetTranslateY }],

@@ -7,7 +7,6 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHealthInsight";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import { AddProgressPhotoSheet } from "@/features/plants/components/AddProgressPhotoSheet";
@@ -543,7 +542,7 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
                       backgroundColor:
                         card.tileColor ??
                         (darkCard
-                          ? withAlpha(colors.onPrimary, 0.12)
+                          ? colors.onPrimaryOverlay
                           : colors.secondaryContainer),
                     },
                   ]}

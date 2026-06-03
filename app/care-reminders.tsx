@@ -29,7 +29,6 @@ import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
 import type { CareReminder, ReminderType } from "@/types/models";
 
@@ -626,13 +625,13 @@ export default function CareRemindersScreen() {
                   <View
                     style={[
                       styles.dialogBackdropTint,
-                      { backgroundColor: withAlpha(colors.surface, 0.38) },
+                      { backgroundColor: colors.overlayTint },
                     ]}
                   />
                   <View
                     style={[
                       styles.dialogBackdropShade,
-                      { backgroundColor: withAlpha(colors.onSurface, 0.06) },
+                      { backgroundColor: colors.overlayShade },
                     ]}
                   />
                 </BlurView>
@@ -648,7 +647,7 @@ export default function CareRemindersScreen() {
                   shadowWithColor(shadowScale.modalCard, colors.backdrop),
                   {
                     backgroundColor: colors.surfaceContainerLowest,
-                    borderColor: withAlpha(colors.surfaceContainerLowest, 0.74),
+                    borderColor: colors.borderFrosted,
                   },
             ]}
           >
@@ -657,10 +656,7 @@ export default function CareRemindersScreen() {
                   style={[
                     styles.cardGlow,
                     {
-                      backgroundColor: withAlpha(
-                        colors.surfaceContainerLowest,
-                        0.14,
-                      ),
+                      backgroundColor: colors.surfaceGlow,
                     },
                   ]}
                 />

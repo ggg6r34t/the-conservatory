@@ -3,7 +3,6 @@ import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
 import type { AlertDialogCardProps } from "./alert.types";
@@ -51,13 +50,13 @@ export function AlertDialogCard({
           <View
             style={[
               styles.backdropTint,
-              { backgroundColor: withAlpha(colors.surface, 0.38) },
+              { backgroundColor: colors.overlayTint },
             ]}
           />
           <View
             style={[
               styles.backdropShade,
-              { backgroundColor: withAlpha(colors.onSurface, 0.06) },
+              { backgroundColor: colors.overlayShade },
             ]}
           />
         </BlurView>
@@ -73,7 +72,7 @@ export function AlertDialogCard({
           shadowWithColor(shadowScale.modalCard, colors.backdrop),
           {
             backgroundColor: colors.surfaceContainerLowest,
-            borderColor: withAlpha(colors.surfaceContainerLowest, 0.74),
+            borderColor: colors.borderFrosted,
           },
         ]}
         testID={alert.testID}
@@ -82,7 +81,7 @@ export function AlertDialogCard({
           pointerEvents="none"
           style={[
             styles.cardGlow,
-            { backgroundColor: withAlpha(colors.surfaceContainerLowest, 0.14) },
+            { backgroundColor: colors.surfaceGlow },
           ]}
         />
 

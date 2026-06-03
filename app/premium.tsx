@@ -19,7 +19,6 @@ import { resolvePremiumOfferingPackages } from "@/features/billing/services/offe
 import { LegalFooterLinks } from "@/features/legal/components/LegalFooterLinks";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
-import { withAlpha } from "@/features/theme/utils/withAlpha";
 
 const HEIRLOOM_CARD_IMAGE = require("@/assets/images/intricate-vintage-botanical-illustration-of-fern-leaves.png");
 
@@ -128,14 +127,14 @@ export default function PremiumScreen() {
             <View
               style={[
                 styles.membershipImageOverlay,
-                { backgroundColor: withAlpha(colors.primary, 0.58) },
+                { backgroundColor: colors.premiumHeroOverlay },
               ]}
             />
           </View>
           <View
             style={[
               styles.membershipCardOverlay,
-              { backgroundColor: withAlpha(colors.primaryContainer, 0.42) },
+              { backgroundColor: colors.premiumPanelOverlay },
             ]}
           />
           <View style={styles.membershipHeader}>
