@@ -103,6 +103,7 @@ describe("MonthlyHighlightsScreen", () => {
         },
       ],
       isError: false,
+      plantsQuery: { data: [{ id: "plant-1" }] },
     });
 
     renderWithProviders(<MonthlyHighlightsScreen />);
@@ -116,10 +117,12 @@ describe("MonthlyHighlightsScreen", () => {
     mockUseMonthlyHighlights.mockReturnValue({
       sections: [],
       isError: false,
+      plantsQuery: { data: [{ id: "plant-1" }] },
+      photosQuery: { data: [] },
     });
 
     renderWithProviders(<MonthlyHighlightsScreen />);
 
-    expect(screen.getByText("No highlights yet")).toBeTruthy();
+    expect(screen.getByText("Progress photos needed")).toBeTruthy();
   });
 });

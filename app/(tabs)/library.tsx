@@ -13,7 +13,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
@@ -23,7 +22,15 @@ import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
-import { usePlants } from "@/features/plants/hooks/usePlants";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import {
+  getEmptyStateForContext,
+} from "@/features/empty-states/getEmptyStateForContext";
+import {
+  trackEmptyStateActionTapped,
+  trackEmptyStateFilterCleared,
+} from "@/features/empty-states/analytics";
+import { useAllActivePlants, usePlants } from "@/features/plants/hooks/usePlants";
 import {
   groupPlantsForAdvancedFilter,
   isPremiumLibraryFilter,
@@ -226,6 +233,7 @@ export default function LibraryScreen() {
   const router = useRouter();
   const { isPremium } = useSubscription();
   const plantsQuery = usePlants();
+  const allPlantsQuery = useAllActivePlants();
   const { onRefresh, refreshing } = usePullToRefreshSync();
   const filter = usePlantStore((state) => state.filter);
   const query = usePlantStore((state) => state.query);
@@ -239,6 +247,7 @@ export default function LibraryScreen() {
   }, [filter, isPremium, setFilter]);
 
   const plants = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
+  const totalPlants = allPlantsQuery.data?.length ?? 0;
   const remindersQuery = useReminders();
   const plantIds = useMemo(() => plants.map((p) => p.id), [plants]);
   const logsQuery = useCareLogsForPlantIds(plantIds, "library", {
@@ -375,27 +384,67 @@ export default function LibraryScreen() {
     [colors, filter, isPremium, query, setFilter, setQuery],
   );
 
-  const EmptyState = useMemo(
+  const libraryEmptyContext = useMemo(() => {
+    if (totalPlants === 0) {
+      return "library.noPlants" as const;
+    }
+    if (query.trim().length > 0) {
+      return "library.search" as const;
+    }
+    if (filter !== "all") {
+      return "library.filter" as const;
+    }
+    return "library.noPlants" as const;
+  }, [filter, query, totalPlants]);
+
+  const libraryEmptyContent = getEmptyStateForContext({
+    context: libraryEmptyContext,
+  });
+
+  const ListEmptyComponent = useMemo(
     () => (
-      <View
-        style={[
-          styles.emptyCard,
-          { backgroundColor: colors.surfaceContainerLow },
-        ]}
-      >
-        <View style={styles.emptyCopy}>
-          <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-            Your conservatory is quiet.
-          </Text>
-          <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
-            Every collection starts with a single specimen. Begin your botanical
-            archive today.
-          </Text>
-          <PrimaryButton label="Add First Specimen" href="/plant/add" />
-        </View>
-      </View>
+      <EmptyState
+        content={libraryEmptyContent}
+        screen="library"
+        reason={libraryEmptyContext}
+        primaryHref={
+          libraryEmptyContext === "library.noPlants" ? "/plant/add" : undefined
+        }
+        onPrimaryAction={
+          libraryEmptyContext === "library.search"
+            ? () => {
+                trackEmptyStateFilterCleared({
+                  screen: "library",
+                  empty_state_type: libraryEmptyContent.tone,
+                  reason: "search",
+                  analytics_key: libraryEmptyContent.analyticsKey,
+                });
+                setQuery("");
+              }
+            : libraryEmptyContext === "library.filter"
+              ? () => {
+                  trackEmptyStateFilterCleared({
+                    screen: "library",
+                    empty_state_type: libraryEmptyContent.tone,
+                    reason: "filter",
+                    analytics_key: libraryEmptyContent.analyticsKey,
+                  });
+                  setFilter("all");
+                }
+              : () => {
+                  trackEmptyStateActionTapped({
+                    screen: "library",
+                    empty_state_type: libraryEmptyContent.tone,
+                    reason: "no_plants",
+                    action: "add_plant",
+                    analytics_key: libraryEmptyContent.analyticsKey,
+                  });
+                }
+        }
+        style={styles.emptyCard}
+      />
     ),
-    [colors],
+    [libraryEmptyContent, libraryEmptyContext, setFilter, setQuery],
   );
 
   return (
@@ -420,7 +469,7 @@ export default function LibraryScreen() {
           )
         }
         ListHeaderComponent={ListHeader}
-        ListEmptyComponent={EmptyState}
+        ListEmptyComponent={ListEmptyComponent}
         contentContainerStyle={[
           styles.content,
           {

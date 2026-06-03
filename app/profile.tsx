@@ -262,7 +262,11 @@ export default function ProfileScreen() {
               { backgroundColor: colors.surfaceContainerHigh },
             ]}
           />
-          <StreakBadge streak={streakDays} variant="compact" />
+          <StreakBadge
+            streak={streakDays}
+            variant="compact"
+            totalPlants={activeSpecimens}
+          />
           <View
             style={[
               styles.statDivider,

@@ -4,11 +4,12 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { useArchiveCuration } from "@/features/ai/hooks/useArchiveCuration";
 import { saveArchiveCurationOverride } from "@/features/ai/services/archiveCurationOverridesService";
 import { getInsightSourceLabel } from "@/features/ai/services/insightSourcePresentation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { UpgradePrompt } from "@/features/billing/components/UpgradePrompt";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
@@ -51,22 +52,21 @@ export default function ArchiveGalleryScreen() {
       description="A compact catalog of your remembered specimens, preserved with their memorial notes and archive dates."
     >
       {memorials.length > 0 && !isPremium && curationQuery.data.length === 0 ? (
-        <UpgradePrompt
-          message="Archive curation pairs before-and-after photos from your remembered specimens to reveal each plant's growth over time."
-          cta="Unlock Archive Curation"
-          compact
+        <EmptyState
+          content={getEmptyStateForContext({ context: "archive.premiumLocked" })}
+          screen="archive_gallery"
+          reason="premium_locked"
+          primaryHref="/premium"
         />
       ) : null}
 
       {isPremium && memorials.length > 0 && curationQuery.data.length === 0 && !curationQuery.isLoading ? (
-        <View style={[styles.emptyCard, { backgroundColor: colors.surfaceContainerLow }]}>
-          <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-            No pairings yet
-          </Text>
-          <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
-            Add photos to your archived plants and archive curation will find meaningful before-and-after pairs.
-          </Text>
-        </View>
+        <EmptyState
+          content={getEmptyStateForContext({ context: "archive.noPairs" })}
+          screen="archive_gallery"
+          reason="no_pairs"
+          style={styles.emptyCard}
+        />
       ) : null}
 
       {curationQuery.data.length ? (
@@ -284,20 +284,12 @@ export default function ArchiveGalleryScreen() {
           </View>
         ))
       ) : (
-        <View
-          style={[
-            styles.emptyCard,
-            { backgroundColor: colors.surfaceContainerLow },
-          ]}
-        >
-          <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-            No memorials yet
-          </Text>
-          <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
-            Archived plants will appear here once they move into the memorial
-            collection.
-          </Text>
-        </View>
+        <EmptyState
+          content={getEmptyStateForContext({ context: "archive.noMemorials" })}
+          screen="archive_gallery"
+          reason="no_memorials"
+          style={styles.emptyCard}
+        />
       )}
     </ProfileScreenScaffold>
   );

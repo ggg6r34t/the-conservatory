@@ -12,10 +12,8 @@ describe("dashboardHeroCopy", () => {
 
     expect(copy.eyebrow).toBe("YOUR LIVING GALLERY");
     expect(copy.titleLines).toEqual(["Garden is", "starting."]);
-    expect(copy.body).toContain(
-      "Welcome back. Your indoor sanctuary is looking lush today.",
-    );
-    expect(copy.body).toContain("first specimen");
+    expect(copy.body).toContain("Add your first plant");
+    expect(copy.body).not.toMatch(/lush|welcome back|hydrated/i);
   });
 
   it("uses live counts when care is due", () => {
@@ -29,12 +27,8 @@ describe("dashboardHeroCopy", () => {
 
     expect(copy.eyebrow).toBe("YOUR LIVING GALLERY");
     expect(copy.titleLines).toEqual(["Care is", "needed."]);
-    expect(copy.body).toContain(
-      "Welcome back. Your indoor sanctuary is looking lush today.",
-    );
-    expect(copy.body).toContain(
-      "Your conservatory could use a thoughtful round of care today.",
-    );
+    expect(copy.body).toContain("need attention today");
+    expect(copy.body).not.toMatch(/lush|welcome back/i);
   });
 
   it("flags reminder pause when no active reminders", () => {
@@ -46,22 +40,19 @@ describe("dashboardHeroCopy", () => {
       activeReminders: 0,
     });
 
-    expect(copy.body).toContain("Reminder schedules are currently paused.");
+    expect(copy.body).toContain("No reminders are active yet.");
     expect(copy.titleLines).toEqual(["Garden is", "steady."]);
   });
 
-  it("uses digits when counts are above twenty", () => {
+  it("uses settled language when nothing is due", () => {
     const copy = buildDashboardHeroCopy({
       totalPlants: 24,
       dueToday: 0,
       overdue: 0,
-      upcomingCare: 24,
+      upcomingCare: 0,
       activeReminders: 3,
     });
 
-    expect(copy.eyebrow).toBe("YOUR LIVING GALLERY");
-    expect(copy.body).toContain(
-      "24 specimens are approaching their next window",
-    );
+    expect(copy.body).toContain("Everything is settled for today.");
   });
 });

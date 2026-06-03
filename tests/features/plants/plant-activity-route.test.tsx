@@ -87,7 +87,7 @@ describe("PlantActivityRoute", () => {
     expect(screen.getByText("Recent Activity")).toBeTruthy();
     expect(screen.getByText("CHRONICLE")).toBeTruthy();
     expect(screen.getByText("Monstera deliciosa")).toBeTruthy();
-    expect(screen.getByText("No care history yet")).toBeTruthy();
+    expect(screen.getByText("No care entries yet")).toBeTruthy();
   });
 
   it("renders only real activity rows when logs exist", () => {
@@ -115,6 +115,6 @@ describe("PlantActivityRoute", () => {
 
     expect(screen.getByText("Full Soak & Fertilize")).toBeTruthy();
     expect(screen.getByText("Used 10-10-10 liquid fertilizer.")).toBeTruthy();
-    expect(screen.queryByText("No care history yet")).toBeNull();
+    expect(screen.queryByText("No care entries yet")).toBeNull();
   });
 });

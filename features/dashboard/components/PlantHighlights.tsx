@@ -7,6 +7,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
 import { selectPlantHighlights } from "@/features/plants/services/plantSelectionService";
@@ -82,16 +84,15 @@ export function PlantHighlights({
     .slice(0, 5);
 
   if (!featuredItem) {
+    const content = getEmptyStateForContext({ context: "dashboard.gallery" });
     return (
-      <View style={styles.emptyState}>
-        <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-          Your gallery is ready for its first specimen.
-        </Text>
-        <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
-          Add a plant to unlock featured photography, hydration insights, and a
-          living timeline.
-        </Text>
-      </View>
+      <EmptyState
+        content={content}
+        screen="dashboard"
+        reason={plants.length === 0 ? "no_plants" : "no_highlights"}
+        primaryHref="/plant/add"
+        style={styles.emptyState}
+      />
     );
   }
 

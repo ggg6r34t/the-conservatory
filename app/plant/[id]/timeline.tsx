@@ -17,6 +17,8 @@ import {
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { getFloatingActionBottomOffset } from "@/components/navigation/tabBarMetrics";
 import { AddProgressPhotoSheet } from "@/features/plants/components/AddProgressPhotoSheet";
 import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantProgressPhoto";
@@ -271,21 +273,12 @@ export default function GrowthTimelineScreen() {
             </Text>
           </View>
         ) : (
-          <View
-            style={[
-              styles.emptyCard,
-              { backgroundColor: colors.surfaceContainerLow },
-            ]}
-          >
-            <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-              No timeline moments yet
-            </Text>
-            <Text
-              style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}
-            >
-              Add your first progress photo to begin this plant&apos;s story.
-            </Text>
-          </View>
+          <EmptyState
+            content={getEmptyStateForContext({ context: "timeline.noPhotos" })}
+            screen="plant_timeline"
+            reason="no_photos"
+            style={styles.emptyCard}
+          />
         )}
       </ScrollView>
 

@@ -13,6 +13,7 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { isFeatureRequestBackendAvailable } from "@/features/product-feedback/api/featureRequestsClient";
 import { FeatureRequestListSection } from "@/features/product-feedback/components/FeatureRequestListSection";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { ProductFeedbackUnavailable } from "@/features/product-feedback/components/ProductFeedbackUnavailable";
 import { useFeatureRequests } from "@/features/product-feedback/hooks/useFeatureRequests";
 import { useVoteFeatureRequestMutation } from "@/features/product-feedback/hooks/useVoteFeatureRequest";
@@ -175,7 +176,10 @@ export default function FeatureRequestsScreen() {
           requests={searchResults}
           onRequestPress={(requestId) => openRequest(requestId, "search")}
           onVotePress={(request) => handleVote(request.id, request.hasVoted)}
-          emptyMessage="No matching ideas yet."
+          emptyContent={getEmptyStateForContext({
+            context: "featureRequests.searchEmpty",
+          })}
+          emptyReason="search_empty"
           hasMore={Boolean(searchResultsQuery.hasNextPage)}
           isLoadingMore={searchResultsQuery.isFetchingNextPage}
           onLoadMore={() => void searchResultsQuery.fetchNextPage()}
@@ -219,7 +223,11 @@ export default function FeatureRequestsScreen() {
             requests={mine}
             onRequestPress={(requestId) => openRequest(requestId, "mine")}
             onVotePress={(request) => handleVote(request.id, request.hasVoted)}
-            emptyMessage="You have not shared an idea yet."
+            emptyContent={getEmptyStateForContext({
+              context: "featureRequests.mineEmpty",
+            })}
+            emptyReason="mine_empty"
+            emptyPrimaryHref="/feature-requests/new"
             hasMore={Boolean(mineQuery.hasNextPage)}
             isLoadingMore={mineQuery.isFetchingNextPage}
             onLoadMore={() => void mineQuery.fetchNextPage()}

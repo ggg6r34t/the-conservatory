@@ -1,6 +1,3 @@
-import fs from "fs";
-import path from "path";
-
 import { screen } from "@testing-library/react-native";
 import React from "react";
 
@@ -49,22 +46,21 @@ jest.mock("@/components/design-system/useTheme", () => ({
       onSurface: "#222",
       onSurfaceVariant: "#666",
       outlineVariant: "#ccc",
+      primaryFixed: "#eee",
+      secondaryContainer: "#ddd",
+      shadowElevated: "#000",
+      primaryContainer: "#333",
+      onPrimary: "#fff",
     },
-    spacing: {
-      lg: 16,
-      md: 12,
-      sm: 8,
-    },
+    spacing: { lg: 16, md: 12, sm: 8 },
   }),
 }));
 
 jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({
-    user: {
-      id: "user-1",
-      email: "grower@example.com",
-      displayName: "Aster Keeper",
-    },
+    user: { id: "user-1", email: "grower@example.com", displayName: "Keeper" },
+    signOut: jest.fn(),
+    isSigningOut: false,
   }),
 }));
 
@@ -72,22 +68,20 @@ jest.mock("@/features/billing/hooks/useSubscription", () => ({
   useSubscription: () => ({
     isPremium: false,
     tier: "free",
+    period: null,
     isLoading: false,
   }),
 }));
 
 jest.mock("@/features/plants/hooks/usePlants", () => ({
   useAllActivePlants: () => ({
-    data: [{ id: "plant-1" }],
+    data: [],
     isLoading: false,
   }),
 }));
 
 jest.mock("@/features/plants/hooks/useGraveyard", () => ({
-  useGraveyard: () => ({
-    data: [],
-    isLoading: false,
-  }),
+  useGraveyard: () => ({ data: [], isLoading: false }),
 }));
 
 jest.mock("@/features/settings/hooks/useSettings", () => ({
@@ -98,43 +92,32 @@ jest.mock("@/features/settings/hooks/useSettings", () => ({
 }));
 
 jest.mock("@/features/settings/hooks/useUpdateSettings", () => ({
-  useUpdateSettings: () => ({
-    mutateAsync: jest.fn(),
-    isPending: false,
-  }),
+  useUpdateSettings: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));
-
-const mockRefreshIfStale = jest.fn();
 
 jest.mock("@/features/plants/hooks/useCollectionStreak", () => ({
   useCollectionStreak: () => ({
-    currentStreak: 5,
-    longestStreak: 8,
+    currentStreak: 0,
+    longestStreak: 0,
     isLoading: false,
-    refreshIfStale: mockRefreshIfStale,
+    refreshIfStale: jest.fn(),
   }),
 }));
 
-describe("profile collection streak", () => {
-  it("wires the shared streak hook and StreakBadge on the profile stats card", () => {
-    const source = fs.readFileSync(
-      path.join(process.cwd(), "app", "profile.tsx"),
-      "utf8",
-    );
+jest.mock("@/features/product-feedback/hooks/useProductFeedbackNotifications", () => ({
+  useProductFeedbackNotifications: () => undefined,
+}));
 
-    expect(source).toContain("useCollectionStreak");
-    expect(source).toContain("<StreakBadge");
-    expect(source).toContain("totalPlants={activeSpecimens}");
-    expect(source).toContain("useFocusEffect");
-    expect(source).toContain("refreshIfStale");
-    expect(source).not.toContain("computeCareStreak");
-  });
+jest.mock("@/features/theme/hooks/usePreferredThemeDisplay", () => ({
+  usePreferredThemeDisplayName: () => ({ displayName: "Linen Light" }),
+}));
 
-  it("renders the streak count from useCollectionStreak", () => {
+describe("profile with zero plants", () => {
+  it("does not imply an existing care rhythm on the streak badge", () => {
     renderWithProviders(<ProfileScreen />);
 
-    expect(screen.getByLabelText("5 day streak")).toBeTruthy();
-    expect(screen.getByText("DAYS STREAK")).toBeTruthy();
-    expect(mockRefreshIfStale).toHaveBeenCalled();
+    expect(screen.getByLabelText("Care rhythm begins with your first log")).toBeTruthy();
+    expect(screen.getByText("BEGIN CARE RHYTHM")).toBeTruthy();
+    expect(screen.getByText("ACTIVE SPECIMENS")).toBeTruthy();
   });
 });

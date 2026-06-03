@@ -149,10 +149,10 @@ describe("GrowthTimelineScreen", () => {
   it("renders an intentional empty state when no progress photos exist", () => {
     renderWithProviders(<GrowthTimelineScreen />);
 
-    expect(screen.getByText("No timeline moments yet")).toBeTruthy();
+    expect(screen.getByText("No progress photos yet")).toBeTruthy();
     expect(
       screen.getByText(
-        "Add your first progress photo to begin this plant's story.",
+        "Add a photo when you notice new growth, a change in shape, or a moment worth remembering.",
       ),
     ).toBeTruthy();
   });

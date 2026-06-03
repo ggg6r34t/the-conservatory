@@ -3,6 +3,8 @@ import { type Href, useRouter } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { UpgradePrompt } from "@/features/billing/components/UpgradePrompt";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useSpecimenTags } from "@/features/plants/hooks/useSpecimenTags";
@@ -99,19 +101,13 @@ export default function SpecimenTagsScreen() {
             );
           })
         ) : (
-          <View
-            style={[
-              styles.emptyCard,
-              { backgroundColor: colors.surfaceContainerLow },
-            ]}
-          >
-            <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-              No active specimens
-            </Text>
-            <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
-              Add a plant to generate specimen identifiers for your collection.
-            </Text>
-          </View>
+          <EmptyState
+            content={getEmptyStateForContext({ context: "specimenTags.noPlants" })}
+            screen="specimen_tags"
+            reason="no_plants"
+            primaryHref="/plant/add"
+            style={styles.emptyCard}
+          />
         )
       ) : (
         <UpgradePrompt

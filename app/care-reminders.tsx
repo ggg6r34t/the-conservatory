@@ -24,6 +24,8 @@ import { useReminders } from "@/features/notifications/hooks/useReminders";
 import { useSetReminder } from "@/features/notifications/hooks/useSetReminder";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
@@ -421,6 +423,19 @@ export default function CareRemindersScreen() {
           </Pressable>
         </View>
 
+        {!remindersEnabled ? (
+          <EmptyState
+            content={getEmptyStateForContext({
+              context: "reminders.notificationsDisabled",
+            })}
+            screen="care_reminders"
+            reason="notifications_disabled"
+            onPrimaryAction={() => {
+              updateSettings.mutate({ remindersEnabled: true });
+            }}
+          />
+        ) : null}
+
         <View style={styles.reminderList}>
           {reminderRows.map(({ plant, reminder, reminderType }, index) => {
             const fallbackDays = getDefaultFrequencyDays(
@@ -599,6 +614,24 @@ export default function CareRemindersScreen() {
             );
           })}
         </View>
+
+        {remindersEnabled && !plants.length ? (
+          <EmptyState
+            content={getEmptyStateForContext({ context: "reminders.noPlants" })}
+            screen="care_reminders"
+            reason="no_plants"
+            primaryHref="/plant/add"
+          />
+        ) : null}
+
+        {remindersEnabled && plants.length > 0 && reminderRows.length === 0 ? (
+          <EmptyState
+            content={getEmptyStateForContext({ context: "reminders.none" })}
+            screen="care_reminders"
+            reason="no_reminders"
+            onPrimaryAction={openCreateReminder}
+          />
+        ) : null}
 
         <Modal
           animationType="fade"

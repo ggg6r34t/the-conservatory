@@ -5,8 +5,11 @@ import { StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useBackupStatus } from "@/features/profile/hooks/useBackupStatus";
+import { useNetworkState } from "@/hooks/useNetworkState";
 import {
   getBackupSyncFailureMessage,
   getBackupSyncSuccessMessage,
@@ -48,6 +51,10 @@ export default function BackupDetailsScreen() {
   const snackbar = useSnackbar();
   const { canSync, remoteAvailability, summary, syncMutation, hasIssues, hasPending } =
     useBackupStatus();
+  const network = useNetworkState();
+  const abandonedCount =
+    (summary?.abandonedSyncQueueAccount ?? 0) +
+    (summary?.abandonedSyncQueueDevice ?? 0);
   const queueDiagnosticsQuery = useQuery({
     queryKey: ["sync-queue-diagnostics"],
     queryFn: getSyncQueueDiagnostics,
@@ -82,6 +89,44 @@ export default function BackupDetailsScreen() {
       subtitle="System status"
       description="Review what is saved to your account, what is still pending, and where recent sync activity may still need attention."
     >
+      {network.isOffline ? (
+        <EmptyState
+          content={getEmptyStateForContext({ context: "ai.offline" })}
+          screen="backup_details"
+          reason="offline"
+        />
+      ) : remoteAvailability.state === "local-development" ? (
+        <EmptyState
+          content={getEmptyStateForContext({ context: "backup.localOnly" })}
+          screen="backup_details"
+          reason="local_only"
+        />
+      ) : !remoteAvailability.canSync &&
+        remoteAvailability.state !== "cloud" ? (
+        <EmptyState
+          content={getEmptyStateForContext({ context: "backup.unavailable" })}
+          screen="backup_details"
+          reason="sync_unavailable"
+        />
+      ) : null}
+
+      {abandonedCount > 0 ? (
+        <EmptyState
+          content={getEmptyStateForContext({ context: "sync.abandoned" })}
+          screen="backup_details"
+          reason="sync_abandoned"
+          primaryHref="/sync-repair"
+        />
+      ) : null}
+
+      {!summary?.lastSuccessfulSyncAt && remoteAvailability.canSync ? (
+        <EmptyState
+          content={getEmptyStateForContext({ context: "backup.noHistory" })}
+          screen="backup_details"
+          reason="no_sync_history"
+        />
+      ) : null}
+
       <View
         style={[
           styles.statusCard,

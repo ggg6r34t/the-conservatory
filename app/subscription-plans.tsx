@@ -15,6 +15,8 @@ import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { getMembershipNameForPackageType } from "@/features/billing/membershipNames";
 import { resolvePremiumOfferingPackages } from "@/features/billing/services/offeringPackageResolution";
 import { formatAnnualSavingsLabel } from "@/features/billing/services/subscriptionPricingCopy";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 
@@ -233,37 +235,23 @@ export default function SubscriptionPlansScreen() {
           </View>
         ) : isLoading ? (
           <ActivityIndicator color={colors.primary} style={styles.loader} />
+        ) : isPremium ? (
+          <EmptyState
+            content={getEmptyStateForContext({
+              context: "premium.alreadySubscribed",
+            })}
+            screen="subscription_plans"
+            reason="already_subscribed"
+          />
         ) : (
-          <View
-            style={[
-              styles.offeringsEmptyCard,
-              { backgroundColor: colors.surfaceContainerLowest },
-            ]}
-          >
-            <Text
-              style={[styles.offeringsEmptyTitle, { color: colors.primary }]}
-            >
-              Plans unavailable
-            </Text>
-            <Text
-              style={[styles.offeringsEmptyBody, { color: colors.onSurface }]}
-            >
-              We couldn&apos;t load subscription options right now. Check your
-              connection and try again.
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => void refreshOfferings()}
-              style={[
-                styles.retryButton,
-                { backgroundColor: colors.surfaceContainerHigh },
-              ]}
-            >
-              <Text style={[styles.retryLabel, { color: colors.primary }]}>
-                Try Again
-              </Text>
-            </Pressable>
-          </View>
+          <EmptyState
+            content={getEmptyStateForContext({
+              context: "premium.offeringsUnavailable",
+            })}
+            screen="subscription_plans"
+            reason="offerings_unavailable"
+            onPrimaryAction={() => void refreshOfferings()}
+          />
         )}
       </View>
 
@@ -272,12 +260,13 @@ export default function SubscriptionPlansScreen() {
       ) : null}
 
       {entitlementUnavailable ? (
-        <Text style={[styles.statusText, { color: colors.onSurfaceVariant }]}>
-          Subscription status is temporarily unavailable.
-          {lastVerifiedAt
-            ? ` Last verified ${new Date(lastVerifiedAt).toLocaleDateString()}.`
-            : " Try again when your connection is steady."}
-        </Text>
+        <EmptyState
+          content={getEmptyStateForContext({
+            context: "premium.entitlementUnavailable",
+          })}
+          screen="subscription_plans"
+          reason="entitlement_unavailable"
+        />
       ) : null}
 
       <View style={styles.purchaseSection}>

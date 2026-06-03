@@ -8,6 +8,8 @@ import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHealthInsight";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import { AddProgressPhotoSheet } from "@/features/plants/components/AddProgressPhotoSheet";
 import { WaterNowNoteSheet } from "@/features/care-logs/components/WaterNowNoteSheet";
@@ -691,27 +693,15 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
               );
             })
           ) : (
-            <View
-              style={[
-                styles.activityEmptyCard,
-                { backgroundColor: colors.surfaceContainerLow },
-              ]}
-            >
-              <Text
-                style={[styles.activityEmptyTitle, { color: colors.onSurface }]}
-              >
-                No care entries yet
-              </Text>
-              <Text
-                style={[
-                  styles.activityEmptyBody,
-                  { color: colors.onSurfaceVariant },
-                ]}
-              >
-                This journal will begin to read like a real history once you log
-                watering, observations, and care rituals for this specimen.
-              </Text>
-            </View>
+            <EmptyState
+              content={getEmptyStateForContext({
+                context: "plantDetail.noCareLogs",
+              })}
+              screen="plant_detail"
+              reason="no_care_logs"
+              primaryHref={`/care-log/${data.plant.id}` as const}
+              style={styles.activityEmptyCard}
+            />
           )}
 
           {recentActivity.length > 0 && recentActivity.length < 3 ? (
@@ -763,26 +753,23 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
 
         <View style={styles.growthGrid}>
           {growthPhotos.length === 0 ? (
-            <View
-              style={[
-                styles.growthEmptyCard,
-                { backgroundColor: colors.surfaceContainerLow },
-              ]}
-            >
-              <Text
-                style={[styles.growthEmptyTitle, { color: colors.onSurface }]}
-              >
-                No progress photos yet
-              </Text>
-              <Text
-                style={[
-                  styles.growthEmptyBody,
-                  { color: colors.onSurfaceVariant },
-                ]}
-              >
-                Add a progress photo to start this plant&apos;s visual record.
-              </Text>
-            </View>
+            <EmptyState
+              content={getEmptyStateForContext({
+                context: "plantDetail.noPhotos",
+              })}
+              screen="plant_detail"
+              reason="no_progress_photos"
+              style={styles.growthEmptyCard}
+            />
+          ) : growthPhotos.length === 1 ? (
+            <EmptyState
+              content={getEmptyStateForContext({
+                context: "timeline.insufficientComparison",
+              })}
+              screen="plant_detail"
+              reason="insufficient_comparison_photos"
+              style={styles.growthEmptyCard}
+            />
           ) : null}
 
           {growthPhotos.map((item) => (

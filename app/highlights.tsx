@@ -11,7 +11,9 @@ import {
   SafeAreaView,
 } from "react-native-safe-area-context";
 
-import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
+import { resolveHighlightsEmptyContext } from "@/features/empty-states/resolveHighlightsEmptyContext";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { MonthlyHighlightMonthSection } from "@/features/journal/components/MonthlyHighlightMonthSection";
@@ -23,7 +25,14 @@ export default function MonthlyHighlightsScreen() {
   const { colors, spacing } = useTheme();
   const router = useRouter();
   const { onRefresh, refreshing } = usePullToRefreshSync();
-  const { sections, isError: hasError } = useMonthlyHighlights();
+  const { sections, isError: hasError, plantsQuery, photosQuery } =
+    useMonthlyHighlights();
+  const plantCount = plantsQuery?.data?.length ?? 0;
+  const progressPhotoCount = photosQuery?.data?.length ?? 0;
+  const highlightsEmptyContext = resolveHighlightsEmptyContext({
+    plantCount,
+    progressPhotoCount,
+  });
 
   return (
     <SafeAreaView
@@ -75,23 +84,16 @@ export default function MonthlyHighlightsScreen() {
         </View>
 
         {hasError ? (
-          <View
-            style={[
+          <EmptyState
+            content={getEmptyStateForContext({ context: "highlights.error" })}
+            screen="highlights"
+            reason="query_error"
+            onPrimaryAction={onRefresh}
+            style={StyleSheet.flatten([
               styles.emptyCard,
-              { backgroundColor: colors.surfaceContainerLow },
               { marginHorizontal: spacing.lg },
-            ]}
-          >
-            <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-              Unable to load highlights
-            </Text>
-            <Text
-              style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}
-            >
-              Refresh to try again and reopen your collection archive.
-            </Text>
-            <PrimaryButton label="Try Again" onPress={onRefresh} />
-          </View>
+            ])}
+          />
         ) : sections.length ? (
           <View style={[styles.sections, { paddingHorizontal: spacing.lg }]}>
             {sections.map((section) => (
@@ -102,23 +104,28 @@ export default function MonthlyHighlightsScreen() {
             ))}
           </View>
         ) : (
-          <View
-            style={[
+          <EmptyState
+            content={getEmptyStateForContext({
+              context: highlightsEmptyContext,
+            })}
+            screen="highlights"
+            reason={
+              plantCount === 0
+                ? "no_plants"
+                : progressPhotoCount === 0
+                  ? "no_progress_photos"
+                  : "no_qualifying_highlights"
+            }
+            primaryHref={
+              plantCount === 0 || progressPhotoCount === 0
+                ? "/plant/add"
+                : undefined
+            }
+            style={StyleSheet.flatten([
               styles.emptyCard,
-              { backgroundColor: colors.surfaceContainerLow },
               { marginHorizontal: spacing.lg },
-            ]}
-          >
-            <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-              No highlights yet
-            </Text>
-            <Text
-              style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}
-            >
-              Add progress photos to start building monthly highlights from
-              real growth moments.
-            </Text>
-          </View>
+            ])}
+          />
         )}
       </ScrollView>
     </SafeAreaView>

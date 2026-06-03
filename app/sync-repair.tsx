@@ -3,6 +3,8 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import {
   listSyncRepairItems,
@@ -107,16 +109,12 @@ export default function SyncRepairScreen() {
           ))}
         </View>
       ) : (
-        <View
-          style={[styles.card, { backgroundColor: colors.surfaceContainerLow }]}
-        >
-          <Text style={[styles.title, { color: colors.primary }]}>
-            No backup repairs needed
-          </Text>
-          <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
-            The queue has no failed or interrupted items right now.
-          </Text>
-        </View>
+        <EmptyState
+          content={getEmptyStateForContext({ context: "sync.repairQueueEmpty" })}
+          screen="sync_repair"
+          reason="repair_queue_clear"
+          style={styles.card}
+        />
       )}
 
       <PrimaryButton

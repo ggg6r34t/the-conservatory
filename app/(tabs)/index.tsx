@@ -154,11 +154,12 @@ export default function HomeScreen() {
             compact
             href="/plant/add"
             icon="plus"
-            label="New Specimen"
+            label={heroCopy.primaryActionLabel ?? "New Specimen"}
           />
         </View>
 
         <HydrationCard
+          totalPlants={dashboard.plants.length}
           dueToday={dashboard.dueToday.length}
           overdue={overdueCount}
           nextCycleHours={dashboard.nextCycleHours}

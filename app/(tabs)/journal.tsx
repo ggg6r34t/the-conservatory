@@ -14,6 +14,9 @@ import {
 } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { AiInsightEmptyState } from "@/features/ai/components/AiInsightEmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
@@ -321,6 +324,21 @@ export default function JournalScreen() {
 
             {summaryQuery.data ? (
               <JournalSummaryCard summary={summaryQuery.data} />
+            ) : summaryQuery.isError ? (
+              <AiInsightEmptyState
+                context="ai.error"
+                screen="journal"
+                reason="summary_query_error"
+                onRetry={() => void summaryQuery.refetch()}
+              />
+            ) : !summaryQuery.isLoading &&
+              entries.length >= 1 &&
+              entries.length < 2 ? (
+              <AiInsightEmptyState
+                context="ai.insufficientData"
+                screen="journal"
+                reason="summary_insufficient_logs"
+              />
             ) : null}
 
             {sections.length ? (
@@ -417,42 +435,21 @@ export default function JournalScreen() {
                 ))}
               </View>
             ) : (
-              <View
-                style={[
-                  styles.emptyCard,
-                  { backgroundColor: colors.surfaceContainerLow },
-                ]}
-              >
-                <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-                  No field notes yet
-                </Text>
-                <Text
-                  style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}
-                >
-                  Start logging care moments to build a journal of your
-                  collection.
-                </Text>
-              </View>
+              <EmptyState
+                content={getEmptyStateForContext({ context: "journal.noLogs" })}
+                screen="journal"
+                reason="no_logs"
+                primaryHref={`/care-log/${featuredPlant.id}` as const}
+              />
             )}
           </>
         ) : (
-          <View
-            style={[
-              styles.emptyCard,
-              { backgroundColor: colors.surfaceContainerLow },
-            ]}
-          >
-            <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-              Journal coming to life
-            </Text>
-            <Text
-              style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}
-            >
-              Add your first plant to start a care journal and preserve each
-              ritual.
-            </Text>
-            <PrimaryButton href="/plant/add" icon="plus" label="Add Plant" />
-          </View>
+          <EmptyState
+            content={getEmptyStateForContext({ context: "journal.noPlants" })}
+            screen="journal"
+            reason="no_plants"
+            primaryHref="/plant/add"
+          />
         )}
       </ScrollView>
 

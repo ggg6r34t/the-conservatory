@@ -5,11 +5,21 @@ import { useTheme } from "@/components/design-system/useTheme";
 interface StreakBadgeProps {
   streak: number;
   variant?: "default" | "compact";
+  totalPlants?: number;
 }
 
-export function StreakBadge({ streak, variant = "default" }: StreakBadgeProps) {
+export function StreakBadge({
+  streak,
+  variant = "default",
+  totalPlants,
+}: StreakBadgeProps) {
   const { colors } = useTheme();
   const compact = variant === "compact";
+  const hasCollection = (totalPlants ?? 1) > 0;
+  const streakLabel = compact ? "DAYS STREAK" : "ACTIVE STREAK";
+  const zeroCopy = hasCollection
+    ? "0 day streak"
+    : "Care rhythm begins with your first log";
 
   return (
     <View
@@ -19,7 +29,7 @@ export function StreakBadge({ streak, variant = "default" }: StreakBadgeProps) {
           : [styles.container, { backgroundColor: colors.surfaceContainerLow }]
       }
       accessibilityRole="text"
-      accessibilityLabel={`${streak} day streak`}
+      accessibilityLabel={hasCollection ? `${streak} day streak` : zeroCopy}
     >
       <Text
         style={[
@@ -35,7 +45,7 @@ export function StreakBadge({ streak, variant = "default" }: StreakBadgeProps) {
           { color: colors.onSurfaceVariant },
         ]}
       >
-        {compact ? "DAYS STREAK" : "ACTIVE STREAK"}
+        {hasCollection ? streakLabel : "BEGIN CARE RHYTHM"}
       </Text>
     </View>
   );

@@ -20,11 +20,11 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { AiInsightEmptyState } from "@/features/ai/components/AiInsightEmptyState";
 import { SpeciesSuggestionBanner } from "@/features/ai/components/SpeciesSuggestionBanner";
 import { useSpeciesSuggestion } from "@/features/ai/hooks/useSpeciesSuggestion";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
 import type { LightCondition, SpeciesSuggestion } from "@/features/ai/types/ai";
-import { UpgradePrompt } from "@/features/billing/components/UpgradePrompt";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { useAlert } from "@/hooks/useAlert";
@@ -569,10 +569,10 @@ export function PlantForm({ mode, plantId, initialValues }: PlantFormProps) {
           }}
         />
       ) : speciesSuggestionQuery.quotaExhausted && values.photoUri ? (
-        <UpgradePrompt
-          message="You've used your free AI species identifications this month. Upgrade to Premium for unlimited identifications."
-          cta="Unlock Unlimited ID"
-          compact
+        <AiInsightEmptyState
+          context="ai.quotaReached"
+          screen="plant_form"
+          reason="species_quota_reached"
         />
       ) : null}
 

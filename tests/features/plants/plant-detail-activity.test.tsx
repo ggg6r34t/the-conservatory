@@ -11,8 +11,18 @@ const mockUpdateCareLogNote = jest.fn();
 const mockSnackbarSuccess = jest.fn();
 const mockSnackbarWarning = jest.fn();
 
-jest.mock("expo-router", () => ({
-  useRouter: () => ({ push: mockPush }),
+jest.mock("expo-router", () => {
+  const { Pressable } = require("react-native");
+  return {
+    useRouter: () => ({ push: mockPush }),
+    Link: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) =>
+      asChild ? children : <Pressable>{children}</Pressable>,
+  };
+});
+
+jest.mock("@/services/analytics/analyticsService", () => ({
+  trackEvent: jest.fn(),
+  trackMonetizationEvent: jest.fn(),
 }));
 
 jest.mock("@/features/billing/hooks/useSubscription", () => ({
@@ -421,7 +431,7 @@ describe("PlantDetail recent activity", () => {
     expect(screen.getByText("No progress photos yet")).toBeTruthy();
     expect(
       screen.getByText(
-        "Add a progress photo to start this plant's visual record.",
+        "Add a photo when you notice new growth, a change in shape, or a moment worth remembering.",
       ),
     ).toBeTruthy();
   });

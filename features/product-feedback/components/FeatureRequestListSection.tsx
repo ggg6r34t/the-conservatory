@@ -1,7 +1,10 @@
+import type { Href } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import type { EmptyStateContent } from "@/features/empty-states/types";
 import { FeatureRequestCard } from "@/features/product-feedback/components/FeatureRequestCard";
 import type { FeatureRequest } from "@/features/product-feedback/types";
 
@@ -12,6 +15,10 @@ type FeatureRequestListSectionProps = {
   onRequestPress: (requestId: string) => void;
   onVotePress?: (request: FeatureRequest) => void;
   emptyMessage?: string;
+  emptyContent?: EmptyStateContent;
+  emptyScreen?: string;
+  emptyReason?: string;
+  emptyPrimaryHref?: Href;
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
@@ -24,6 +31,10 @@ export function FeatureRequestListSection({
   onRequestPress,
   onVotePress,
   emptyMessage = "Nothing here yet.",
+  emptyContent,
+  emptyScreen = "feature_requests",
+  emptyReason = "list_empty",
+  emptyPrimaryHref,
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
@@ -51,6 +62,14 @@ export function FeatureRequestListSection({
             }
           />
         ))
+      ) : emptyContent ? (
+        <EmptyState
+          content={emptyContent}
+          screen={emptyScreen}
+          reason={emptyReason}
+          primaryHref={emptyPrimaryHref}
+          style={styles.emptyCard}
+        />
       ) : (
         <View
           style={[

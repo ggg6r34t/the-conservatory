@@ -93,6 +93,7 @@ jest.mock("@/components/design-system/useTheme", () => ({
 
 jest.mock("@/features/plants/hooks/usePlants", () => ({
   usePlants: () => ({ data: mockPlants }),
+  useAllActivePlants: () => ({ data: mockPlants }),
 }));
 
 jest.mock("@/features/notifications/hooks/useReminders", () => ({

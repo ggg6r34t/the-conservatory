@@ -14,6 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
+import { EmptyState } from "@/features/empty-states/components/EmptyState";
+import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
@@ -192,22 +194,12 @@ export default function GraveyardScreen() {
         </Text>
 
         {!hasMemorials ? (
-          <View
-            style={[
-              styles.emptyCard,
-              { backgroundColor: colors.surfaceContainerLow },
-            ]}
-          >
-            <Text style={[styles.emptyTitle, { color: colors.primary }]}>
-              No memorials yet
-            </Text>
-            <Text
-              style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}
-            >
-              Plants moved into the Graveyard will be remembered here with their
-              archive details, memorial notes, and preserved history.
-            </Text>
-          </View>
+          <EmptyState
+            content={getEmptyStateForContext({ context: "graveyard.none" })}
+            screen="graveyard"
+            reason="no_memorials"
+            style={styles.emptyCard}
+          />
         ) : null}
 
         {featuredMemorial ? (

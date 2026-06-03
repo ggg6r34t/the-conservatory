@@ -6,10 +6,19 @@ import type { PlantWithRelations } from "@/types/models";
 
 jest.mock("@/services/analytics/analyticsService", () => ({
   trackMonetizationEvent: jest.fn(),
+  trackEvent: jest.fn(),
 }));
 
 jest.mock("@/features/billing/hooks/useSubscription", () => ({
   useSubscription: () => ({ isPremium: false }),
+}));
+
+jest.mock("@/hooks/useNetworkState", () => ({
+  useNetworkState: () => ({ isOffline: false }),
+}));
+
+jest.mock("expo-router", () => ({
+  useRouter: () => ({ push: jest.fn() }),
 }));
 
 jest.mock("react-native-safe-area-context", () => {
@@ -46,16 +55,26 @@ const fixture: PlantWithRelations = {
   logs: [],
 };
 
+function mockInsightQuery(overrides: Record<string, unknown>) {
+  useHealthInsight.mockReturnValue({
+    data: null,
+    quotaExhausted: false,
+    isLoading: false,
+    isError: false,
+    refetch: jest.fn(),
+    ...overrides,
+  });
+}
+
 describe("PlantDetailHealthInsight", () => {
   it("renders sufficient-confidence insight content", () => {
-    useHealthInsight.mockReturnValue({
+    mockInsightQuery({
       data: {
         title: "Health insight",
         body: "Recent photos suggest steady new growth over the past two weeks.",
         confidence: 0.82,
         source: "local",
       },
-      quotaExhausted: false,
     });
 
     renderWithProviders(
@@ -66,25 +85,25 @@ describe("PlantDetailHealthInsight", () => {
     expect(screen.getByText(/steady new growth/i)).toBeTruthy();
   });
 
-  it("suppresses the module when confidence is too low", () => {
-    useHealthInsight.mockReturnValue({ data: null, quotaExhausted: false });
+  it("shows insufficient-data empty state when insight is unavailable", () => {
+    mockInsightQuery({ data: null });
 
     renderWithProviders(
       <PlantDetailHealthInsight plantId="plant-1" data={fixture} />,
     );
 
+    expect(screen.getByText("More history needed")).toBeTruthy();
     expect(screen.queryByText("Health insight")).toBeNull();
   });
 
   it("renders safe fallback content when available", () => {
-    useHealthInsight.mockReturnValue({
+    mockInsightQuery({
       data: {
         title: "Health insight",
         body: "Your recent entries suggest stable condition with no obvious change.",
         confidence: 0.63,
         source: "local",
       },
-      quotaExhausted: false,
     });
 
     renderWithProviders(
@@ -94,24 +113,23 @@ describe("PlantDetailHealthInsight", () => {
     expect(screen.getByText(/no obvious change/i)).toBeTruthy();
   });
 
-  it("renders nothing when there is no data", () => {
-    useHealthInsight.mockReturnValue({ data: null, quotaExhausted: false });
+  it("shows quota empty state when quota is exhausted", () => {
+    mockInsightQuery({ quotaExhausted: true });
 
     renderWithProviders(
       <PlantDetailHealthInsight plantId="plant-1" data={fixture} />,
     );
 
-    expect(screen.queryByText(/Health insight/i)).toBeNull();
+    expect(screen.getByText("Monthly limit reached")).toBeTruthy();
   });
 
-  it("shows upgrade prompt when quota is exhausted", () => {
-    useHealthInsight.mockReturnValue({ data: null, quotaExhausted: true });
+  it("shows error empty state when the query fails", () => {
+    mockInsightQuery({ isError: true });
 
     renderWithProviders(
       <PlantDetailHealthInsight plantId="plant-1" data={fixture} />,
     );
 
-    expect(screen.getByText(/used your free AI health insights/i)).toBeTruthy();
-    expect(screen.getByText("Unlock Unlimited Insights")).toBeTruthy();
+    expect(screen.getByText("Unable to load insight")).toBeTruthy();
   });
 });

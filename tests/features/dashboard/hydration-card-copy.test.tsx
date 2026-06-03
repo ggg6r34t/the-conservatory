@@ -20,24 +20,36 @@ jest.mock("@/components/common/Icon/Icon", () => ({
 }));
 
 describe("HydrationCard copy", () => {
-  it("shows overdue status and gentle-pass meta when care is overdue", () => {
+  it("shows first-run guidance when there are no plants", () => {
     const { getByText } = render(
-      <HydrationCard dueToday={1} overdue={1} nextCycleHours={2} />,
+      <HydrationCard
+        totalPlants={0}
+        dueToday={0}
+        overdue={0}
+        nextCycleHours={null}
+      />,
     );
 
-    expect(
-      getByText(
-        "One specimen needs attention today. One care window opens in the next day.",
-      ),
-    ).toBeTruthy();
-    expect(
-      getByText("A gentle watering pass today should keep your rhythm steady."),
-    ).toBeTruthy();
+    expect(getByText(/Add your first plant/i)).toBeTruthy();
+  });
+
+  it("shows cared-for status when plants exist and none are due", () => {
+    const { getByText, queryByText } = render(
+      <HydrationCard
+        totalPlants={2}
+        dueToday={0}
+        overdue={0}
+        nextCycleHours={null}
+      />,
+    );
+
+    expect(getByText("Your plants are cared for today.")).toBeTruthy();
+    expect(queryByText(/hydrated|rhythm steady/i)).toBeNull();
   });
 
   it("shows due-soon status and next-cycle-hours meta when care is upcoming", () => {
     const { getByText } = render(
-      <HydrationCard dueToday={2} overdue={0} nextCycleHours={5} />,
+      <HydrationCard totalPlants={2} dueToday={2} overdue={0} nextCycleHours={5} />,
     );
 
     expect(
@@ -46,14 +58,11 @@ describe("HydrationCard copy", () => {
     expect(getByText("Next cycle in 5 hours.")).toBeTruthy();
   });
 
-  it("shows hydrated status and gentle-pass meta when there is no time left", () => {
+  it("shows overdue status when care is overdue", () => {
     const { getByText } = render(
-      <HydrationCard dueToday={0} overdue={0} nextCycleHours={null} />,
+      <HydrationCard totalPlants={2} dueToday={1} overdue={1} nextCycleHours={2} />,
     );
 
-    expect(getByText("All specimens are comfortably hydrated.")).toBeTruthy();
-    expect(
-      getByText("A gentle watering pass today should keep your rhythm steady."),
-    ).toBeTruthy();
+    expect(getByText(/One specimen needs attention today/i)).toBeTruthy();
   });
 });
