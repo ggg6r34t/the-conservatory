@@ -186,7 +186,7 @@ export default function ProfileEditScreen() {
               <View
                 style={[
                   styles.avatarLoadingOverlay,
-                  { backgroundColor: colors.imageOverlay },
+                  { backgroundColor: colors.photoEditOverlay },
                 ]}
               >
                 <ActivityIndicator color={colors.onPrimary} size="small" />

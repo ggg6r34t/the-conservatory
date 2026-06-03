@@ -63,6 +63,8 @@ export type BotanicalSemanticTokens = {
 
   /** Imagery */
   imageOverlay: string;
+  /** Avatar / photo edit loading scrim (pre-expansion: backdrop @ 0.45). */
+  photoEditOverlay: string;
   heroImageFadeEnd: string;
 
   /** Marketing / premium surfaces */
@@ -127,6 +129,7 @@ export const REQUIRED_SEMANTIC_TOKEN_KEYS = [
   "onPrimaryHighlight",
   "onPrimaryBorder",
   "imageOverlay",
+  "photoEditOverlay",
   "heroImageFadeEnd",
   "premiumHeroOverlay",
   "premiumPanelOverlay",

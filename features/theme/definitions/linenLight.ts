@@ -54,7 +54,10 @@ const linenLightCore = {
   transparent: "transparent",
 } as const;
 
-const linenLightColors = buildThemePalette(linenLightCore, { isDark: false });
+const linenLightColors = buildThemePalette(linenLightCore, { isDark: false }, {
+  /** Pre-expansion destructive CTA gradient end (PrimaryButton). */
+  dangerGradientEnd: "#8c1414",
+});
 
 export const linenLightTheme: ThemeDefinition = {
   id: "linen-light",

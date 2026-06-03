@@ -70,6 +70,7 @@ export function deriveSemanticTokens(
     onPrimaryBorder: withAlpha(core.onPrimary, 0.7),
 
     imageOverlay: withAlpha(core.surface, 0.5),
+    photoEditOverlay: withAlpha(core.backdrop, 0.45),
     heroImageFadeEnd: withAlpha(core.surface, 0.86),
 
     premiumHeroOverlay: withAlpha(core.primary, 0.58),

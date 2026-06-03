@@ -8,6 +8,7 @@ import { resolveBootstrapThemeId } from "@/features/theme/services/themeBootstra
 import { linenLightTheme } from "@/features/theme/definitions/linenLight";
 import { getPlantStatusBadgePresentation } from "@/features/plants/services/plantStatusBadgePresentation";
 import { botanicalSharedTokens } from "@/features/theme/tokens/shared";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 
 /** Core palette captured before multi-theme expansion (styles/tokens.ts @ a17a5d8^). */
 const LINEN_LIGHT_BASELINE_CORE = {
@@ -109,6 +110,16 @@ describe("Linen Light regression", () => {
     expect(linen.colors.shadow).toBe("rgba(27, 28, 25, 0.04)");
     expect(linen.colors.shadowElevated).toBe("rgba(27, 28, 25, 0.1)");
     expect(linenLightTheme.isDark).toBe(false);
+  });
+
+  it("preserves pre-expansion destructive and profile-edit overlay semantics", () => {
+    expect(linen.colors.dangerGradientEnd).toBe("#8c1414");
+    expect(linen.colors.photoEditOverlay).toBe(
+      withAlpha(LINEN_LIGHT_BASELINE_CORE.backdrop, 0.45),
+    );
+    expect(linen.colors.sheetBorder).toBe(
+      withAlpha(LINEN_LIGHT_BASELINE_CORE.surfaceContainerLowest, 0.72),
+    );
   });
 
   it("maps status badge presentation to the pre-expansion linen appearance", () => {

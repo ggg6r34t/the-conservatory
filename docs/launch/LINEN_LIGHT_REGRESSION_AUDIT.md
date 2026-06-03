@@ -102,9 +102,11 @@ No theme-related breakage identified in unit/integration tests. Full E2E not run
 ## Phase 10 — Remediation summary
 
 1. **Plant status badge** — Restored pre-expansion core color mapping (thriving icon `primaryFixed`, badge `secondaryFixed`).
-2. **Linen semantic shadow** — Override to `rgba(27, 28, 25, 0.04)`.
+2. **Linen semantic shadow** — Derived light shadow `rgba(27, 28, 25, 0.04)` (not dark-theme `0.28`).
 3. **SecondaryButton** — Surface variant uses shared `shadow.shadowColor` again.
 4. **Profile edit badge** — Kept historical `rgba(27, 28, 25, 0.1)` shadow.
+5. **Profile avatar loading overlay** — Restored `photoEditOverlay` (`backdrop` @ 0.45); reverted mistaken `imageOverlay` (surface @ 0.5).
+6. **Destructive PrimaryButton gradient** — Linen override `dangerGradientEnd: #8c1414` (pre-expansion hardcoded end stop).
 
 ## Intentionally untouched (per product)
 
