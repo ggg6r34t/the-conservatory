@@ -1,6 +1,29 @@
 import type { ThemeDefinition } from "@/features/theme/types";
 import { buildThemePalette } from "@/features/theme/tokens/deriveSemanticTokens";
+import { withAlpha } from "@/features/theme/utils/withAlpha";
 
+import { linenLightCore } from "./linenLight";
+
+/** Picker card + preview tokens from Terracotta Dusk mockup (Linen secondary-fixed shell). */
+const terracottaPickerCore = {
+  selectionCardBackground: linenLightCore.secondaryFixed,
+  cardTitle: linenLightCore.onSecondaryFixed,
+  cardDescription: linenLightCore.onSecondaryFixedVariant,
+  cardEditorialLabel: linenLightCore.secondary,
+  cardEditorialQuote: linenLightCore.onSecondaryFixedVariant,
+  cardDivider: withAlpha(linenLightCore.onSecondaryFixedVariant, 0.1),
+  cardUnselectedRing: withAlpha(linenLightCore.onSecondaryFixedVariant, 0.3),
+  selectionRing: linenLightCore.onSecondaryFixed,
+  selectionFill: linenLightCore.secondary,
+  selectionIcon: linenLightCore.onSecondary,
+  previewBackground: withAlpha(linenLightCore.surfaceContainerLow, 0.6),
+  previewPlantTitle: linenLightCore.secondary,
+  previewStatusBackground: linenLightCore.secondaryContainer,
+  previewStatusForeground: linenLightCore.onSecondaryContainer,
+  previewPlaceholder: withAlpha(linenLightCore.onSecondaryFixed, 0.05),
+} as const;
+
+/** In-app Mediterranean palette when Terracotta Dusk is the active theme. */
 const terracottaCore = {
   primary: "#2f4a3a",
   primaryContainer: "#4a6454",
@@ -52,6 +75,7 @@ const terracottaCore = {
   onErrorContainer: "#93000a",
   backdrop: "rgba(61, 34, 24, 0.24)",
   transparent: "transparent",
+  selectionCardBackground: terracottaPickerCore.selectionCardBackground,
 } as const;
 
 const terracottaColors = buildThemePalette(terracottaCore, { isDark: false }, {
@@ -63,6 +87,11 @@ const terracottaColors = buildThemePalette(terracottaCore, { isDark: false }, {
   journalAccent: terracottaCore.primary,
   dangerGradientEnd: "#7a1515",
 });
+
+const terracottaPickerBorder = withAlpha(
+  linenLightCore.onSecondaryFixedVariant,
+  0.1,
+);
 
 export const terracottaDuskTheme: ThemeDefinition = {
   id: "terracotta-dusk",
@@ -77,27 +106,28 @@ export const terracottaDuskTheme: ThemeDefinition = {
     plantTitle: "Cactus",
     statusLabel: "Thriving",
     image: require("@/assets/images/pilea-peperomioides.png"),
+    imageOpacity: 1,
     surfaces: {
-      background: terracottaCore.surfaceContainerLow,
-      border: terracottaColors.suggestionCardBorder,
-      plantTitle: terracottaCore.primary,
-      statusBackground: terracottaCore.primaryFixed,
-      statusForeground: terracottaCore.onPrimaryFixed,
-      placeholderPrimary: terracottaCore.surfaceContainer,
-      placeholderSecondary: terracottaCore.surfaceVariant,
+      background: terracottaPickerCore.previewBackground,
+      border: terracottaPickerBorder,
+      plantTitle: terracottaPickerCore.previewPlantTitle,
+      statusBackground: terracottaPickerCore.previewStatusBackground,
+      statusForeground: terracottaPickerCore.previewStatusForeground,
+      placeholderPrimary: terracottaPickerCore.previewPlaceholder,
+      placeholderSecondary: terracottaPickerCore.previewPlaceholder,
     },
   },
   card: {
-    background: terracottaCore.surfaceContainerLowest,
-    title: terracottaCore.primary,
-    description: terracottaCore.onSurfaceVariant,
-    editorialLabel: terracottaCore.secondary,
-    editorialQuote: terracottaCore.onSurfaceVariant,
-    selectionRing: terracottaCore.primary,
-    selectionFill: terracottaCore.primary,
-    selectionIcon: terracottaCore.onPrimary,
-    unselectedRing: terracottaColors.borderSubtle,
-    editorialDivider: terracottaCore.surfaceContainerHigh,
+    background: terracottaPickerCore.selectionCardBackground,
+    title: terracottaPickerCore.cardTitle,
+    description: terracottaPickerCore.cardDescription,
+    editorialLabel: terracottaPickerCore.cardEditorialLabel,
+    editorialQuote: terracottaPickerCore.cardEditorialQuote,
+    selectionRing: terracottaPickerCore.selectionRing,
+    selectionFill: terracottaPickerCore.selectionFill,
+    selectionIcon: terracottaPickerCore.selectionIcon,
+    unselectedRing: terracottaPickerCore.cardUnselectedRing,
+    editorialDivider: terracottaPickerCore.cardDivider,
   },
   accessibility: {
     passesWcagAa: true,

@@ -50,4 +50,6 @@ export type BotanicalCoreTokens = {
   onErrorContainer: string;
   backdrop: string;
   transparent: string;
+  /** Interface Theme picker card shell (per-theme mockup surface). */
+  selectionCardBackground: string;
 };

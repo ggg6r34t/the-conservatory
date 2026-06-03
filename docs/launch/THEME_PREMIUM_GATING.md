@@ -2,6 +2,10 @@
 
 **Date:** 2026-06-03
 
+## Interface Theme card surface
+
+Each theme defines `selectionCardBackground` in its core palette (e.g. Terracotta Dusk `#ffdbcf`), referenced by `ThemeDefinition.card.background`.
+
 ## Access model
 
 | Theme | `access` |

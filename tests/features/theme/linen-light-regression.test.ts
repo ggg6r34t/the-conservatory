@@ -62,6 +62,7 @@ const LINEN_LIGHT_BASELINE_CORE = {
   onErrorContainer: "#93000a",
   backdrop: "rgba(27, 28, 25, 0.32)",
   transparent: "transparent",
+  selectionCardBackground: "#ffffff",
 } as const;
 
 describe("Linen Light regression", () => {

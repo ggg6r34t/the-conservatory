@@ -52,6 +52,7 @@ const deepForestCore = {
   onErrorContainer: "#ffdad6",
   backdrop: "rgba(8, 16, 12, 0.72)",
   transparent: "transparent",
+  selectionCardBackground: "#2a4a3c",
 } as const;
 
 const deepForestColors = buildThemePalette(deepForestCore, { isDark: true }, {
@@ -90,7 +91,7 @@ export const deepForestTheme: ThemeDefinition = {
     },
   },
   card: {
-    background: deepForestCore.primaryContainer,
+    background: deepForestCore.selectionCardBackground,
     title: deepForestCore.onPrimaryContainer,
     description: deepForestCore.onSurfaceVariant,
     editorialLabel: deepForestCore.secondaryFixedDim,

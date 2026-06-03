@@ -52,6 +52,7 @@ const midnightIvyCore = {
   onErrorContainer: "#ffdad6",
   backdrop: "rgba(0, 0, 0, 0.76)",
   transparent: "transparent",
+  selectionCardBackground: "#242c28",
 } as const;
 
 const midnightIvyColors = buildThemePalette(midnightIvyCore, { isDark: true }, {
@@ -89,7 +90,7 @@ export const midnightIvyTheme: ThemeDefinition = {
     },
   },
   card: {
-    background: midnightIvyCore.surfaceContainerHighest,
+    background: midnightIvyCore.selectionCardBackground,
     title: midnightIvyCore.onSurface,
     description: midnightIvyCore.onSurfaceVariant,
     editorialLabel: midnightIvyCore.primaryFixedDim,
