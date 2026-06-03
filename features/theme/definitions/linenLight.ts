@@ -1,5 +1,6 @@
 import type { ThemeDefinition } from "@/features/theme/types";
 import { buildThemePalette } from "@/features/theme/tokens/deriveSemanticTokens";
+import { resolveThrivingPreviewChip } from "@/features/theme/services/themePreviewSurfaces";
 
 const linenLightCore = {
   primary: "#163828",
@@ -60,6 +61,11 @@ const linenLightColors = buildThemePalette(linenLightCore, { isDark: false }, {
   dangerGradientEnd: "#8c1414",
 });
 
+const linenThrivingPreview = resolveThrivingPreviewChip(
+  "linen-light",
+  linenLightColors,
+);
+
 export const linenLightTheme: ThemeDefinition = {
   id: "linen-light",
   name: "Linen Light",
@@ -77,8 +83,8 @@ export const linenLightTheme: ThemeDefinition = {
       background: linenLightCore.surface,
       border: "rgba(193, 200, 194, 0.1)",
       plantTitle: linenLightCore.primary,
-      statusBackground: linenLightCore.surfaceContainerLowest,
-      statusForeground: linenLightCore.onSurface,
+      statusBackground: linenThrivingPreview.statusBackground,
+      statusForeground: linenThrivingPreview.statusForeground,
       placeholderPrimary: linenLightCore.surfaceContainer,
       placeholderSecondary: linenLightCore.surfaceContainer,
     },

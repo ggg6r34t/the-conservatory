@@ -5,6 +5,7 @@ import { AppState, type AppStateStatus } from "react-native";
 import { waitForAuthPersistenceIdle } from "@/features/auth/api/authClient";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { invalidateBackupQueries } from "@/features/profile/utils/invalidateBackupQueries";
+import { reconcileThemeAfterSync } from "@/features/theme/services/themeSyncReconciliation";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import { useNetworkState } from "@/hooks/useNetworkState";
 import { subscribeToSyncQueueChanges } from "@/services/database/syncSignals";
@@ -75,9 +76,14 @@ export function SyncBootstrapProvider({ children }: PropsWithChildren) {
           return;
         }
         lastUserIdRef.current = user.id;
-        await invalidateBackupQueries(queryClient, user.id).catch(
-          () => undefined,
-        );
+        await Promise.all([
+          invalidateBackupQueries(queryClient, user.id).catch(() => undefined),
+          reconcileThemeAfterSync({
+            userId: user.id,
+            queryClient,
+            source: reason,
+          }).catch(() => undefined),
+        ]);
       } catch (error) {
         logger.warn("sync.auto_trigger.failed", {
           userId: user.id,
@@ -132,9 +138,14 @@ export function SyncBootstrapProvider({ children }: PropsWithChildren) {
             userId: user.id,
             trigger: "auto-network",
           });
-          await invalidateBackupQueries(queryClient, user.id).catch(
-            () => undefined,
-          );
+          await Promise.all([
+            invalidateBackupQueries(queryClient, user.id).catch(() => undefined),
+            reconcileThemeAfterSync({
+              userId: user.id,
+              queryClient,
+              source: "auto-network",
+            }).catch(() => undefined),
+          ]);
         } catch (error) {
           logger.warn("sync.auto_network.failed", {
             userId: user.id,

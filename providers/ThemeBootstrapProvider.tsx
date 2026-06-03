@@ -2,6 +2,7 @@ import { type PropsWithChildren, useEffect } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { getUserPreferences } from "@/features/settings/api/settingsClient";
+import { trackThemeRestoredOnStartup } from "@/features/theme/analytics";
 import {
   readThemeSubscriptionSnapshot,
   resolveAccessibleThemeId,
@@ -31,6 +32,11 @@ export function ThemeBootstrapProvider({ children }: PropsWithChildren) {
         if (!cancelled) {
           setActiveThemeId(themeId);
           setHydrated(true);
+          trackThemeRestoredOnStartup({
+            theme_id: themeId,
+            previous_theme_id: cachedThemeId,
+            source: "theme_bootstrap",
+          });
         }
         return;
       }
@@ -48,6 +54,11 @@ export function ThemeBootstrapProvider({ children }: PropsWithChildren) {
         if (!cancelled) {
           setActiveThemeId(themeId);
           setHydrated(true);
+          trackThemeRestoredOnStartup({
+            theme_id: themeId,
+            previous_theme_id: preferences.preferredTheme ?? cachedThemeId,
+            source: "theme_bootstrap",
+          });
         }
       } catch {
         const themeId = resolveAccessibleThemeId(cachedThemeId, subscription);
@@ -55,6 +66,11 @@ export function ThemeBootstrapProvider({ children }: PropsWithChildren) {
         if (!cancelled) {
           setActiveThemeId(themeId);
           setHydrated(true);
+          trackThemeRestoredOnStartup({
+            theme_id: themeId,
+            previous_theme_id: cachedThemeId,
+            source: "theme_bootstrap",
+          });
         }
       }
     }

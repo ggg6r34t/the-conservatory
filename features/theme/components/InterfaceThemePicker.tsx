@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { useSnackbar } from "@/hooks/useSnackbar";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import {
@@ -28,11 +29,11 @@ import type { ThemeId } from "@/features/theme/types";
 
 export function InterfaceThemePicker() {
   const router = useRouter();
+  const snackbar = useSnackbar();
   const { colors } = useTheme();
   const settingsQuery = useSettings();
   const { tier, period } = useSubscription();
   const activeThemeId = useThemeRuntimeStore((state) => state.activeThemeId);
-  const setActiveThemeId = useThemeRuntimeStore((state) => state.setActiveThemeId);
   const preferredThemeMutation = usePreferredThemeMutation();
   const persistedThemeId = resolveThemeId(settingsQuery.data?.preferredTheme);
   const [pendingThemeId, setPendingThemeId] = useState<ThemeId | null>(null);
@@ -74,16 +75,19 @@ export function InterfaceThemePicker() {
 
       const previousThemeId = selectedThemeId;
       setPendingThemeId(themeId);
-      setActiveThemeId(themeId);
       try {
-        await preferredThemeMutation.mutateAsync(themeId);
+        await preferredThemeMutation.mutateAsync({ themeId, previousThemeId });
         const themeName = themeCatalog.find((theme) => theme.id === themeId)?.name;
         if (themeName) {
           await announceThemeSelection(themeName);
         }
       } catch (error) {
-        setActiveThemeId(previousThemeId);
         if (error instanceof ThemeApplicationError) {
+          if (error.code === "THEME_SAVE_FAILED") {
+            snackbar.error("Could not save your theme. Please try again.");
+            return;
+          }
+
           trackPremiumThemeBlocked({
             theme_id: themeId,
             previous_theme_id: previousThemeId,
@@ -103,7 +107,7 @@ export function InterfaceThemePicker() {
       preferredThemeMutation,
       router,
       selectedThemeId,
-      setActiveThemeId,
+      snackbar,
       subscription,
     ],
   );

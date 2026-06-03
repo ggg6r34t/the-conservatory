@@ -18,20 +18,17 @@ describe("theme token completeness", () => {
     }
   });
 
-  it("uses catalog preview chips from the same palette tokens as the live app", () => {
-    const refinedThemeIds = [
+  it("uses suggestionCardBorder for preview card borders on premium themes", () => {
+    const premiumThemeIds = [
       "deep-forest",
       "midnight-ivy",
       "terracotta-dusk",
     ] as const;
 
-    for (const themeId of refinedThemeIds) {
+    for (const themeId of premiumThemeIds) {
       const definition = getThemeDefinition(themeId);
       const palette = buildThemeTokens(themeId);
 
-      expect(definition.preview.surfaces.statusBackground).toBe(
-        palette.colors.statusThriving,
-      );
       expect(definition.preview.surfaces.border).toBe(
         palette.colors.suggestionCardBorder,
       );

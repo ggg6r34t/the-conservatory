@@ -1,4 +1,7 @@
-import { updatePreferredTheme } from "@/features/settings/api/settingsClient";
+import {
+  getUserPreferences,
+  updatePreferredTheme,
+} from "@/features/settings/api/settingsClient";
 import {
   applyTheme,
   reconcilePreferredTheme,
@@ -8,6 +11,7 @@ import {
 import { writeCachedThemeId } from "@/features/theme/services/themeCacheStorage";
 
 jest.mock("@/features/settings/api/settingsClient", () => ({
+  getUserPreferences: jest.fn().mockResolvedValue({ preferredTheme: "linen-light" }),
   updatePreferredTheme: jest.fn().mockResolvedValue({ preferredTheme: "linen-light" }),
 }));
 
@@ -21,8 +25,10 @@ jest.mock("@/features/theme/analytics", () => ({
   trackThemeChanged: jest.fn(),
   trackThemeFallbackApplied: jest.fn(),
   trackThemeRevertedAfterDowngrade: jest.fn(),
+  trackThemeSaveFailed: jest.fn(),
 }));
 
+const getUserPreferencesMock = getUserPreferences as jest.Mock;
 const updatePreferredThemeMock = updatePreferredTheme as jest.Mock;
 const writeCachedThemeIdMock = writeCachedThemeId as jest.Mock;
 
@@ -46,6 +52,8 @@ describe("theme application service", () => {
   });
 
   it("persists premium theme for recurring subscribers", async () => {
+    getUserPreferencesMock.mockResolvedValueOnce({ preferredTheme: "linen-light" });
+
     const result = await applyTheme({
       userId: "user-1",
       themeId: "midnight-ivy",
@@ -56,6 +64,38 @@ describe("theme application service", () => {
     expect(result.appliedThemeId).toBe("midnight-ivy");
     expect(updatePreferredThemeMock).toHaveBeenCalledWith("user-1", "midnight-ivy");
     expect(writeCachedThemeIdMock).toHaveBeenCalledWith("midnight-ivy");
+  });
+
+  it("persists when runtime already matches but SQLite preference does not", async () => {
+    getUserPreferencesMock.mockResolvedValueOnce({ preferredTheme: "linen-light" });
+
+    const result = await applyTheme({
+      userId: "user-1",
+      themeId: "deep-forest",
+      subscription: { tier: "premium", period: "monthly" },
+      previousThemeId: "deep-forest",
+    });
+
+    expect(result.appliedThemeId).toBe("deep-forest");
+    expect(result.changed).toBe(true);
+    expect(updatePreferredThemeMock).toHaveBeenCalledWith("user-1", "deep-forest");
+    expect(writeCachedThemeIdMock).toHaveBeenCalledWith("deep-forest");
+  });
+
+  it("skips writes when preference is already stored", async () => {
+    getUserPreferencesMock.mockResolvedValueOnce({ preferredTheme: "deep-forest" });
+
+    const result = await applyTheme({
+      userId: "user-1",
+      themeId: "deep-forest",
+      subscription: { tier: "premium", period: "monthly" },
+      previousThemeId: "deep-forest",
+    });
+
+    expect(result.appliedThemeId).toBe("deep-forest");
+    expect(result.changed).toBe(false);
+    expect(updatePreferredThemeMock).not.toHaveBeenCalled();
+    expect(writeCachedThemeIdMock).toHaveBeenCalledWith("deep-forest");
   });
 
   it("reconciles stale premium preference to linen-light", async () => {

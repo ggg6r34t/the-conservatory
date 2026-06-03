@@ -45,7 +45,7 @@ Component `withAlpha(...)` usage migrated to derived semantic tokens (`sheetBord
 
 | Theme | Visual quality | Token completeness | Contrast | Component migration | Preview accuracy | Production readiness |
 |-------|----------------|-------------------|----------|---------------------|------------------|----------------------|
-| Linen Light | FULLY (unchanged core) | FULLY | FULLY | FULLY | PARTIAL (legacy preview border chip) | FULLY |
+| Linen Light | FULLY (unchanged core) | FULLY | FULLY | FULLY | FULLY | FULLY |
 | Deep Forest | FULLY | FULLY | FULLY | FULLY | FULLY | FULLY |
 | Midnight Ivy | FULLY | FULLY | FULLY | FULLY | FULLY | FULLY |
 | Terracotta Dusk | FULLY | FULLY | FULLY | FULLY | FULLY | FULLY |

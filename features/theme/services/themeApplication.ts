@@ -1,8 +1,13 @@
-import { updatePreferredTheme } from "@/features/settings/api/settingsClient";
+import {
+  getUserPreferences,
+  updatePreferredTheme,
+} from "@/features/settings/api/settingsClient";
 import {
   trackThemeChanged,
   trackThemeFallbackApplied,
+  trackThemeRestoredOnStartup,
   trackThemeRevertedAfterDowngrade,
+  trackThemeSaveFailed,
   trackThemeSelected,
 } from "@/features/theme/analytics";
 import { DEFAULT_THEME_ID, resolveThemeId } from "@/features/theme/registry";
@@ -20,7 +25,8 @@ import type { ThemeId } from "@/features/theme/types";
 export type ThemeApplicationErrorCode =
   | "THEME_REQUIRES_PREMIUM"
   | "THEME_UNKNOWN"
-  | "THEME_ENTITLEMENT_EXPIRED";
+  | "THEME_ENTITLEMENT_EXPIRED"
+  | "THEME_SAVE_FAILED";
 
 export class ThemeApplicationError extends Error {
   readonly code: ThemeApplicationErrorCode;
@@ -139,36 +145,65 @@ export async function applyTheme(input: {
     throw toApplicationError(input.themeId, access.reason);
   }
 
-  if (input.previousThemeId === access.resolvedThemeId) {
+  const appliedThemeId = access.resolvedThemeId;
+
+  let persistedThemeId: ThemeId;
+  try {
+    const preferences = await getUserPreferences(input.userId);
+    persistedThemeId = preferences.preferredTheme;
+  } catch {
+    trackThemeSaveFailed({
+      theme_id: appliedThemeId,
+      previous_theme_id: input.previousThemeId,
+      reason: "preferences_read_failed",
+      source: input.source,
+    });
+    throw new ThemeApplicationError("THEME_SAVE_FAILED", input.themeId);
+  }
+
+  const needsPersist = persistedThemeId !== appliedThemeId;
+
+  if (!needsPersist) {
+    await writeCachedThemeId(appliedThemeId);
     return {
-      appliedThemeId: access.resolvedThemeId,
-      changed: false,
+      appliedThemeId,
+      changed: input.previousThemeId !== appliedThemeId,
       previousThemeId: input.previousThemeId,
     };
   }
 
-  await updatePreferredTheme(input.userId, access.resolvedThemeId);
-  await writeCachedThemeId(access.resolvedThemeId);
+  try {
+    await updatePreferredTheme(input.userId, appliedThemeId);
+    await writeCachedThemeId(appliedThemeId);
+  } catch {
+    trackThemeSaveFailed({
+      theme_id: appliedThemeId,
+      previous_theme_id: input.previousThemeId,
+      reason: "preferences_write_failed",
+      source: input.source,
+    });
+    throw new ThemeApplicationError("THEME_SAVE_FAILED", input.themeId);
+  }
 
   trackThemeSelected({
-    theme_id: access.resolvedThemeId,
+    theme_id: appliedThemeId,
     previous_theme: input.previousThemeId,
-    new_theme: access.resolvedThemeId,
+    new_theme: appliedThemeId,
     access: access.access,
     subscription_tier: input.subscription.tier,
     source: input.source,
   });
   trackThemeChanged({
-    theme_id: access.resolvedThemeId,
+    theme_id: appliedThemeId,
     previous_theme: input.previousThemeId,
-    new_theme: access.resolvedThemeId,
+    new_theme: appliedThemeId,
     access: access.access,
     subscription_tier: input.subscription.tier,
     source: input.source,
   });
 
   return {
-    appliedThemeId: access.resolvedThemeId,
+    appliedThemeId,
     changed: true,
     previousThemeId: input.previousThemeId,
   };

@@ -6,7 +6,6 @@ import {
   useSegments,
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
 import "react-native-reanimated";
 
 import { ThemedStatusBar } from "@/app/ThemedStatusBar";
@@ -29,12 +28,6 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
 function RootLayout() {
   const { isReady, isAuthenticated, authStatus, user } = useAuth();
   const onboarding = useOnboarding(user?.id);
-
-  useEffect(() => {
-    if (isReady && onboarding.isReady) {
-      SplashScreen.hideAsync().catch(() => undefined);
-    }
-  }, [isReady, onboarding.isReady]);
 
   if (!isReady || !onboarding.isReady) {
     return null;

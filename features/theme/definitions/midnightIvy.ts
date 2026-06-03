@@ -1,5 +1,6 @@
 import type { ThemeDefinition } from "@/features/theme/types";
 import { buildThemePalette } from "@/features/theme/tokens/deriveSemanticTokens";
+import { resolveThrivingPreviewChip } from "@/features/theme/services/themePreviewSurfaces";
 
 const midnightIvyCore = {
   primary: "#72a886",
@@ -65,6 +66,11 @@ const midnightIvyColors = buildThemePalette(midnightIvyCore, { isDark: true }, {
   dangerGradientEnd: "#5c1f1a",
 });
 
+const midnightIvyThrivingPreview = resolveThrivingPreviewChip(
+  "midnight-ivy",
+  midnightIvyColors,
+);
+
 export const midnightIvyTheme: ThemeDefinition = {
   id: "midnight-ivy",
   name: "Midnight Ivy",
@@ -83,8 +89,8 @@ export const midnightIvyTheme: ThemeDefinition = {
       background: midnightIvyCore.surfaceContainerHigh,
       border: midnightIvyColors.suggestionCardBorder,
       plantTitle: midnightIvyCore.primaryFixedDim,
-      statusBackground: midnightIvyCore.primaryFixed,
-      statusForeground: midnightIvyCore.onPrimaryFixed,
+      statusBackground: midnightIvyThrivingPreview.statusBackground,
+      statusForeground: midnightIvyThrivingPreview.statusForeground,
       placeholderPrimary: midnightIvyCore.surfaceContainerHighest,
       placeholderSecondary: midnightIvyCore.outlineVariant,
     },

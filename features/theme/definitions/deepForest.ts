@@ -1,5 +1,6 @@
 import type { ThemeDefinition } from "@/features/theme/types";
 import { buildThemePalette } from "@/features/theme/tokens/deriveSemanticTokens";
+import { resolveThrivingPreviewChip } from "@/features/theme/services/themePreviewSurfaces";
 
 const deepForestCore = {
   primary: "#a3bdb0",
@@ -66,6 +67,11 @@ const deepForestColors = buildThemePalette(deepForestCore, { isDark: true }, {
   dangerGradientEnd: "#5c1f1a",
 });
 
+const deepForestThrivingPreview = resolveThrivingPreviewChip(
+  "deep-forest",
+  deepForestColors,
+);
+
 export const deepForestTheme: ThemeDefinition = {
   id: "deep-forest",
   name: "Deep Forest",
@@ -84,8 +90,8 @@ export const deepForestTheme: ThemeDefinition = {
       background: deepForestCore.surfaceContainer,
       border: deepForestColors.suggestionCardBorder,
       plantTitle: deepForestCore.primaryFixedDim,
-      statusBackground: deepForestCore.primaryFixed,
-      statusForeground: deepForestCore.onPrimaryFixed,
+      statusBackground: deepForestThrivingPreview.statusBackground,
+      statusForeground: deepForestThrivingPreview.statusForeground,
       placeholderPrimary: deepForestCore.surfaceContainerHigh,
       placeholderSecondary: deepForestCore.surfaceContainerHighest,
     },

@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Constants from "expo-constants";
@@ -31,9 +32,10 @@ import {
   getProfileInitials,
   getProfileVersionLabel,
 } from "@/features/profile/services/profilePresentationService";
+import { queryKeys } from "@/config/constants";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { useUpdateSettings } from "@/features/settings/hooks/useUpdateSettings";
-import { formatThemeName } from "@/features/theme/registry";
+import { usePreferredThemeDisplayName } from "@/features/theme/hooks/usePreferredThemeDisplay";
 
 type ProfileRowProps = {
   icon: string;
@@ -48,10 +50,6 @@ type StatItemProps = {
   value: string;
   label: string;
 };
-
-function formatThemeLabel(theme: string | undefined) {
-  return formatThemeName(theme);
-}
 
 function StatItem({ value, label }: StatItemProps) {
   const { colors } = useTheme();
@@ -122,6 +120,7 @@ export default function ProfileScreen() {
   const [avatarFailed, setAvatarFailed] = useState(false);
   const plantsQuery = useAllActivePlants();
   const graveyardQuery = useGraveyard();
+  const queryClient = useQueryClient();
   const settingsQuery = useSettings();
   const updateSettings = useUpdateSettings();
   const { isPremium, tier, period } = useSubscription();
@@ -130,7 +129,7 @@ export default function ProfileScreen() {
   const plants = plantsQuery.data ?? [];
   const graveyard = graveyardQuery.data ?? [];
   const remindersEnabled = settingsQuery.data?.remindersEnabled ?? true;
-  const themeLabel = formatThemeLabel(settingsQuery.data?.preferredTheme);
+  const { displayName: themeLabel } = usePreferredThemeDisplayName();
   const { currentStreak: streakDays, refreshIfStale } =
     useCollectionStreak();
   useProductFeedbackNotifications();
@@ -138,7 +137,12 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       void refreshIfStale();
-    }, [refreshIfStale]),
+      if (user?.id) {
+        void queryClient.invalidateQueries({
+          queryKey: [...queryKeys.preferences, user.id],
+        });
+      }
+    }, [queryClient, refreshIfStale, user?.id]),
   );
 
   const displayName = getProfileDisplayName(user?.displayName);

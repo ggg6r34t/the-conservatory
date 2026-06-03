@@ -23,6 +23,7 @@ import { SnackbarProvider } from "@/providers/SnackbarProvider";
 import { BillingBootstrapProvider } from "@/providers/BillingBootstrapProvider";
 import { ThemeBootstrapProvider } from "@/providers/ThemeBootstrapProvider";
 import { ThemeEntitlementSync } from "@/providers/ThemeEntitlementSync";
+import { ThemeHydrationGate } from "@/providers/ThemeHydrationGate";
 import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
 import {
   getDatabaseBootstrapState,
@@ -91,18 +92,20 @@ export function Providers({ children }: PropsWithChildren) {
             <SnackbarProvider>
               <QueryProvider>
                 <ThemeBootstrapProvider>
-                  <DatabaseBootstrapGate>
-                    <ReleaseConfigGate>
-                      <SyncBootstrapProvider>
-                        <BillingBootstrapProvider>
-                          <ThemeEntitlementSync>
-                            <SyncAutoFailureNotifier />
-                            {children}
-                          </ThemeEntitlementSync>
-                        </BillingBootstrapProvider>
-                      </SyncBootstrapProvider>
-                    </ReleaseConfigGate>
-                  </DatabaseBootstrapGate>
+                  <ThemeHydrationGate>
+                    <DatabaseBootstrapGate>
+                      <ReleaseConfigGate>
+                        <SyncBootstrapProvider>
+                          <BillingBootstrapProvider>
+                            <ThemeEntitlementSync>
+                              <SyncAutoFailureNotifier />
+                              {children}
+                            </ThemeEntitlementSync>
+                          </BillingBootstrapProvider>
+                        </SyncBootstrapProvider>
+                      </ReleaseConfigGate>
+                    </DatabaseBootstrapGate>
+                  </ThemeHydrationGate>
                 </ThemeBootstrapProvider>
               </QueryProvider>
             </SnackbarProvider>

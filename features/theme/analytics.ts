@@ -90,3 +90,27 @@ export function trackThemeFallbackApplied(properties: {
 }) {
   trackEvent("theme_fallback_applied", properties);
 }
+
+export function trackThemeSaveFailed(properties: {
+  theme_id: ThemeId;
+  previous_theme_id?: ThemeId | string | null;
+  reason?: string;
+  source?: string;
+}) {
+  trackEvent("theme_save_failed", properties);
+}
+
+export function trackThemeRestoredOnStartup(properties: {
+  theme_id: ThemeId;
+  previous_theme_id?: ThemeId | string | null;
+  source?: string;
+}) {
+  trackEvent("theme_restored_on_startup", properties);
+}
+
+export function trackProfileThemeLabelRendered(properties: {
+  theme_id: ThemeId;
+  source?: string;
+}) {
+  trackEvent("profile_theme_label_rendered", properties);
+}

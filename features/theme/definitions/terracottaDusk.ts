@@ -1,5 +1,6 @@
 import type { ThemeDefinition } from "@/features/theme/types";
 import { buildThemePalette } from "@/features/theme/tokens/deriveSemanticTokens";
+import { resolveThrivingPreviewChip } from "@/features/theme/services/themePreviewSurfaces";
 import { withAlpha } from "@/features/theme/utils/withAlpha";
 
 /**
@@ -70,6 +71,11 @@ const terracottaColors = buildThemePalette(terracottaCore, { isDark: false }, {
   dangerGradientEnd: "#7a1515",
 });
 
+const terracottaThrivingPreview = resolveThrivingPreviewChip(
+  "terracotta-dusk",
+  terracottaColors,
+);
+
 export const terracottaDuskTheme: ThemeDefinition = {
   id: "terracotta-dusk",
   name: "Terracotta Dusk",
@@ -88,8 +94,8 @@ export const terracottaDuskTheme: ThemeDefinition = {
       background: withAlpha(terracottaCore.surfaceContainerLow, 0.62),
       border: terracottaColors.suggestionCardBorder,
       plantTitle: terracottaCore.primary,
-      statusBackground: terracottaCore.secondaryFixed,
-      statusForeground: terracottaCore.onSecondaryFixed,
+      statusBackground: terracottaThrivingPreview.statusBackground,
+      statusForeground: terracottaThrivingPreview.statusForeground,
       placeholderPrimary: withAlpha(terracottaCore.onSecondaryFixed, 0.08),
       placeholderSecondary: withAlpha(terracottaCore.onSecondaryFixed, 0.05),
     },
