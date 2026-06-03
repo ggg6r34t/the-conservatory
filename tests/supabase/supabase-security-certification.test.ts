@@ -59,6 +59,9 @@ describe("Supabase security certification (static)", () => {
     );
 
     expect(listMigrations()).toContain("20260603160000_client_id_columns.sql");
+    expect(listMigrations()).toContain(
+      "20260604120000_client_id_unique_constraints.sql",
+    );
     expect(clientIdMigration).toContain("add column if not exists client_id");
     expect(clientIdMigration).toContain("idx_plants_user_client_id");
     expect(clientIdMigration).toContain("idx_care_reminders_user_client_id");

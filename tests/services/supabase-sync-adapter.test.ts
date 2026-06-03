@@ -17,13 +17,46 @@ jest.mock("@/services/entitlementState", () => ({
 
 const REMOTE_PLANT_UUID = "550e8400-e29b-41d4-a716-446655440000";
 
-function createUpsertMock(remoteId = REMOTE_PLANT_UUID) {
-  const single = jest.fn().mockResolvedValue({
-    data: { id: remoteId },
+function createClientIdWriteMock(options?: {
+  existingRemoteId?: string | null;
+  returnedId?: string;
+}) {
+  const existingRemoteId = options?.existingRemoteId ?? null;
+  const returnedId = options?.returnedId ?? REMOTE_PLANT_UUID;
+
+  const lookupMaybeSingle = jest.fn().mockResolvedValue({
+    data: existingRemoteId ? { id: existingRemoteId } : null,
     error: null,
   });
-  const select = jest.fn().mockReturnValue({ single });
-  return jest.fn().mockReturnValue({ select });
+  const eqClientId = jest.fn().mockReturnValue({ maybeSingle: lookupMaybeSingle });
+  const eqUserId = jest.fn().mockReturnValue({ eq: eqClientId });
+
+  const single = jest.fn().mockResolvedValue({
+    data: { id: returnedId },
+    error: null,
+  });
+  const selectAfterWrite = jest.fn().mockReturnValue({ single });
+  const insert = jest.fn().mockReturnValue({ select: selectAfterWrite });
+  const update = jest.fn().mockReturnValue({
+    eq: jest.fn().mockReturnValue({ select: selectAfterWrite }),
+  });
+  const select = jest.fn().mockReturnValue({ eq: eqUserId });
+
+  return { select, insert, update, eqUserId, eqClientId, lookupMaybeSingle };
+}
+
+function applyClientIdWriteMock(
+  writeMock: ReturnType<typeof createClientIdWriteMock>,
+  extra: Record<string, unknown> = {},
+) {
+  const from = require("@/config/supabase").supabase.from as jest.Mock;
+  from.mockReturnValue({
+    select: writeMock.select,
+    insert: writeMock.insert,
+    update: writeMock.update,
+    ...extra,
+  });
+  return from;
 }
 
 function createGetFirstAsyncMock(row: Record<string, unknown>) {
@@ -42,14 +75,8 @@ describe("supabase sync adapter", () => {
   });
 
   it("should upsert plant rows and mark local sync state", async () => {
-    const single = jest.fn().mockResolvedValue({
-      data: { id: "550e8400-e29b-41d4-a716-446655440000" },
-      error: null,
-    });
-    const select = jest.fn().mockReturnValue({ single });
-    const upsert = jest.fn().mockReturnValue({ select });
-    const from = require("@/config/supabase").supabase.from as jest.Mock;
-    from.mockReturnValue({ upsert });
+    const writeMock = createClientIdWriteMock();
+    const from = applyClientIdWriteMock(writeMock);
 
     const runAsync = jest.fn().mockResolvedValue(undefined);
     const getFirstAsync = jest.fn().mockResolvedValue({
@@ -93,14 +120,15 @@ describe("supabase sync adapter", () => {
     });
 
     expect(from).toHaveBeenCalledWith("plants");
-    expect(upsert).toHaveBeenCalledWith(
+    expect(writeMock.eqUserId).toHaveBeenCalledWith("user_id", "user-1");
+    expect(writeMock.eqClientId).toHaveBeenCalledWith("client_id", "plant-1");
+    expect(writeMock.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         client_id: "plant-1",
         name: "Monstera",
       }),
-      { onConflict: "user_id,client_id" },
     );
-    expect(upsert.mock.calls[0][0]).not.toHaveProperty("id", "plant-1");
+    expect(writeMock.insert.mock.calls[0][0]).not.toHaveProperty("id", "plant-1");
     expect(runAsync).toHaveBeenCalledWith(
       expect.stringContaining("remote_id"),
       "550e8400-e29b-41d4-a716-446655440000",
@@ -151,16 +179,17 @@ describe("supabase sync adapter", () => {
   });
 
   it("should upload photo assets before syncing photo metadata", async () => {
-    const upsert = createUpsertMock("660e8400-e29b-41d4-a716-446655440001");
+    const writeMock = createClientIdWriteMock({
+      returnedId: "660e8400-e29b-41d4-a716-446655440001",
+    });
     const upload = jest.fn().mockResolvedValue({ error: null });
     const createSignedUrl = jest.fn().mockResolvedValue({
       data: { signedUrl: "https://cdn.example.com/photo-1.jpg" },
       error: null,
     });
-    const from = require("@/config/supabase").supabase.from as jest.Mock;
+    const from = applyClientIdWriteMock(writeMock);
     const storageFrom = require("@/config/supabase").supabase.storage
       .from as jest.Mock;
-    from.mockReturnValue({ upsert });
     storageFrom.mockReturnValue({ upload, createSignedUrl });
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
@@ -220,7 +249,7 @@ describe("supabase sync adapter", () => {
       expect.objectContaining({ contentType: "image/jpeg", upsert: true }),
     );
     expect(from).toHaveBeenCalledWith("photos");
-    expect(upsert).toHaveBeenCalledWith(
+    expect(writeMock.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         client_id: "photo-1",
         plant_id: REMOTE_PLANT_UUID,
@@ -229,14 +258,12 @@ describe("supabase sync adapter", () => {
         captured_at: "2026-03-20T09:00:00.000Z",
         caption: "Early growth",
       }),
-      { onConflict: "user_id,client_id" },
     );
   });
 
   it("should sync graveyard records", async () => {
-    const upsert = createUpsertMock();
-    const from = require("@/config/supabase").supabase.from as jest.Mock;
-    from.mockReturnValue({ upsert });
+    const writeMock = createClientIdWriteMock();
+    const from = applyClientIdWriteMock(writeMock);
 
     require("@/services/database/sqlite").getDatabase.mockResolvedValue({
       getFirstAsync: createGetFirstAsyncMock({
@@ -272,19 +299,17 @@ describe("supabase sync adapter", () => {
     });
 
     expect(from).toHaveBeenCalledWith("graveyard_plants");
-    expect(upsert).toHaveBeenCalledWith(
+    expect(writeMock.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         client_id: "graveyard-1",
         plant_id: REMOTE_PLANT_UUID,
       }),
-      { onConflict: "user_id,client_id" },
     );
   });
 
   it("upserts care reminders by client_id with resolved plant uuid", async () => {
-    const upsert = createUpsertMock();
-    const from = require("@/config/supabase").supabase.from as jest.Mock;
-    from.mockReturnValue({ upsert });
+    const writeMock = createClientIdWriteMock();
+    const from = applyClientIdWriteMock(writeMock);
 
     require("@/services/database/sqlite").getDatabase.mockResolvedValue({
       getFirstAsync: createGetFirstAsyncMock({
@@ -321,14 +346,13 @@ describe("supabase sync adapter", () => {
       updatedAt: "2026-03-21T10:00:00.000Z",
     });
 
-    expect(upsert).toHaveBeenCalledWith(
+    expect(writeMock.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         client_id: "reminder-1780497725390-hkali992",
         plant_id: REMOTE_PLANT_UUID,
       }),
-      { onConflict: "user_id,client_id" },
     );
-    expect(upsert.mock.calls[0][0]).not.toHaveProperty(
+    expect(writeMock.insert.mock.calls[0][0]).not.toHaveProperty(
       "id",
       "reminder-1780497725390-hkali992",
     );
@@ -336,7 +360,7 @@ describe("supabase sync adapter", () => {
 
   it("defers care reminders when the parent plant has no remote uuid yet", async () => {
     const from = require("@/config/supabase").supabase.from as jest.Mock;
-    from.mockReturnValue({ upsert: jest.fn() });
+    from.mockReturnValue({ insert: jest.fn(), update: jest.fn() });
 
     const getFirstAsync = jest.fn().mockImplementation((sql: string) => {
       if (sql.includes("remote_id") && sql.includes("plants")) {
@@ -363,7 +387,7 @@ describe("supabase sync adapter", () => {
     const maybeSingle = jest.fn().mockResolvedValue({ data: null, error: null });
     const eq = jest.fn().mockReturnValue({ maybeSingle });
     const select = jest.fn().mockReturnValue({ eq });
-    from.mockReturnValue({ select, upsert: jest.fn() });
+    from.mockReturnValue({ select, insert: jest.fn(), update: jest.fn() });
 
     require("@/services/database/sqlite").getDatabase.mockResolvedValue({
       getFirstAsync,
@@ -443,9 +467,8 @@ describe("supabase sync adapter", () => {
   });
 
   it("should sync care log condition fields", async () => {
-    const upsert = createUpsertMock();
-    const from = require("@/config/supabase").supabase.from as jest.Mock;
-    from.mockReturnValue({ upsert });
+    const writeMock = createClientIdWriteMock();
+    const from = applyClientIdWriteMock(writeMock);
 
     require("@/services/database/sqlite").getDatabase.mockResolvedValue({
       getFirstAsync: createGetFirstAsyncMock({
@@ -483,12 +506,11 @@ describe("supabase sync adapter", () => {
     });
 
     expect(from).toHaveBeenCalledWith("care_logs");
-    expect(upsert).toHaveBeenCalledWith(
+    expect(writeMock.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         current_condition: "Declining",
         tags: JSON.stringify(["stable condition", "new growth"]),
       }),
-      { onConflict: "user_id,client_id" },
     );
   });
 
@@ -635,15 +657,21 @@ describe("supabase sync adapter", () => {
   });
 
   it("merges feature usage sync conflicts with max count", async () => {
-    const upsert = createUpsertMock("770e8400-e29b-41d4-a716-446655440002");
-    const maybeSingle = jest.fn().mockResolvedValue({
+    const writeMock = createClientIdWriteMock({
+      returnedId: "770e8400-e29b-41d4-a716-446655440002",
+    });
+    const countMaybeSingle = jest.fn().mockResolvedValue({
       data: { count: 5 },
       error: null,
     });
-    const eq = jest.fn().mockReturnValue({ maybeSingle });
-    const select = jest.fn().mockReturnValue({ eq });
-    const from = require("@/config/supabase").supabase.from as jest.Mock;
-    from.mockReturnValue({ select, upsert });
+    const countEq = jest.fn().mockReturnValue({ maybeSingle: countMaybeSingle });
+    writeMock.select.mockImplementation((columns: string) => {
+      if (columns === "count") {
+        return { eq: countEq };
+      }
+      return { eq: writeMock.eqUserId };
+    });
+    const from = applyClientIdWriteMock(writeMock);
 
     const runAsync = jest.fn().mockResolvedValue(undefined);
     const getFirstAsync = jest.fn().mockResolvedValue({
@@ -678,8 +706,8 @@ describe("supabase sync adapter", () => {
       updatedAt: "2026-05-07T00:00:00.000Z",
     });
 
-    expect(select).toHaveBeenCalledWith("count");
-    expect(eq).toHaveBeenCalledWith(
+    expect(writeMock.select).toHaveBeenCalledWith("count");
+    expect(countEq).toHaveBeenCalledWith(
       "client_id",
       "user-1:ai_health_insight:plant-1:2026-05",
     );
@@ -689,12 +717,11 @@ describe("supabase sync adapter", () => {
       expect.any(String),
       "user-1:ai_health_insight:plant-1:2026-05",
     );
-    expect(upsert).toHaveBeenCalledWith(
+    expect(writeMock.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         client_id: "user-1:ai_health_insight:plant-1:2026-05",
         count: 5,
       }),
-      { onConflict: "user_id,client_id" },
     );
   });
 

@@ -56,6 +56,29 @@ export async function persistRemoteId(
   );
 }
 
+async function findRemoteRowIdByClientId(
+  table: ClientIdEntityTable,
+  userId: string,
+  clientId: string,
+): Promise<string | null> {
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from(table)
+    .select("id")
+    .eq("user_id", userId)
+    .eq("client_id", clientId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.id ?? null;
+}
+
 export async function resolveRemoteId(
   table: ClientIdEntityTable,
   localId: string,
@@ -105,9 +128,37 @@ export async function upsertByClientId(
   }
 
   const { id: _ignored, client_id: _clientIgnored, ...rest } = row;
+  const userId = typeof rest.user_id === "string" ? rest.user_id : null;
+  if (!userId) {
+    throw new Error(`Remote upsert for ${table} requires user_id.`);
+  }
+
+  const payload = { ...rest, client_id: clientId };
+  const existingRemoteId = await findRemoteRowIdByClientId(table, userId, clientId);
+
+  if (existingRemoteId) {
+    const { data, error } = await supabase
+      .from(table)
+      .update(payload)
+      .eq("id", existingRemoteId)
+      .select("id")
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data?.id) {
+      throw new Error(`Remote update for ${table} did not return an id.`);
+    }
+
+    await persistRemoteId(table, clientId, data.id);
+    return data.id;
+  }
+
   const { data, error } = await supabase
     .from(table)
-    .upsert({ ...rest, client_id: clientId }, { onConflict: "user_id,client_id" })
+    .insert(payload)
     .select("id")
     .single();
 
@@ -116,7 +167,7 @@ export async function upsertByClientId(
   }
 
   if (!data?.id) {
-    throw new Error(`Remote upsert for ${table} did not return an id.`);
+    throw new Error(`Remote insert for ${table} did not return an id.`);
   }
 
   await persistRemoteId(table, clientId, data.id);
