@@ -1,5 +1,7 @@
 import { act, renderHook } from "@testing-library/react-native";
 
+import { PREMIUM_PACKAGE_IDENTIFIERS } from "@/features/billing/constants";
+
 const mockPurchasePackage = jest.fn();
 const mockRestorePurchases = jest.fn();
 const mockGetSubscriptionState = jest.fn();
@@ -77,7 +79,7 @@ describe("useSubscription entitlement propagation", () => {
     const { result } = renderHook(() => useSubscription());
 
     await act(async () => {
-      await result.current.purchase("$rc_annual");
+      await result.current.purchase(PREMIUM_PACKAGE_IDENTIFIERS.annual);
     });
 
     expect(mockSetEntitlementState).toHaveBeenCalledWith(true);

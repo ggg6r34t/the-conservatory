@@ -8,6 +8,11 @@ import Purchases, { LOG_LEVEL, PACKAGE_TYPE } from "react-native-purchases";
 
 import { billingConfig, validateBillingConfig } from "../config";
 import { PREMIUM_ENTITLEMENT_ID } from "../constants";
+import { buildBillingOffering } from "../services/offeringPackageResolution";
+import {
+  logEmptyOfferingsDiagnostics,
+  resolvePurchasesOffering,
+} from "../services/purchasesOfferingSelection";
 import type {
   BillingAdapter,
   BillingOffering,
@@ -163,22 +168,54 @@ export class RevenueCatAdapter implements BillingAdapter {
 
     try {
       const offerings = await Purchases.getOfferings();
-      const current = offerings.current;
-      if (!current) return null;
+      const selected = resolvePurchasesOffering(offerings);
+      if (!selected) {
+        logEmptyOfferingsDiagnostics(offerings);
+        return null;
+      }
 
-      const packages = current.availablePackages.map(mapRcPackage);
-      const annual = current.annual ? mapRcPackage(current.annual) : null;
-      const monthly = current.monthly ? mapRcPackage(current.monthly) : null;
-      const lifetime = current.lifetime ? mapRcPackage(current.lifetime) : null;
+      if (selected.availablePackages.length === 0) {
+        logEmptyOfferingsDiagnostics(offerings);
+        return null;
+      }
 
-      return {
-        identifier: current.identifier,
-        packages,
+      const packages = selected.availablePackages.map((pkg) =>
+        mapRcPackage(pkg as PurchasesPackage),
+      );
+      const annual = selected.annual
+        ? mapRcPackage(selected.annual as PurchasesPackage)
+        : null;
+      const monthly = selected.monthly
+        ? mapRcPackage(selected.monthly as PurchasesPackage)
+        : null;
+
+      const billingOffering = buildBillingOffering(selected.identifier, packages, {
         annual,
         monthly,
-        lifetime,
-      };
-    } catch {
+        lifetime: null,
+      });
+
+      if (
+        !billingOffering.annual &&
+        !billingOffering.monthly &&
+        billingOffering.packages.length === 0
+      ) {
+        if (__DEV__) {
+          console.warn(
+            `[Billing] Offering "${selected.identifier}" loaded but no monthly/annual packages matched conservatory_premium_monthly or conservatory_premium_annual.`,
+          );
+        }
+        return null;
+      }
+
+      return billingOffering;
+    } catch (err: unknown) {
+      if (__DEV__) {
+        console.warn(
+          "[Billing] getOfferings error:",
+          err instanceof Error ? err.message : err,
+        );
+      }
       return null;
     }
   }
@@ -190,9 +227,11 @@ export class RevenueCatAdapter implements BillingAdapter {
 
     try {
       const offerings = await Purchases.getOfferings();
-      const current = offerings.current;
-      const pkg = current?.availablePackages.find(
-        (p) => p.identifier === packageIdentifier,
+      const selected = resolvePurchasesOffering(offerings);
+      const pkg = (selected?.availablePackages as PurchasesPackage[] | undefined)?.find(
+        (candidate) =>
+          candidate.identifier === packageIdentifier ||
+          candidate.product.identifier === packageIdentifier,
       );
 
       if (!pkg) {

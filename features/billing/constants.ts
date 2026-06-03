@@ -9,6 +9,16 @@ export const FREE_PLANT_IDENTIFICATIONS_PER_MONTH = 3;
 export const PREMIUM_ENTITLEMENT_ID =
   process.env.EXPO_PUBLIC_RC_ENTITLEMENT_PREMIUM ?? 'premium';
 
+/** Store + RevenueCat product / package identifiers (launch SKUs). */
+export const PREMIUM_PACKAGE_IDENTIFIERS = {
+  monthly: 'conservatory_premium_monthly',
+  annual: 'conservatory_premium_annual',
+} as const;
+
+/** Deferred at launch — do not surface in offerings UI yet. */
+export const PREMIUM_LIFETIME_PACKAGE_IDENTIFIER =
+  'conservatory_premium_lifetime';
+
 export const FEATURE_REQUIRES_PREMIUM: Record<GatedFeature, boolean> = {
   plant_create: false,
   progress_photo_upload: false,

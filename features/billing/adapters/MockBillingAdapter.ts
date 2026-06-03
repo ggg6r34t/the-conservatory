@@ -5,6 +5,8 @@ import type {
   PurchaseResult,
   SubscriptionState,
 } from '../types';
+import { PREMIUM_PACKAGE_IDENTIFIERS } from '../constants';
+import { buildBillingOffering } from '../services/offeringPackageResolution';
 
 export class MockBillingAdapter implements BillingAdapter {
   private static readonly ANNUAL_PACKAGE: BillingPackage = {
@@ -12,16 +14,16 @@ export class MockBillingAdapter implements BillingAdapter {
     packageType: 'annual',
     priceString: '$44.99',
     pricePerMonthString: '$3.75',
-    productIdentifier: 'conservatory_premium_annual',
-    introductoryPrice: '7 days free',
+    productIdentifier: PREMIUM_PACKAGE_IDENTIFIERS.annual,
+    introductoryPrice: '7-day free trial',
   };
 
   private static readonly MONTHLY_PACKAGE: BillingPackage = {
     identifier: '$rc_monthly',
     packageType: 'monthly',
-    priceString: '$5.99',
-    pricePerMonthString: '$5.99',
-    productIdentifier: 'conservatory_premium_monthly',
+    priceString: '$6.99',
+    pricePerMonthString: '$6.99',
+    productIdentifier: PREMIUM_PACKAGE_IDENTIFIERS.monthly,
     introductoryPrice: null,
   };
 
@@ -43,13 +45,16 @@ export class MockBillingAdapter implements BillingAdapter {
   }
 
   async getOfferings(): Promise<BillingOffering | null> {
-    return {
-      identifier: 'default',
-      packages: [MockBillingAdapter.ANNUAL_PACKAGE, MockBillingAdapter.MONTHLY_PACKAGE],
+    const packages = [
+      MockBillingAdapter.ANNUAL_PACKAGE,
+      MockBillingAdapter.MONTHLY_PACKAGE,
+    ];
+
+    return buildBillingOffering('default', packages, {
       annual: MockBillingAdapter.ANNUAL_PACKAGE,
       monthly: MockBillingAdapter.MONTHLY_PACKAGE,
       lifetime: null,
-    };
+    });
   }
 
   async purchasePackage(_packageIdentifier: string): Promise<PurchaseResult> {

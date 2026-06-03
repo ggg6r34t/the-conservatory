@@ -19,6 +19,7 @@ import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import { getMembershipName } from "@/features/billing/membershipNames";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { useCollectionStreak } from "@/features/plants/hooks/useCollectionStreak";
 import { StreakBadge } from "@/features/plants/components/StreakBadge";
@@ -129,7 +130,8 @@ export default function ProfileScreen() {
   const graveyardQuery = useGraveyard();
   const settingsQuery = useSettings();
   const updateSettings = useUpdateSettings();
-  const { isPremium } = useSubscription();
+  const { isPremium, tier, period } = useSubscription();
+  const membershipName = getMembershipName({ tier, period });
 
   const plants = plantsQuery.data ?? [];
   const graveyard = graveyardQuery.data ?? [];
@@ -317,7 +319,7 @@ export default function ProfileScreen() {
                     { color: colors.onPrimary },
                   ]}
                 >
-                  {isPremium ? "Premium Plan" : "Free Plan"}
+                  {membershipName}
                 </Text>
                 {isPremium ? (
                   <View
@@ -342,8 +344,8 @@ export default function ProfileScreen() {
                   ]}
                 >
                   {isPremium
-                    ? "Your subscription is active. Enjoy unlimited AI insights, full cloud backup, and all premium features."
-                    : "Upgrade for unlimited AI insights, full cloud backup, and tools built for serious plant collectors."}
+                    ? "Your membership is active with cloud backup, AI editorial tools, specimen tags, and premium export."
+                    : "Upgrade for cloud backup, AI journal narratives, archive curation, and tools built for serious collectors."}
                 </Text>
                 <Pressable
                   accessibilityRole="button"

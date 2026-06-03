@@ -1,5 +1,6 @@
 const mockConfigure = jest.fn();
 const mockGetCustomerInfo = jest.fn();
+const mockGetOfferings = jest.fn();
 const mockAddCustomerInfoUpdateListener = jest.fn();
 const mockRemoveCustomerInfoUpdateListener = jest.fn();
 
@@ -13,6 +14,7 @@ jest.mock("react-native-purchases", () => ({
     configure: (...args: unknown[]) => mockConfigure(...args),
     setLogLevel: jest.fn(),
     getCustomerInfo: (...args: unknown[]) => mockGetCustomerInfo(...args),
+    getOfferings: (...args: unknown[]) => mockGetOfferings(...args),
     addCustomerInfoUpdateListener: (...args: unknown[]) =>
       mockAddCustomerInfoUpdateListener(...args),
     removeCustomerInfoUpdateListener: (...args: unknown[]) =>
@@ -69,6 +71,58 @@ describe("RevenueCatAdapter", () => {
         period: "annual",
         expiresAt: "2027-05-07T00:00:00.000Z",
       }),
+    );
+  });
+
+  it("resolves offerings from configured offering id when current is missing", async () => {
+    mockGetOfferings.mockResolvedValue({
+      current: null,
+      all: {
+        default: {
+          identifier: "default",
+          availablePackages: [
+            {
+              identifier: "$rc_monthly",
+              packageType: "MONTHLY",
+              product: {
+                identifier: "conservatory_premium_monthly",
+                priceString: "$6.99",
+                pricePerMonthString: "$6.99",
+                introPrice: null,
+              },
+            },
+            {
+              identifier: "$rc_annual",
+              packageType: "ANNUAL",
+              product: {
+                identifier: "conservatory_premium_annual",
+                priceString: "$44.99",
+                pricePerMonthString: "$3.75",
+                introPrice: null,
+              },
+            },
+          ],
+          monthly: null,
+          annual: null,
+          lifetime: null,
+        },
+      },
+    });
+
+    const {
+      RevenueCatAdapter,
+    } = require("@/features/billing/adapters/RevenueCatAdapter");
+    const adapter = new RevenueCatAdapter();
+
+    await adapter.initialize("user-1");
+    const offering = await adapter.getOfferings();
+
+    expect(offering?.identifier).toBe("default");
+    expect(offering?.monthly?.productIdentifier).toBe(
+      "conservatory_premium_monthly",
+    );
+    expect(offering?.annual?.productIdentifier).toBe(
+      "conservatory_premium_annual",
     );
   });
 

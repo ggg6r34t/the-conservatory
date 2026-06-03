@@ -12,6 +12,9 @@ import {
 import { useTheme } from "@/components/design-system/useTheme";
 import { LegalFooterLinks } from "@/features/legal/components/LegalFooterLinks";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import { getMembershipNameForPackageType } from "@/features/billing/membershipNames";
+import { resolvePremiumOfferingPackages } from "@/features/billing/services/offeringPackageResolution";
+import { formatAnnualSavingsLabel } from "@/features/billing/services/subscriptionPricingCopy";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 
@@ -40,13 +43,15 @@ export default function SubscriptionPlansScreen() {
   }, [refreshOfferings]);
 
   useEffect(() => {
-    if (
-      !isLoading &&
-      !isPremium &&
-      offerings !== null &&
-      (offerings.packages ?? []).length === 0
-    ) {
-      trackMonetizationEvent("offerings_load_failed");
+    if (!isLoading && !isPremium && offerings !== null) {
+      const resolved = resolvePremiumOfferingPackages(offerings.packages ?? [], {
+        annual: offerings.annual ?? null,
+        monthly: offerings.monthly ?? null,
+        lifetime: null,
+      });
+      if (!resolved.annual && !resolved.monthly) {
+        trackMonetizationEvent("offerings_load_failed");
+      }
     }
   }, [isLoading, isPremium, offerings]);
 
@@ -81,11 +86,21 @@ export default function SubscriptionPlansScreen() {
   }
 
   const packages = offerings?.packages ?? [];
-  const annualPkg = offerings?.annual;
-  const monthlyPkg = offerings?.monthly;
+  const { annual: annualPkg, monthly: monthlyPkg } = resolvePremiumOfferingPackages(
+    packages,
+    {
+      annual: offerings?.annual ?? null,
+      monthly: offerings?.monthly ?? null,
+      lifetime: null,
+    },
+  );
   const preferredPackage = annualPkg ?? monthlyPkg ?? null;
+  const launchPackages = [annualPkg, monthlyPkg].filter(
+    (pkg): pkg is NonNullable<typeof annualPkg> => pkg !== null,
+  );
+  const annualSavingsLabel = formatAnnualSavingsLabel(monthlyPkg, annualPkg);
   const selectedPackage =
-    packages.find((pkg) => pkg.identifier === selectedPackageIdentifier) ??
+    launchPackages.find((pkg) => pkg.identifier === selectedPackageIdentifier) ??
     preferredPackage;
 
   useEffect(() => {
@@ -101,7 +116,7 @@ export default function SubscriptionPlansScreen() {
       description="Choose the subscription that fits your collection. All plans renew automatically until cancelled."
     >
       <View style={styles.section}>
-        {packages.length > 0 ? (
+        {annualPkg || monthlyPkg ? (
           <View style={styles.plans}>
             <Text
               style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
@@ -147,7 +162,8 @@ export default function SubscriptionPlansScreen() {
                 </View>
               </View>
               <Text style={[styles.planTitle, { color: colors.primary }]}>
-                Annual
+                {getMembershipNameForPackageType(annualPkg.packageType) ??
+                  "Annual"}
               </Text>
               <Text style={[styles.planPrice, { color: colors.primary }]}>
                 {annualPkg.priceString}
@@ -158,6 +174,11 @@ export default function SubscriptionPlansScreen() {
               <Text style={[styles.planPerMonth, { color: colors.onSurface }]}>
                 {annualPkg.pricePerMonthString}/month
               </Text>
+              {annualSavingsLabel ? (
+                <Text style={[styles.planSavings, { color: colors.secondary }]}>
+                  {annualSavingsLabel}
+                </Text>
+              ) : null}
               {annualPkg.introductoryPrice ? (
                 <Text style={[styles.planTrial, { color: colors.secondary }]}>
                   {annualPkg.introductoryPrice}
@@ -193,7 +214,8 @@ export default function SubscriptionPlansScreen() {
               ]}
             >
               <Text style={[styles.planTitle, { color: colors.primary }]}>
-                Monthly
+                {getMembershipNameForPackageType(monthlyPkg.packageType) ??
+                  "Monthly"}
               </Text>
               <Text style={[styles.planPrice, { color: colors.primary }]}>
                 {monthlyPkg.priceString}
@@ -345,6 +367,11 @@ const styles = StyleSheet.create({
   planPeriod: { fontFamily: "Manrope_500Medium", fontSize: 16 },
   planPerMonth: {
     fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  planSavings: {
+    fontFamily: "Manrope_700Bold",
     fontSize: 13,
     lineHeight: 18,
   },

@@ -14,6 +14,8 @@ import {
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import { getMembershipName } from "@/features/billing/membershipNames";
+import { resolvePremiumOfferingPackages } from "@/features/billing/services/offeringPackageResolution";
 import { LegalFooterLinks } from "@/features/legal/components/LegalFooterLinks";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
@@ -64,6 +66,8 @@ export default function PremiumScreen() {
   const router = useRouter();
   const {
     isPremium,
+    tier,
+    period,
     offerings,
     lastVerifiedAt,
     subscribedAt,
@@ -72,12 +76,23 @@ export default function PremiumScreen() {
     isRestoring,
   } = useSubscription();
 
+  const membershipName = getMembershipName({ tier, period });
+
   useEffect(() => {
     trackMonetizationEvent("premium_screen_viewed", { surface: "premium" });
     void refreshOfferings();
   }, [refreshOfferings]);
 
-  const displayPackage = offerings?.annual ?? offerings?.monthly ?? null;
+  const resolvedOfferings = resolvePremiumOfferingPackages(
+    offerings?.packages ?? [],
+    {
+      annual: offerings?.annual ?? null,
+      monthly: offerings?.monthly ?? null,
+      lifetime: null,
+    },
+  );
+  const displayPackage =
+    resolvedOfferings.annual ?? resolvedOfferings.monthly ?? null;
   const periodLabel =
     displayPackage?.packageType === "annual"
       ? "year"
@@ -120,7 +135,7 @@ export default function PremiumScreen() {
                   { color: colors.surfaceBright },
                 ]}
               >
-                The Heirloom
+                {membershipName}
               </Text>
               <Text
                 style={[
@@ -198,10 +213,10 @@ export default function PremiumScreen() {
           <View style={styles.membershipHeader}>
             <View style={styles.membershipTitleBlock}>
               <Text style={[styles.membershipTitle, { color: colors.primary }]}>
-                Conservatory Free
+                {membershipName}
               </Text>
               <Text style={[styles.membershipSince, { color: colors.primary }]}>
-                Basic plant tracking, no subscription required
+                Care tracking for your collection — no subscription required
               </Text>
             </View>
             <View
