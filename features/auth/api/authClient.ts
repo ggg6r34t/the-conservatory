@@ -8,6 +8,7 @@ import {
   writeSession,
 } from "@/services/auth/sessionManager";
 import { getDatabase } from "@/services/database/sqlite";
+import { enqueueSyncOperation } from "@/services/database/sync";
 import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 import type { AuthResult } from "@/types/api";
 import type { AppUser } from "@/types/models";
@@ -790,24 +791,16 @@ export async function updateProfileIdentity(
       logger.warn("profile.auth_update_failed");
     }
 
-    const { error: upsertError } = await supabase.from("users").upsert(
-      {
-        id: nextUser.id,
-        email: nextUser.email,
-        display_name: nextUser.displayName,
-        avatar_url: nextUser.avatarUrl,
-        role: nextUser.role,
-        updated_by: nextUser.id,
-      },
-      { onConflict: "id" },
-    );
-
-    if (upsertError) {
-      logger.warn("profile.upsert_failed");
-    }
   }
 
   await persistLocalUser(nextUser);
+  await enqueueSyncOperation({
+    entity: "users",
+    entityId: nextUser.id,
+    operation: "update",
+    payload: { userId: nextUser.id },
+    nowIso: nextUser.updatedAt,
+  });
   await writeSession(nextUser);
 
   return nextUser;

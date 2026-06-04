@@ -44,6 +44,7 @@ describe("userDataSync", () => {
       successful: 1,
       failed: 0,
       remaining: 0,
+      blockingRemaining: 0,
     });
   });
 
@@ -58,6 +59,7 @@ describe("userDataSync", () => {
               successful: 1,
               failed: 0,
               remaining: 0,
+              blockingRemaining: 0,
             });
         }),
     );
@@ -114,6 +116,7 @@ describe("userDataSync", () => {
       successful: 2,
       failed: 1,
       remaining: 1,
+      blockingRemaining: 1,
     });
 
     const {
@@ -135,6 +138,33 @@ describe("userDataSync", () => {
     );
   });
 
+  it("completes hydration when only premium-deferred photo queue items remain", async () => {
+    mockSyncPendingChanges.mockResolvedValueOnce({
+      processed: 1,
+      successful: 0,
+      failed: 0,
+      remaining: 0,
+      blockingRemaining: 0,
+      deferred: 1,
+    });
+
+    const { runUserDataSync } = require("@/services/database/userDataSync");
+
+    await expect(
+      runUserDataSync({
+        userId: "user-1",
+        trigger: "manual",
+      }),
+    ).resolves.toMatchObject({
+      failed: 0,
+      blockingRemaining: 0,
+      deferred: 1,
+      hydrationApplied: true,
+    });
+
+    expect(mockHydrateRemoteUserData).toHaveBeenCalledWith("user-1");
+  });
+
   it("continues clean queue batches until no sync work remains", async () => {
     mockSyncPendingChanges
       .mockResolvedValueOnce({
@@ -142,12 +172,14 @@ describe("userDataSync", () => {
         successful: 25,
         failed: 0,
         remaining: 2,
+        blockingRemaining: 2,
       })
       .mockResolvedValueOnce({
         processed: 2,
         successful: 2,
         failed: 0,
         remaining: 0,
+        blockingRemaining: 0,
       });
 
     const { runUserDataSync } = require("@/services/database/userDataSync");
@@ -162,6 +194,8 @@ describe("userDataSync", () => {
       successful: 27,
       failed: 0,
       remaining: 0,
+      blockingRemaining: 0,
+      deferredRemaining: 0,
       deletedBeforeSync: 0,
       skipped: 0,
       deferred: 0,

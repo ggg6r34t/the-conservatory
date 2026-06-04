@@ -15,7 +15,7 @@ export interface SyncQueueDiagnostics {
 export function formatSyncRepairStatus(status: string) {
   switch (status) {
     case "failed":
-      return "Retryable failure";
+      return "Retryable failure (scheduled backoff)";
     case "abandoned":
       return "Unrecoverable after retries";
     case "processing":
@@ -24,13 +24,20 @@ export function formatSyncRepairStatus(status: string) {
       return "Local record removed before upload";
     case "skipped":
       return "Skipped by sync processor";
+    case "deferred":
+      return "Deferred until conditions change";
     default:
       return status.replace(/_/g, " ");
   }
 }
 
 export function canRetrySyncRepairItem(status: string) {
-  return status === "failed" || status === "abandoned" || status === "processing";
+  return (
+    status === "failed" ||
+    status === "abandoned" ||
+    status === "processing" ||
+    status === "deferred"
+  );
 }
 
 export function describeSyncRunFailure(input: {

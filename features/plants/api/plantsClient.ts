@@ -11,7 +11,10 @@ import { getDatabase } from "@/services/database/sqlite";
 import {
   insertSyncOutboxOperationInTransaction,
   runAtomicMutationWithSyncOutbox,
+  terminalizePendingUpsertSyncQueueInTransaction,
+  terminalizePendingUpsertSyncQueueItemsInTransaction,
 } from "@/services/database/syncOutbox";
+import { notifySyncQueueChanged } from "@/services/database/syncSignals";
 import { getStorageAssetUrl } from "@/services/supabase/storage";
 import type {
   CareLog,
@@ -1245,11 +1248,31 @@ export async function deletePlant(userId: string, plantId: string) {
     "SELECT id FROM care_logs WHERE plant_id = ?;",
     plantId,
   );
+  const careLogTags = await database.getAllAsync<{ id: string }>(
+    "SELECT id FROM care_log_tags WHERE plant_id = ?;",
+    plantId,
+  );
   const reminders = await database.getAllAsync<{
     id: string;
     notification_id: string | null;
   }>(
     "SELECT id, notification_id FROM care_reminders WHERE plant_id = ?;",
+    plantId,
+  );
+  const statusSnapshots = await database.getAllAsync<{ id: string }>(
+    "SELECT id FROM plant_status_snapshots WHERE plant_id = ?;",
+    plantId,
+  );
+  const specimenTags = await database.getAllAsync<{ id: string }>(
+    "SELECT id FROM specimen_tags WHERE plant_id = ?;",
+    plantId,
+  );
+  const archiveOverrides = await database.getAllAsync<{ id: string }>(
+    "SELECT id FROM archive_curation_overrides WHERE plant_id = ?;",
+    plantId,
+  );
+  const scheduleSuggestions = await database.getAllAsync<{ id: string }>(
+    "SELECT id FROM care_schedule_suggestions WHERE plant_id = ?;",
     plantId,
   );
 
@@ -1258,6 +1281,57 @@ export async function deletePlant(userId: string, plantId: string) {
   }
 
   await database.withTransactionAsync(async () => {
+    await terminalizePendingUpsertSyncQueueInTransaction(database, {
+      entity: "plants",
+      entityId: plantId,
+      nowIso: queueTimestamp,
+    });
+    await terminalizePendingUpsertSyncQueueItemsInTransaction(database, {
+      entity: "photos",
+      entityIds: photos.map((row) => row.id),
+      nowIso: queueTimestamp,
+    });
+    await terminalizePendingUpsertSyncQueueItemsInTransaction(database, {
+      entity: "graveyard_plants",
+      entityIds: graveyardRecords.map((row) => row.id),
+      nowIso: queueTimestamp,
+    });
+    await terminalizePendingUpsertSyncQueueItemsInTransaction(database, {
+      entity: "care_logs",
+      entityIds: logs.map((row) => row.id),
+      nowIso: queueTimestamp,
+    });
+    await terminalizePendingUpsertSyncQueueItemsInTransaction(database, {
+      entity: "care_log_tags",
+      entityIds: careLogTags.map((row) => row.id),
+      nowIso: queueTimestamp,
+    });
+    await terminalizePendingUpsertSyncQueueItemsInTransaction(database, {
+      entity: "care_reminders",
+      entityIds: reminders.map((row) => row.id),
+      nowIso: queueTimestamp,
+    });
+    await terminalizePendingUpsertSyncQueueItemsInTransaction(database, {
+      entity: "plant_status_snapshots",
+      entityIds: statusSnapshots.map((row) => row.id),
+      nowIso: queueTimestamp,
+    });
+    await terminalizePendingUpsertSyncQueueItemsInTransaction(database, {
+      entity: "specimen_tags",
+      entityIds: specimenTags.map((row) => row.id),
+      nowIso: queueTimestamp,
+    });
+    await terminalizePendingUpsertSyncQueueItemsInTransaction(database, {
+      entity: "archive_curation_overrides",
+      entityIds: archiveOverrides.map((row) => row.id),
+      nowIso: queueTimestamp,
+    });
+    await terminalizePendingUpsertSyncQueueItemsInTransaction(database, {
+      entity: "care_schedule_suggestions",
+      entityIds: scheduleSuggestions.map((row) => row.id),
+      nowIso: queueTimestamp,
+    });
+
     for (const photo of photos) {
       await queueSyncDeleteInTransaction(database, {
         entity: "photos",
@@ -1307,6 +1381,51 @@ export async function deletePlant(userId: string, plantId: string) {
       });
     }
 
+    for (const tag of careLogTags) {
+      await queueSyncDeleteInTransaction(database, {
+        entity: "care_log_tags",
+        entityId: tag.id,
+        payload: { userId, plantId },
+        nowIso: queueTimestamp,
+      });
+    }
+
+    for (const snapshot of statusSnapshots) {
+      await queueSyncDeleteInTransaction(database, {
+        entity: "plant_status_snapshots",
+        entityId: snapshot.id,
+        payload: { userId, plantId },
+        nowIso: queueTimestamp,
+      });
+    }
+
+    for (const tag of specimenTags) {
+      await queueSyncDeleteInTransaction(database, {
+        entity: "specimen_tags",
+        entityId: tag.id,
+        payload: { userId, plantId },
+        nowIso: queueTimestamp,
+      });
+    }
+
+    for (const override of archiveOverrides) {
+      await queueSyncDeleteInTransaction(database, {
+        entity: "archive_curation_overrides",
+        entityId: override.id,
+        payload: { userId, plantId },
+        nowIso: queueTimestamp,
+      });
+    }
+
+    for (const suggestion of scheduleSuggestions) {
+      await queueSyncDeleteInTransaction(database, {
+        entity: "care_schedule_suggestions",
+        entityId: suggestion.id,
+        payload: { userId, plantId },
+        nowIso: queueTimestamp,
+      });
+    }
+
     await queueSyncDeleteInTransaction(database, {
       entity: "plants",
       entityId: plantId,
@@ -1320,6 +1439,10 @@ export async function deletePlant(userId: string, plantId: string) {
       plantId,
     );
     await database.runAsync(
+      "DELETE FROM care_log_tags WHERE plant_id = ?;",
+      plantId,
+    );
+    await database.runAsync(
       "DELETE FROM care_logs WHERE plant_id = ?;",
       plantId,
     );
@@ -1328,11 +1451,29 @@ export async function deletePlant(userId: string, plantId: string) {
       plantId,
     );
     await database.runAsync(
+      "DELETE FROM plant_status_snapshots WHERE plant_id = ?;",
+      plantId,
+    );
+    await database.runAsync(
+      "DELETE FROM specimen_tags WHERE plant_id = ?;",
+      plantId,
+    );
+    await database.runAsync(
+      "DELETE FROM archive_curation_overrides WHERE plant_id = ?;",
+      plantId,
+    );
+    await database.runAsync(
+      "DELETE FROM care_schedule_suggestions WHERE plant_id = ?;",
+      plantId,
+    );
+    await database.runAsync(
       "DELETE FROM plants WHERE id = ? AND user_id = ?;",
       plantId,
       userId,
     );
   });
+
+  notifySyncQueueChanged();
 }
 
 export async function archivePlant(input: {

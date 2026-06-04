@@ -38,16 +38,31 @@ export async function retryDeferredPremiumPhotoBackups(userId: string) {
         photo.id,
       );
 
-      const existingQueue = await database.getFirstAsync<{ id: string }>(
-        `SELECT id
+      const existingQueue = await database.getFirstAsync<{ id: string; status: string }>(
+        `SELECT id, status
          FROM sync_queue
          WHERE entity = 'photos'
            AND entity_id = ?
            AND operation IN ('insert', 'update')
-           AND status IN ('pending', 'failed', 'processing')
+           AND status IN ('pending', 'failed', 'processing', 'deferred')
          LIMIT 1;`,
         photo.id,
       );
+
+      if (existingQueue?.status === "deferred") {
+        await database.runAsync(
+          `UPDATE sync_queue
+           SET status = 'pending',
+               last_error = NULL,
+               next_retry_at = NULL,
+               updated_at = ?
+           WHERE id = ?;`,
+          nowIso,
+          existingQueue.id,
+        );
+        requeued += 1;
+        continue;
+      }
 
       if (existingQueue) {
         continue;

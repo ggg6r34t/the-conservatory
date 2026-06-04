@@ -24,6 +24,64 @@ function serializePayload(payload?: Record<string, unknown> | null) {
   return JSON.stringify(payload);
 }
 
+const TERMINALIZE_PENDING_UPSERT_REASON =
+  "Local record was removed before changes could be uploaded to the cloud.";
+
+const ACTIVE_UPSERT_QUEUE_STATUSES = [
+  "pending",
+  "failed",
+  "processing",
+  "deferred",
+] as const;
+
+/** Marks stale insert/update queue rows terminal when the local row was removed first. */
+export async function terminalizePendingUpsertSyncQueueInTransaction(
+  database: SQLiteDatabase,
+  input: {
+    entity: string;
+    entityId: string;
+    nowIso: string;
+  },
+) {
+  const statusPlaceholders = ACTIVE_UPSERT_QUEUE_STATUSES.map(() => "?").join(
+    ", ",
+  );
+
+  await database.runAsync(
+    `UPDATE sync_queue
+     SET status = 'deleted_before_sync',
+         last_error = ?,
+         next_retry_at = NULL,
+         updated_at = ?
+     WHERE entity = ?
+       AND entity_id = ?
+       AND operation IN ('insert', 'update')
+       AND status IN (${statusPlaceholders});`,
+    TERMINALIZE_PENDING_UPSERT_REASON,
+    input.nowIso,
+    input.entity,
+    input.entityId,
+    ...ACTIVE_UPSERT_QUEUE_STATUSES,
+  );
+}
+
+export async function terminalizePendingUpsertSyncQueueItemsInTransaction(
+  database: SQLiteDatabase,
+  input: {
+    entity: string;
+    entityIds: string[];
+    nowIso: string;
+  },
+) {
+  for (const entityId of input.entityIds) {
+    await terminalizePendingUpsertSyncQueueInTransaction(database, {
+      entity: input.entity,
+      entityId,
+      nowIso: input.nowIso,
+    });
+  }
+}
+
 export async function insertSyncOutboxOperationInTransaction(
   database: SQLiteDatabase,
   input: {

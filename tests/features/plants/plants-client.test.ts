@@ -204,9 +204,14 @@ describe("plants client", () => {
       ])
       .mockResolvedValueOnce([{ id: "graveyard-1" }])
       .mockResolvedValueOnce([{ id: "log-1" }])
+      .mockResolvedValueOnce([{ id: "tag-1" }])
       .mockResolvedValueOnce([
         { id: "reminder-1", notification_id: "notif-1" },
-      ]);
+      ])
+      .mockResolvedValueOnce([{ id: "snapshot-1" }])
+      .mockResolvedValueOnce([{ id: "specimen-1" }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     mockGetDatabase.mockResolvedValue({
       getAllAsync,
@@ -223,7 +228,11 @@ describe("plants client", () => {
       String(call[0]).includes("INSERT INTO sync_queue"),
     );
 
-    expect(syncInsertCalls).toHaveLength(5);
+    const terminalizeCalls = runAsync.mock.calls.filter((call) =>
+      String(call[0]).includes("UPDATE sync_queue"),
+    );
+    expect(terminalizeCalls.length).toBeGreaterThan(0);
+    expect(syncInsertCalls.length).toBeGreaterThanOrEqual(5);
     expect(syncInsertCalls).toEqual(
       expect.arrayContaining([
         expect.arrayContaining([

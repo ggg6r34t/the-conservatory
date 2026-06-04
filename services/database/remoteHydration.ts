@@ -192,6 +192,14 @@ interface RemoteUserRow {
   updated_by: string | null;
 }
 
+interface RemoteFeatureUsageRow extends MergeableRemoteRow {
+  user_id: string;
+  feature: string;
+  period: string;
+  count: number;
+  created_at: string;
+}
+
 async function fetchRemoteRows<T>(
   table: string,
   columns: string,
@@ -459,6 +467,7 @@ export async function hydrateRemoteUserData(userId: string) {
     archiveOverridesResult,
     graveyardResult,
     usersResult,
+    featureUsageResult,
   ] = await Promise.all([
     fetchRemoteRowsSafe<RemoteUserPreferencesRow>(
       "user_preferences",
@@ -633,6 +642,20 @@ export async function hydrateRemoteUserData(userId: string) {
       userId,
     ),
     fetchRemoteUserRowSafe(userId),
+    fetchRemoteRowsSafe<RemoteFeatureUsageRow>(
+      "feature_usage",
+      [
+        "id",
+        "client_id",
+        "user_id",
+        "feature",
+        "period",
+        "count",
+        "created_at",
+        "updated_at",
+      ].join(", "),
+      userId,
+    ),
   ]);
 
   const plants = plantsResult.rows;
@@ -1208,6 +1231,30 @@ export async function hydrateRemoteUserData(userId: string) {
         userId,
         remoteIds: plants.map((row) => getLocalEntityId(row)),
       });
+    }
+
+    if (featureUsageResult.ok) {
+      for (const row of featureUsageResult.rows) {
+        const localId = getLocalEntityId(row);
+        const localRow = await database.getFirstAsync<{ count: number }>(
+          "SELECT count FROM feature_usage WHERE id = ? LIMIT 1;",
+          localId,
+        );
+        const mergedCount = Math.max(localRow?.count ?? 0, row.count);
+
+        await database.runAsync(
+          `INSERT OR REPLACE INTO feature_usage (
+            id, user_id, feature, period, count, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?);`,
+          localId,
+          row.user_id,
+          row.feature,
+          row.period,
+          mergedCount,
+          row.created_at,
+          row.updated_at,
+        );
+      }
     }
   });
 }

@@ -5,9 +5,16 @@ jest.mock("@/services/database/sqlite", () => ({
   getDatabase: (...args: unknown[]) => mockGetDatabase(...args),
 }));
 
+const mockTerminalizePendingUpsertSyncQueueInTransaction = jest.fn();
+const mockTerminalizePendingUpsertSyncQueueItemsInTransaction = jest.fn();
+
 jest.mock("@/services/database/syncOutbox", () => ({
   runAtomicMutationWithSyncOutbox: (...args: unknown[]) =>
     mockRunAtomicMutationWithSyncOutbox(...args),
+  terminalizePendingUpsertSyncQueueInTransaction: (...args: unknown[]) =>
+    mockTerminalizePendingUpsertSyncQueueInTransaction(...args),
+  terminalizePendingUpsertSyncQueueItemsInTransaction: (...args: unknown[]) =>
+    mockTerminalizePendingUpsertSyncQueueItemsInTransaction(...args),
 }));
 
 describe("deleteCareLog", () => {
@@ -37,6 +44,20 @@ describe("deleteCareLog", () => {
     });
 
     expect(result.careLogId).toBe("log-1");
+    expect(mockTerminalizePendingUpsertSyncQueueInTransaction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        entity: "care_logs",
+        entityId: "log-1",
+      }),
+    );
+    expect(mockTerminalizePendingUpsertSyncQueueItemsInTransaction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        entity: "care_log_tags",
+        entityIds: ["tag-1", "tag-2"],
+      }),
+    );
     expect(runAsync).toHaveBeenCalledWith(
       expect.stringContaining("DELETE FROM care_log_tags"),
       "log-1",

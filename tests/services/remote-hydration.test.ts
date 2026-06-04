@@ -459,3 +459,65 @@ describe("remoteHydration photos", () => {
     );
   });
 });
+
+describe("remoteHydration feature_usage", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("merges remote feature_usage counts with local using max", async () => {
+    mockFrom.mockImplementation((table: string) => ({
+      select: () => ({
+        eq: async () => ({
+          data:
+            table === "feature_usage"
+              ? [
+                  {
+                    id: "remote-uuid-1",
+                    client_id: "user-1:ai_health_insight:2026-05",
+                    user_id: "user-1",
+                    feature: "ai_health_insight",
+                    period: "2026-05",
+                    count: 5,
+                    created_at: "2026-05-01T00:00:00.000Z",
+                    updated_at: "2026-05-07T00:00:00.000Z",
+                  },
+                ]
+              : [],
+          error: null,
+        }),
+      }),
+    }));
+
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    const getFirstAsync = jest.fn().mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM feature_usage")) {
+        return { count: 2 };
+      }
+      return { pending: 0, updated_at: "2026-01-01T00:00:00.000Z" };
+    });
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
+
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync,
+      runAsync,
+      withTransactionAsync,
+    });
+
+    const { hydrateRemoteUserData } = require("@/services/database/remoteHydration");
+    await hydrateRemoteUserData("user-1");
+
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT OR REPLACE INTO feature_usage"),
+      "user-1:ai_health_insight:2026-05",
+      "user-1",
+      "ai_health_insight",
+      "2026-05",
+      5,
+      "2026-05-01T00:00:00.000Z",
+      "2026-05-07T00:00:00.000Z",
+    );
+  });
+});

@@ -13,6 +13,8 @@ import { extractEmbeddedTags } from "@/services/database/migrations";
 import { getDatabase } from "@/services/database/sqlite";
 import {
   runAtomicMutationWithSyncOutbox,
+  terminalizePendingUpsertSyncQueueInTransaction,
+  terminalizePendingUpsertSyncQueueItemsInTransaction,
   type SyncOutboxOperation,
 } from "@/services/database/syncOutbox";
 import type { CareLog, CareLogCondition, CareLogType } from "@/types/models";
@@ -624,6 +626,17 @@ export async function deleteCareLog(input: {
         input.careLogId,
         input.userId,
       );
+
+      await terminalizePendingUpsertSyncQueueInTransaction(database, {
+        entity: "care_logs",
+        entityId: input.careLogId,
+        nowIso: now,
+      });
+      await terminalizePendingUpsertSyncQueueItemsInTransaction(database, {
+        entity: "care_log_tags",
+        entityIds: tagRows.map((row) => row.id),
+        nowIso: now,
+      });
 
       await database.runAsync(
         "DELETE FROM care_log_tags WHERE care_log_id = ? AND user_id = ?;",

@@ -14,6 +14,7 @@ import {
   canRetrySyncRepairItem,
   formatSyncRepairStatus,
 } from "@/features/profile/services/syncDiagnosticsService";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
 function formatEntityLabel(entity: string) {
@@ -41,6 +42,7 @@ function formatRepairTimestampLabel(item: {
 
 export default function SyncRepairScreen() {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const snackbar = useSnackbar();
   const queryClient = useQueryClient();
   const repairQuery = useQuery({
@@ -48,7 +50,8 @@ export default function SyncRepairScreen() {
     queryFn: listSyncRepairItems,
   });
   const retryMutation = useMutation({
-    mutationFn: (ids?: string[]) => retrySyncRepairItems(ids),
+    mutationFn: (ids?: string[]) =>
+      retrySyncRepairItems(ids, { userId: user?.id }),
     onSuccess: async (_count, ids) => {
       snackbar.success(
         ids?.length

@@ -28,6 +28,7 @@ export interface CloudSyncStatusInput {
   isSyncRunning: boolean;
   hasIssues: boolean;
   hasPending: boolean;
+  hasDeferredPremiumPhotos: boolean;
   lastSuccessfulSyncAt: string | null;
   isPremium: boolean;
 }
@@ -100,6 +101,17 @@ export function deriveCloudSyncStatus(
       statusDetail:
         "Local changes stay on this device until you choose Sync Now manually.",
       statusValue: formatLastSuccessfulSync(input.lastSuccessfulSyncAt),
+      photoSyncAvailable,
+      photoSyncDetail,
+    };
+  }
+
+  if (input.hasDeferredPremiumPhotos) {
+    return {
+      statusTitle: "Photo backup waiting for Premium",
+      statusDetail:
+        "Plants, care logs, and reminders can still sync. Progress photos stay on this device until Premium cloud photo backup is active.",
+      statusValue: "Photos deferred",
       photoSyncAvailable,
       photoSyncDetail,
     };

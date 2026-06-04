@@ -24,6 +24,8 @@ function buildSummary(
     failedSyncQueueDevice: 0,
     abandonedSyncQueueAccount: 0,
     abandonedSyncQueueDevice: 0,
+    deferredSyncQueueAccount: 0,
+    deferredSyncQueueDevice: 0,
     processingSync: 0,
     completedSync: 0,
     syncEnabled: true,
@@ -69,6 +71,18 @@ describe("syncHealthService", () => {
     expect(health.hasIssues).toBe(true);
     expect(health.issueCount).toBe(7);
     expect(health.unrecoverableQueueCount).toBe(4);
+  });
+
+  it("treats premium-deferred queue items as non-blocking pending state", () => {
+    const health = deriveSyncHealth(
+      buildSummary({
+        deferredSyncQueueAccount: 2,
+      }),
+    );
+
+    expect(health.hasIssues).toBe(false);
+    expect(health.hasDeferredPremiumPhotos).toBe(true);
+    expect(health.deferredQueueCount).toBe(2);
   });
 
   it("reports pending work without marking it as an issue", () => {

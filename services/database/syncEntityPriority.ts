@@ -1,6 +1,7 @@
 /** Lower values are processed first so parent rows sync before FK dependents. */
 export const SYNC_ENTITY_PRIORITY: Record<string, number> = {
   user_preferences: 0,
+  users: 5,
   plants: 10,
   care_logs: 20,
   care_reminders: 25,

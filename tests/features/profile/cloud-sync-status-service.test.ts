@@ -16,6 +16,7 @@ describe("cloudSyncStatusService", () => {
       isSyncRunning: false,
       hasIssues: false,
       hasPending: false,
+      hasDeferredPremiumPhotos: false,
       lastSuccessfulSyncAt: "2026-03-29T18:00:00.000Z",
       isPremium: false,
     });
@@ -33,6 +34,7 @@ describe("cloudSyncStatusService", () => {
       isSyncRunning: false,
       hasIssues: false,
       hasPending: false,
+      hasDeferredPremiumPhotos: false,
       lastSuccessfulSyncAt: null,
       isPremium: false,
     });
@@ -54,6 +56,7 @@ describe("cloudSyncStatusService", () => {
       isSyncRunning: false,
       hasIssues: false,
       hasPending: false,
+      hasDeferredPremiumPhotos: false,
       lastSuccessfulSyncAt: null,
       isPremium: false,
     });
@@ -70,6 +73,7 @@ describe("cloudSyncStatusService", () => {
       isSyncRunning: false,
       hasIssues: true,
       hasPending: false,
+      hasDeferredPremiumPhotos: false,
       lastSuccessfulSyncAt: "2026-03-29T18:00:00.000Z",
       isPremium: false,
     });
@@ -86,6 +90,7 @@ describe("cloudSyncStatusService", () => {
       isSyncRunning: false,
       hasIssues: false,
       hasPending: false,
+      hasDeferredPremiumPhotos: false,
       lastSuccessfulSyncAt: "2026-03-29T18:00:00.000Z",
       isPremium: true,
     });

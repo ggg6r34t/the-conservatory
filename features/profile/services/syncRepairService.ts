@@ -1,4 +1,9 @@
+import {
+  requeueOrphanedPendingSyncRecords,
+  terminalizeStaleUpsertQueueWithoutLocalRows,
+} from "@/features/profile/services/syncRepairOrphans";
 import { getDatabase } from "@/services/database/sqlite";
+import { notifySyncQueueChanged } from "@/services/database/syncSignals";
 
 export interface SyncRepairItem {
   id: string;
@@ -51,14 +56,22 @@ export async function listSyncRepairItems() {
   }>(
     `SELECT id, entity, entity_id, operation, status, attempt_count, last_error, queued_at, updated_at
      FROM sync_queue
-     WHERE status IN ('failed', 'abandoned', 'processing', 'deleted_before_sync', 'skipped')
+     WHERE status IN ('failed', 'abandoned', 'processing', 'deleted_before_sync', 'skipped', 'deferred')
      ORDER BY updated_at DESC, queued_at DESC;`,
   );
 
   return rows.map(mapRepairItem);
 }
 
-export async function retrySyncRepairItems(ids?: string[]) {
+export async function retrySyncRepairItems(
+  ids?: string[],
+  options?: { userId?: string },
+) {
+  if (options?.userId) {
+    await terminalizeStaleUpsertQueueWithoutLocalRows(options.userId);
+    await requeueOrphanedPendingSyncRecords(options.userId);
+  }
+
   const database = await getDatabase();
   const updatedAt = new Date().toISOString();
 
@@ -72,7 +85,7 @@ export async function retrySyncRepairItems(ids?: string[]) {
            next_retry_at = NULL,
            updated_at = ?
        WHERE id IN (${placeholders})
-         AND status IN ('failed', 'abandoned', 'processing');`,
+         AND status IN ('failed', 'abandoned', 'processing', 'deferred');`,
       updatedAt,
       ...uniqueIds,
     );
@@ -85,9 +98,10 @@ export async function retrySyncRepairItems(ids?: string[]) {
          last_error = NULL,
          next_retry_at = NULL,
          updated_at = ?
-     WHERE status IN ('failed', 'abandoned', 'processing');`,
+     WHERE status IN ('failed', 'abandoned', 'processing', 'deferred');`,
     updatedAt,
   );
 
+  notifySyncQueueChanged();
   return null;
 }

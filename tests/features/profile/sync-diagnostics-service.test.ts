@@ -5,7 +5,9 @@ import {
 
 describe("syncDiagnosticsService", () => {
   it("formats repair statuses with truthful operator-facing labels", () => {
-    expect(formatSyncRepairStatus("failed")).toBe("Retryable failure");
+    expect(formatSyncRepairStatus("failed")).toBe(
+      "Retryable failure (scheduled backoff)",
+    );
     expect(formatSyncRepairStatus("deleted_before_sync")).toBe(
       "Local record removed before upload",
     );

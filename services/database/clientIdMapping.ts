@@ -31,6 +31,28 @@ export function getLocalEntityId(row: {
   return clientId || row.id;
 }
 
+/** SQLite-only sync metadata — must never be sent to PostgREST. */
+const LOCAL_ONLY_SYNC_FIELD_KEYS = new Set([
+  "pending",
+  "synced_at",
+  "sync_error",
+  "remote_id",
+]);
+
+export function stripLocalOnlySyncFields(
+  row: Record<string, unknown>,
+): Record<string, unknown> {
+  const stripped: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(row)) {
+    if (!LOCAL_ONLY_SYNC_FIELD_KEYS.has(key)) {
+      stripped[key] = value;
+    }
+  }
+
+  return stripped;
+}
+
 export async function readCachedRemoteId(
   table: ClientIdEntityTable,
   localId: string,
@@ -83,6 +105,7 @@ async function findRemoteRowIdByClientId(
 export async function resolveRemoteId(
   table: ClientIdEntityTable,
   localId: string,
+  userId?: string,
 ): Promise<string | null> {
   const cached = await readCachedRemoteId(table, localId);
   if (cached) {
@@ -93,11 +116,12 @@ export async function resolveRemoteId(
     return null;
   }
 
-  const { data, error } = await supabase
-    .from(table)
-    .select("id")
-    .eq("client_id", localId)
-    .maybeSingle();
+  let query = supabase.from(table).select("id").eq("client_id", localId);
+  if (userId) {
+    query = query.eq("user_id", userId);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     throw new Error(error.message);
@@ -128,7 +152,8 @@ export async function upsertByClientId(
     throw new Error("Supabase client is unavailable.");
   }
 
-  const { id: _ignored, client_id: _clientIgnored, ...rest } = row;
+  const { id: _ignored, client_id: _clientIgnored, ...rest } =
+    stripLocalOnlySyncFields(row);
   const userId = typeof rest.user_id === "string" ? rest.user_id : null;
   if (!userId) {
     throw new Error(`Remote upsert for ${table} requires user_id.`);

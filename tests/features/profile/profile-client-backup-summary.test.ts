@@ -52,6 +52,8 @@ describe("profileClient.getBackupSummary", () => {
       if (status === "failed") return 2;
       if (status === "abandoned" && userId) return 1;
       if (status === "abandoned") return 3;
+      if (status === "deferred" && userId) return 2;
+      if (status === "deferred") return 4;
       if (status === "processing") return 1;
       if (status === "completed") return 9;
       return 0;
@@ -77,6 +79,8 @@ describe("profileClient.getBackupSummary", () => {
     expect(summary.failedSyncQueueAccount).toBe(1);
     expect(summary.abandonedSyncQueueAccount).toBe(1);
     expect(summary.abandonedSyncQueueDevice).toBe(3);
+    expect(summary.deferredSyncQueueAccount).toBe(2);
+    expect(summary.deferredSyncQueueDevice).toBe(4);
     expect(summary.lastSuccessfulSyncAt).toBe("2026-05-01T10:00:00.000Z");
     expect(summary.tableLastSyncedAt.careLogTags).toBe(
       "2026-05-01T09:00:00.000Z",

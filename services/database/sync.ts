@@ -1,4 +1,5 @@
 import { env } from "@/config/env";
+import { isPremiumDeferredOutcome } from "@/services/database/syncAuthGuard";
 import { compareSyncQueueItems } from "@/services/database/syncEntityPriority";
 import { processSyncQueueItemWithSupabase } from "@/services/database/supabaseSyncAdapter";
 import { getDatabase } from "@/services/database/sqlite";
@@ -14,7 +15,8 @@ export type SyncStatus =
   | "completed"
   | "abandoned"
   | "skipped"
-  | "deleted_before_sync";
+  | "deleted_before_sync"
+  | "deferred";
 
 export interface SyncQueueItem {
   id: string;
@@ -46,6 +48,12 @@ export interface SyncQueueStorage {
     reason: string,
     updatedAt: string,
   ): Promise<void>;
+  markPremiumDeferred(
+    id: string,
+    reason: string,
+    updatedAt: string,
+  ): Promise<void>;
+  countBlockingProcessable(nowIso: string): Promise<number>;
   markFailed(
     id: string,
     errorMessage: string,
@@ -239,6 +247,33 @@ class SQLiteSyncQueueStorage implements SyncQueueStorage {
     );
   }
 
+  async markPremiumDeferred(id: string, reason: string, updatedAt: string) {
+    const database = await getDatabase();
+    await database.runAsync(
+      `UPDATE sync_queue
+       SET status = 'deferred',
+           last_error = ?,
+           next_retry_at = NULL,
+           updated_at = ?
+       WHERE id = ?;`,
+      reason,
+      updatedAt,
+      id,
+    );
+  }
+
+  async countBlockingProcessable(nowIso: string) {
+    const database = await getDatabase();
+    const result = await database.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) AS count FROM sync_queue
+       WHERE status IN ('pending', 'failed')
+         AND (next_retry_at IS NULL OR next_retry_at <= ?);`,
+      nowIso,
+    );
+
+    return result?.count ?? 0;
+  }
+
   async markFailed(
     id: string,
     errorMessage: string,
@@ -364,12 +399,15 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
       }
 
       if (!processOperation) {
+        const remaining = await storage.countProcessable(nowIso);
+        const blockingRemaining = await storage.countBlockingProcessable(nowIso);
         return {
           reclaimed,
           processed: 0,
           successful: 0,
           failed: 0,
-          remaining: await storage.countProcessable(nowIso),
+          remaining,
+          blockingRemaining,
         };
       }
 
@@ -389,8 +427,17 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
           const result = await processOperation(item);
           const finishedAt = new Date().toISOString();
           if (result?.status === "deferred") {
-            await storage.markDeferred(item.id, result.reason, finishedAt);
+            if (isPremiumDeferredOutcome(result.reasonCode)) {
+              await storage.markPremiumDeferred(item.id, result.reason, finishedAt);
+            } else {
+              await storage.markDeferred(item.id, result.reason, finishedAt);
+            }
             deferred += 1;
+            logger.info("sync.item_deferred", {
+              entity: item.entity,
+              entityId: item.entityId,
+              reasonCode: result.reasonCode,
+            });
           } else if (result?.status === "deleted_before_sync") {
             await storage.markDeletedBeforeSync(
               item.id,
@@ -455,6 +502,7 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
       }
 
       const remaining = await storage.countProcessable(nowIso);
+      const blockingRemaining = await storage.countBlockingProcessable(nowIso);
       return {
         reclaimed,
         processed: queue.length,
@@ -464,6 +512,7 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
         skipped,
         deletedBeforeSync,
         remaining,
+        blockingRemaining,
       };
     },
   };

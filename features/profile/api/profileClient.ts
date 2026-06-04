@@ -30,6 +30,8 @@ export interface BackupSummary {
   failedSyncQueueDevice: number;
   abandonedSyncQueueAccount: number;
   abandonedSyncQueueDevice: number;
+  deferredSyncQueueAccount: number;
+  deferredSyncQueueDevice: number;
   processingSync: number;
   completedSync: number;
   syncEnabled: boolean;
@@ -88,6 +90,8 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     failedSyncQueueDevice,
     abandonedSyncQueueAccount,
     abandonedSyncQueueDevice,
+    deferredSyncQueueAccount,
+    deferredSyncQueueDevice,
     processingSync,
     completedSync,
     userPreferences,
@@ -139,6 +143,8 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     countSyncQueue("failed"),
     countSyncQueue("abandoned", userId),
     countSyncQueue("abandoned"),
+    countSyncQueue("deferred", userId),
+    countSyncQueue("deferred"),
     countSyncQueue("processing"),
     countSyncQueue("completed"),
     database.getFirstAsync<{ auto_sync_enabled: number | null }>(
@@ -201,6 +207,8 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
     failedSyncQueueDevice,
     abandonedSyncQueueAccount,
     abandonedSyncQueueDevice,
+    deferredSyncQueueAccount,
+    deferredSyncQueueDevice,
     processingSync,
     completedSync,
     syncEnabled: (userPreferences?.auto_sync_enabled ?? 1) !== 0,

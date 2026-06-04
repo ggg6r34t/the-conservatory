@@ -12,6 +12,10 @@ jest.mock("expo-router", () => ({
   useRouter: () => ({ back: jest.fn() }),
 }));
 
+jest.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: () => ({ user: { id: "user-1" } }),
+}));
+
 jest.mock("@/features/profile/services/syncRepairService", () => ({
   listSyncRepairItems: (...args: unknown[]) => mockListSyncRepairItems(...args),
   retrySyncRepairItems: (...args: unknown[]) => mockRetrySyncRepairItems(...args),
@@ -83,14 +87,18 @@ describe("SyncRepairScreen", () => {
 
     expect(await screen.findByText("care logs")).toBeTruthy();
     expect(
-      screen.getByText("UPDATE - RETRYABLE FAILURE - 3 attempts"),
+      screen.getByText(
+        "UPDATE - RETRYABLE FAILURE (SCHEDULED BACKOFF) - 3 attempts",
+      ),
     ).toBeTruthy();
     expect(screen.getByText("Network unavailable")).toBeTruthy();
 
     fireEvent.press(screen.getByText("Retry Item"));
 
     await waitFor(() =>
-      expect(mockRetrySyncRepairItems).toHaveBeenCalledWith(["sync-1"]),
+      expect(mockRetrySyncRepairItems).toHaveBeenCalledWith(["sync-1"], {
+        userId: "user-1",
+      }),
     );
     await waitFor(() => expect(mockListSyncRepairItems).toHaveBeenCalledTimes(2));
     expect(mockSuccess).toHaveBeenCalledWith("Backup item is ready to retry.");

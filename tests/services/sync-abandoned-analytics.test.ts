@@ -77,6 +77,22 @@ class InMemorySyncQueueStorage implements SyncQueueStorage {
     );
   }
 
+  async markPremiumDeferred(id: string, reason: string, updatedAt: string) {
+    this.items = this.items.map((item) =>
+      item.id === id
+        ? { ...item, status: "deferred", lastError: reason, nextRetryAt: null, updatedAt }
+        : item,
+    );
+  }
+
+  async countBlockingProcessable(nowIso: string) {
+    return this.items.filter(
+      (item) =>
+        (item.status === "pending" || item.status === "failed") &&
+        (!item.nextRetryAt || item.nextRetryAt <= nowIso),
+    ).length;
+  }
+
   async markFailed(
     id: string,
     errorMessage: string,

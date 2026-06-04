@@ -10,6 +10,11 @@ jest.mock("@/config/env", () => ({
   },
 }));
 
+jest.mock("@/services/database/syncAuthGuard", () => ({
+  isPremiumDeferredOutcome: (reasonCode?: string) =>
+    reasonCode === "PREMIUM_PHOTO_DEFERRED",
+}));
+
 const mockProcessSyncQueueItemWithSupabase = jest.fn();
 
 jest.mock("@/services/database/supabaseSyncAdapter", () => ({
@@ -105,6 +110,32 @@ class InMemorySyncQueueStorage implements SyncQueueStorage {
           }
         : item,
     );
+  }
+
+  async markPremiumDeferred(
+    id: string,
+    reason: string,
+    updatedAt: string,
+  ) {
+    this.items = this.items.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            status: "deferred",
+            lastError: reason,
+            nextRetryAt: null,
+            updatedAt,
+          }
+        : item,
+    );
+  }
+
+  async countBlockingProcessable(nowIso: string) {
+    return this.items.filter(
+      (item) =>
+        (item.status === "pending" || item.status === "failed") &&
+        (!item.nextRetryAt || item.nextRetryAt <= nowIso),
+    ).length;
   }
 
   async markFailed(
@@ -309,7 +340,7 @@ describe("sync queue replay", () => {
     ).toBe(1);
   });
 
-  it("leaves deferred premium-only photo backup retryable without counting it as failed", async () => {
+  it("marks premium-deferred photo backup as deferred without blocking other sync work", async () => {
     const storage = new InMemorySyncQueueStorage();
     const service = createSyncQueueService(storage);
 
@@ -326,6 +357,7 @@ describe("sync queue replay", () => {
       processOperation: async () => ({
         status: "deferred" as const,
         reason: "Premium photo backup is deferred until subscription is active.",
+        reasonCode: "PREMIUM_PHOTO_DEFERRED",
       }),
     });
 
@@ -333,10 +365,11 @@ describe("sync queue replay", () => {
     expect(report.successful).toBe(0);
     expect(report.failed).toBe(0);
     expect(report.deferred).toBe(1);
-    expect(report.remaining).toBe(1);
+    expect(report.remaining).toBe(0);
+    expect(report.blockingRemaining).toBe(0);
 
     const item = storage.findByEntity("photos");
-    expect(item?.status).toBe("pending");
+    expect(item?.status).toBe("deferred");
     expect(item?.attemptCount).toBe(0);
     expect(item?.lastError).toMatch(/premium photo backup/i);
     expect(item?.nextRetryAt).toBeNull();

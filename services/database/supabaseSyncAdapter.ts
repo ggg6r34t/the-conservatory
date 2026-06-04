@@ -8,6 +8,7 @@ import {
   resolveRemoteId,
   upsertByClientId,
 } from "@/services/database/clientIdMapping";
+import { assertSyncItemMatchesAuthenticatedUser } from "@/services/database/syncAuthGuard";
 import { getDatabase } from "@/services/database/sqlite";
 import type { SyncProcessResult, SyncQueueItem } from "@/services/database/sync";
 import {
@@ -296,7 +297,7 @@ async function loadCareLogTagRecord(entityId: string) {
 
 async function loadStatusSnapshotRecord(entityId: string) {
   const database = await getDatabase();
-  return database.getFirstAsync<{
+  const row = await database.getFirstAsync<{
     id: string;
     user_id: string;
     plant_id: string;
@@ -307,6 +308,22 @@ async function loadStatusSnapshotRecord(entityId: string) {
     updated_at: string;
     updated_by: string | null;
   }>("SELECT * FROM plant_status_snapshots WHERE id = ? LIMIT 1;", entityId);
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    plant_id: row.plant_id,
+    status: row.status,
+    reason: row.reason,
+    captured_at: row.captured_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    updated_by: row.updated_by ?? row.user_id,
+  };
 }
 
 async function loadSpecimenTagRecord(entityId: string) {
@@ -547,6 +564,41 @@ async function upsertRemoteRecord(
     return;
   }
 
+  if (item.entity === "users") {
+    const database = await getDatabase();
+    const row = await database.getFirstAsync<{
+      id: string;
+      email: string;
+      display_name: string;
+      avatar_url: string | null;
+      role: string;
+      created_at: string;
+      updated_at: string;
+      updated_by: string | null;
+    }>("SELECT * FROM users WHERE id = ? LIMIT 1;", item.entityId);
+
+    if (!row) {
+      return buildDeletedBeforeSyncOutcome("users");
+    }
+
+    const { error } = await supabase.from("users").upsert(
+      {
+        id: row.id,
+        email: row.email,
+        display_name: row.display_name,
+        avatar_url: row.avatar_url,
+        role: row.role,
+        updated_by: row.updated_by ?? row.id,
+      },
+      { onConflict: "id" },
+    );
+
+    if (error) {
+      throw new Error(error.message);
+    }
+    return;
+  }
+
   if (item.entity === "user_preferences") {
     const row = await loadUserPreferencesRecord(item.entityId);
     if (!row) {
@@ -566,7 +618,7 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("care_logs");
     }
-    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id, row.user_id);
     if (!remotePlantId) {
       return buildParentNotSyncedOutcome("plants");
     }
@@ -583,7 +635,7 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("care_reminders");
     }
-    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id, row.user_id);
     if (!remotePlantId) {
       return buildParentNotSyncedOutcome("plants");
     }
@@ -618,7 +670,7 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("care_schedule_suggestions");
     }
-    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id, row.user_id);
     if (!remotePlantId) {
       return buildParentNotSyncedOutcome("plants");
     }
@@ -636,8 +688,12 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("care_log_tags");
     }
-    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
-    const remoteCareLogId = await resolveRemoteId("care_logs", row.care_log_id);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id, row.user_id);
+    const remoteCareLogId = await resolveRemoteId(
+      "care_logs",
+      row.care_log_id,
+      row.user_id,
+    );
     if (!remotePlantId) {
       return buildParentNotSyncedOutcome("plants");
     }
@@ -663,7 +719,7 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("plant_status_snapshots");
     }
-    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id, row.user_id);
     if (!remotePlantId) {
       return buildParentNotSyncedOutcome("plants");
     }
@@ -680,7 +736,7 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("specimen_tags");
     }
-    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id, row.user_id);
     if (!remotePlantId) {
       return buildParentNotSyncedOutcome("plants");
     }
@@ -697,14 +753,16 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("archive_curation_overrides");
     }
-    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id, row.user_id);
     const remoteBeforePhotoId = await resolveRemoteId(
       "photos",
       row.before_photo_id,
+      row.user_id,
     );
     const remoteAfterPhotoId = await resolveRemoteId(
       "photos",
       row.after_photo_id,
+      row.user_id,
     );
     if (!remotePlantId) {
       return buildParentNotSyncedOutcome("plants");
@@ -744,7 +802,7 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("photos");
     }
-    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id, row.user_id);
     if (!remotePlantId) {
       return buildParentNotSyncedOutcome("plants");
     }
@@ -761,7 +819,7 @@ async function upsertRemoteRecord(
     if (!row) {
       return buildDeletedBeforeSyncOutcome("graveyard_plants");
     }
-    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id, row.user_id);
     if (!remotePlantId) {
       return buildParentNotSyncedOutcome("plants");
     }
@@ -791,6 +849,8 @@ async function upsertRemoteRecord(
 export async function processSyncQueueItemWithSupabase(
   item: SyncQueueItem,
 ): Promise<SyncProcessResult> {
+  await assertSyncItemMatchesAuthenticatedUser(item);
+
   try {
     let result: SyncProcessResult = undefined;
     if (item.operation === "delete") {

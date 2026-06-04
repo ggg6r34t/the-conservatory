@@ -28,6 +28,8 @@ export interface UserDataSyncResult {
   successful: number;
   failed: number;
   remaining: number;
+  blockingRemaining: number;
+  deferredRemaining: number;
   deletedBeforeSync: number;
   skipped: number;
   deferred: number;
@@ -78,19 +80,35 @@ async function executeUserDataSync(
     successful: 0,
     failed: 0,
     remaining: 0,
+    blockingRemaining: 0,
+    deferredRemaining: 0,
     deletedBeforeSync: 0,
     skipped: 0,
     deferred: 0,
     hydrationApplied: false,
   };
 
+  logger.info("sync.run.started", {
+    userId,
+    trigger,
+  });
+
   for (let batch = 0; batch < MAX_SYNC_BATCHES_PER_RUN; batch += 1) {
     const nextReport = await syncPendingChanges();
+    const blockingRemaining =
+      nextReport.blockingRemaining ?? nextReport.remaining;
+    const deferredRemaining = Math.max(
+      0,
+      nextReport.remaining - blockingRemaining,
+    );
+
     report = {
       processed: report.processed + nextReport.processed,
       successful: report.successful + nextReport.successful,
       failed: report.failed + nextReport.failed,
       remaining: nextReport.remaining,
+      blockingRemaining,
+      deferredRemaining,
       deletedBeforeSync:
         report.deletedBeforeSync + (nextReport.deletedBeforeSync ?? 0),
       skipped: report.skipped + (nextReport.skipped ?? 0),
@@ -98,22 +116,34 @@ async function executeUserDataSync(
       hydrationApplied: false,
     };
 
+    logger.info("sync.run.batch", {
+      userId,
+      trigger,
+      batch,
+      processed: nextReport.processed,
+      successful: nextReport.successful,
+      failed: nextReport.failed,
+      deferred: nextReport.deferred ?? 0,
+      blockingRemaining,
+      deferredRemaining,
+    });
+
     if (
       nextReport.failed > 0 ||
-      nextReport.remaining === 0 ||
+      blockingRemaining === 0 ||
       nextReport.processed === 0
     ) {
       break;
     }
   }
 
-  if (report.failed > 0 || report.remaining > 0) {
+  if (report.failed > 0 || report.blockingRemaining > 0) {
     const failedLabel =
       report.failed === 1 ? "1 failed item" : `${report.failed} failed items`;
     const remainingLabel =
-      report.remaining === 1
+      report.blockingRemaining === 1
         ? "1 item remaining"
-        : `${report.remaining} items remaining`;
+        : `${report.blockingRemaining} items remaining`;
     throw new Error(
       `Sync completed with ${failedLabel} and ${remainingLabel}.`,
     );
@@ -135,6 +165,9 @@ async function executeUserDataSync(
     successful: report.successful,
     failed: report.failed,
     remaining: report.remaining,
+    blockingRemaining: report.blockingRemaining,
+    deferredRemaining: report.deferredRemaining,
+    hydrationApplied: report.hydrationApplied,
   });
 
   return {
@@ -142,6 +175,8 @@ async function executeUserDataSync(
     successful: report.successful,
     failed: report.failed,
     remaining: report.remaining,
+    blockingRemaining: report.blockingRemaining,
+    deferredRemaining: report.deferredRemaining,
     deletedBeforeSync: report.deletedBeforeSync,
     skipped: report.skipped,
     deferred: report.deferred,
