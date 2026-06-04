@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -20,6 +19,7 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
 import { MemorialEntrySheet } from "@/features/plants/components/MemorialEntrySheet";
+import { PlantPhotoImage } from "@/features/plants/components/PlantPhotoImage";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { useMemorialLayoutPreferences } from "@/features/plants/hooks/useMemorialLayoutPreferences";
 import { useUpdateGraveyardMemorial } from "@/features/plants/hooks/useUpdateGraveyardMemorial";
@@ -74,31 +74,21 @@ function buildCauseLabel(memorial: GraveyardPlantListItem) {
 }
 
 function GrayscaleImage({
-  uri,
+  memorial,
   style,
 }: {
-  uri?: string | null;
+  memorial: GraveyardPlantListItem;
   style: object;
 }) {
-  const { colors } = useTheme();
-
-  if (!uri) {
-    return (
-      <View
-        style={[style, { backgroundColor: colors.surfaceContainerHigh }]}
-      />
-    );
-  }
-
   return (
-    <View style={style}>
-      <Image
-        source={{ uri }}
-        style={styles.nativeImage}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-      />
-    </View>
+    <PlantPhotoImage
+      plant={memorial}
+      context="detail"
+      frameStyle={style}
+      style={styles.nativeImage}
+      contentFit="cover"
+      cachePolicy="memory-disk"
+    />
   );
 }
 
@@ -225,7 +215,7 @@ export default function GraveyardScreen() {
               ]}
             >
               <GrayscaleImage
-                uri={featuredMemorial.primaryPhotoUri}
+                memorial={featuredMemorial}
                 style={styles.featuredImage}
               />
             </View>
@@ -300,7 +290,7 @@ export default function GraveyardScreen() {
               ]}
             >
               <GrayscaleImage
-                uri={reflectionMemorial.primaryPhotoUri}
+                memorial={reflectionMemorial}
                 style={styles.reflectionImage}
               />
             </View>
@@ -345,7 +335,7 @@ export default function GraveyardScreen() {
                 ]}
               >
                 <GrayscaleImage
-                  uri={tributeMemorial.primaryPhotoUri}
+                  memorial={tributeMemorial}
                   style={styles.avatarImage}
                 />
               </Pressable>
@@ -370,7 +360,7 @@ export default function GraveyardScreen() {
                   ]}
                 >
                   <GrayscaleImage
-                    uri={tributeCompanion.primaryPhotoUri}
+                    memorial={tributeCompanion}
                     style={styles.avatarImage}
                   />
                 </Pressable>
@@ -424,7 +414,7 @@ export default function GraveyardScreen() {
                 ]}
               >
                 <GrayscaleImage
-                  uri={compactMemorial.primaryPhotoUri}
+                  memorial={compactMemorial}
                   style={styles.compactImage}
                 />
               </Pressable>

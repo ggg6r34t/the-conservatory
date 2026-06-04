@@ -6,7 +6,10 @@ import {
   FREE_PLANT_LIMIT,
   FREE_PROGRESS_PHOTOS_PER_PLANT,
 } from "@/features/billing/constants";
-import { downloadRemotePhotoAsset } from "@/features/plants/services/photoStorageService";
+import {
+  downloadRemotePhotoAsset,
+  managedPhotoFileExists,
+} from "@/features/plants/services/photoStorageService";
 import { getEntitlementState } from "@/services/entitlementState";
 import { getDatabase } from "@/services/database/sqlite";
 import { insertSyncOutboxOperationInTransaction } from "@/services/database/syncOutbox";
@@ -256,6 +259,13 @@ export async function restoreCollectionImport(input: {
               storagePath: photo.storagePath ?? null,
             }).catch(() => null)
           : null;
+      let importedLocalUri = restored?.localUri ?? null;
+      if (!importedLocalUri && photo.localUri) {
+        const legacyLocalExists = await managedPhotoFileExists(photo.localUri);
+        if (legacyLocalExists) {
+          importedLocalUri = photo.localUri;
+        }
+      }
       await database.runAsync(
         `INSERT OR REPLACE INTO photos (
           id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type,
@@ -265,7 +275,7 @@ export async function restoreCollectionImport(input: {
         id,
         input.userId,
         plantId,
-        restored?.localUri ?? photo.localUri ?? null,
+        importedLocalUri,
         photo.remoteUrl ?? null,
         restored?.storagePath ?? photo.storagePath ?? null,
         photo.mimeType ?? "image/jpeg",

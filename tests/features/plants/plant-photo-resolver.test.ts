@@ -1,6 +1,8 @@
 import {
   buildPrimaryPhotoListFields,
+  resolvePhotoDisplayFallbackUri,
   resolvePhotoDisplayUri,
+  resolvePlantListPhotoFallbackUri,
   resolvePrimaryPlantPhoto,
   resolveRenderablePhotoUri,
   trackResolvedPlantListPhoto,
@@ -72,6 +74,35 @@ describe("plantPhotoResolver", () => {
 
   it("returns null when neither URI is renderable", () => {
     expect(resolvePhotoDisplayUri(createPhoto())).toBeNull();
+  });
+
+  it("falls back to remote when local load fails", () => {
+    const photo = createPhoto({
+      localUri: "file:///missing.jpg",
+      remoteUrl: "https://cdn.example.com/fresh.jpg",
+    });
+
+    expect(
+      resolvePhotoDisplayFallbackUri(photo, "file:///missing.jpg", {
+        context: "detail",
+      }),
+    ).toBe("https://cdn.example.com/fresh.jpg");
+  });
+
+  it("falls back to list DTO remote when primary URI fails", () => {
+    expect(
+      resolvePlantListPhotoFallbackUri(
+        {
+          primaryPhotoUri: "file:///missing.jpg",
+          primaryPhotoLocalUri: "file:///missing.jpg",
+          primaryPhotoRemoteUrl: "https://cdn.example.com/fresh.jpg",
+          primaryPhotoStoragePath: "user/plant/photo.jpg",
+          primaryPhotoRole: "primary",
+          primaryPhotoUpdatedAt: null,
+        },
+        "file:///missing.jpg",
+      ),
+    ).toBe("https://cdn.example.com/fresh.jpg");
   });
 
   it("selects the primary photo even when a newer progress photo exists", () => {

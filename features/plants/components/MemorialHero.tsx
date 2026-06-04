@@ -1,12 +1,13 @@
-import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { PlantPhotoImage } from "@/features/plants/components/PlantPhotoImage";
+import type { PrimaryPhotoSummaryFields } from "@/features/plants/services/plantPhotoResolver";
 
 interface MemorialHeroProps {
-  photoUri?: string | null;
+  plant?: PrimaryPhotoSummaryFields | null;
   displayName: string;
   speciesLabel: string;
   heroGradientColors: readonly [string, string, string];
@@ -16,7 +17,7 @@ interface MemorialHeroProps {
 const HERO_HEIGHT = 508;
 
 export function MemorialHero({
-  photoUri,
+  plant,
   displayName,
   speciesLabel,
   heroGradientColors,
@@ -56,21 +57,15 @@ export function MemorialHero({
         </View>
       </View>
 
-      {photoUri ? (
-        <Image
-          source={{ uri: photoUri }}
-          style={styles.heroImage}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-        />
-      ) : (
-        <View
-          style={[
-            styles.heroImage,
-            { backgroundColor: colors.inverseSurface },
-          ]}
-        />
-      )}
+      <PlantPhotoImage
+        plant={plant}
+        context="detail"
+        style={styles.heroImage}
+        frameStyle={styles.heroImage}
+        fallbackStyle={{ backgroundColor: colors.inverseSurface }}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+      />
       <LinearGradient
         colors={heroGradientColors}
         locations={[0.3, 0.65, 1]}

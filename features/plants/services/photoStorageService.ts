@@ -206,13 +206,20 @@ export async function managedPhotoFileExists(uri: string | null | undefined) {
     return false;
   }
 
-  if (!isManagedPhotoUri(uri)) {
-    return uri.startsWith("file:") || uri.startsWith("content:");
+  if (
+    !uri.startsWith("file:") &&
+    !uri.startsWith("content:")
+  ) {
+    return false;
   }
 
-  const file = new File(uri);
-  const info = await file.info();
-  return info.exists;
+  try {
+    const file = new File(uri);
+    const info = await file.info();
+    return info.exists;
+  } catch {
+    return false;
+  }
 }
 
 export async function deleteManagedPhoto(uri: string | null | undefined) {

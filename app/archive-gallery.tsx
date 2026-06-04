@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Image } from "expo-image";
-
 import { useTheme } from "@/components/design-system/useTheme";
 import { EmptyState } from "@/features/empty-states/components/EmptyState";
 import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
@@ -11,6 +9,7 @@ import { saveArchiveCurationOverride } from "@/features/ai/services/archiveCurat
 import { getInsightSourceLabel } from "@/features/ai/services/insightSourcePresentation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import { PlantPhotoImage } from "@/features/plants/components/PlantPhotoImage";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useSnackbar } from "@/hooks/useSnackbar";
@@ -224,15 +223,25 @@ export default function ArchiveGalleryScreen() {
               </View>
 
               <View style={styles.curatedImageRow}>
-                <Image
-                  source={{ uri: pair.beforeUri }}
+                <PlantPhotoImage
+                  displayUri={pair.beforeUri}
+                  plant={memorials.find(
+                    (memorial) => memorial.plantId === pair.plantId,
+                  )}
+                  context="detail"
                   style={styles.curatedImage}
+                  frameStyle={styles.curatedImage}
                   contentFit="cover"
                   cachePolicy="memory-disk"
                 />
-                <Image
-                  source={{ uri: pair.afterUri }}
+                <PlantPhotoImage
+                  displayUri={pair.afterUri}
+                  plant={memorials.find(
+                    (memorial) => memorial.plantId === pair.plantId,
+                  )}
+                  context="detail"
                   style={styles.curatedImage}
+                  frameStyle={styles.curatedImage}
                   contentFit="cover"
                   cachePolicy="memory-disk"
                 />
@@ -258,14 +267,14 @@ export default function ArchiveGalleryScreen() {
                 { backgroundColor: colors.surfaceContainerLow },
               ]}
             >
-              {memorial.primaryPhotoUri ? (
-                <Image
-                  source={{ uri: memorial.primaryPhotoUri }}
-                  style={styles.image}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-              ) : null}
+              <PlantPhotoImage
+                plant={memorial}
+                context="detail"
+                style={styles.image}
+                frameStyle={styles.image}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+              />
             </View>
 
             <View style={styles.copy}>

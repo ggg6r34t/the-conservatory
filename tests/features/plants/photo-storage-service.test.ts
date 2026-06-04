@@ -122,6 +122,17 @@ describe("photo storage service", () => {
     await expect(managedPhotoFileExists(managedUri)).resolves.toBe(false);
   });
 
+  it("reports when a legacy temp photo URI is missing on disk", async () => {
+    mockInfo.mockResolvedValue({ exists: false });
+    const {
+      managedPhotoFileExists,
+    } = require("@/features/plants/services/photoStorageService");
+
+    await expect(
+      managedPhotoFileExists("file://cache/temporary.jpg"),
+    ).resolves.toBe(false);
+  });
+
   it("downloads hydrated remote photos into app-owned storage", async () => {
     mockInfo.mockResolvedValueOnce({ exists: false });
     mockInfo.mockResolvedValueOnce({ exists: true });

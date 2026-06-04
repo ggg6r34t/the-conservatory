@@ -1,10 +1,13 @@
 import { Image, type ImageProps } from "expo-image";
-import { memo, useEffect, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { getStorageAssetUrl } from "@/services/supabase/storage";
 import {
+  resolvePhotoDisplayFallbackUri,
   resolvePhotoDisplayUri,
+  resolvePlantListPhotoFallbackUri,
   trackResolvedPlantListPhoto,
   type PhotoUriFields,
   type PlantPhotoDisplayContext,
@@ -37,8 +40,10 @@ export const PlantPhotoImage = memo(function PlantPhotoImage({
   cachePolicy = "memory-disk",
 }: PlantPhotoImageProps) {
   const { colors } = useTheme();
+  const [activeUri, setActiveUri] = useState<string | null>(null);
+  const [failedUris, setFailedUris] = useState<string[]>([]);
 
-  const uri = useMemo(() => {
+  const initialUri = useMemo(() => {
     if (displayUri) {
       return displayUri;
     }
@@ -55,12 +60,55 @@ export const PlantPhotoImage = memo(function PlantPhotoImage({
   }, [analyticsScreen, context, displayUri, photo, plant]);
 
   useEffect(() => {
-    if (analyticsScreen && plant?.primaryPhotoUri && uri) {
-      trackResolvedPlantListPhoto(analyticsScreen, plant, uri);
-    }
-  }, [analyticsScreen, plant, uri]);
+    setActiveUri(initialUri);
+    setFailedUris([]);
+  }, [initialUri]);
 
-  if (!uri) {
+  useEffect(() => {
+    if (analyticsScreen && plant?.primaryPhotoUri && activeUri) {
+      trackResolvedPlantListPhoto(analyticsScreen, plant, activeUri);
+    }
+  }, [activeUri, analyticsScreen, plant]);
+
+  const handleError = useCallback(() => {
+    if (!activeUri) {
+      return;
+    }
+
+    const nextFailed = [...failedUris, activeUri];
+    setFailedUris(nextFailed);
+
+    const syncFallback = photo
+      ? resolvePhotoDisplayFallbackUri(photo, activeUri, {
+          context,
+          failedUris: nextFailed,
+        })
+      : plant
+        ? resolvePlantListPhotoFallbackUri(plant, activeUri, nextFailed)
+        : null;
+
+    if (syncFallback) {
+      setActiveUri(syncFallback);
+      return;
+    }
+
+    const storagePath = photo?.storagePath ?? plant?.primaryPhotoStoragePath;
+    if (!storagePath) {
+      setActiveUri(null);
+      return;
+    }
+
+    void getStorageAssetUrl(storagePath).then((signedUri) => {
+      if (!signedUri || nextFailed.includes(signedUri)) {
+        setActiveUri(null);
+        return;
+      }
+
+      setActiveUri(signedUri);
+    });
+  }, [activeUri, context, failedUris, photo, plant]);
+
+  if (!activeUri) {
     return (
       <View
         style={[
@@ -76,10 +124,11 @@ export const PlantPhotoImage = memo(function PlantPhotoImage({
   return (
     <View style={frameStyle}>
       <Image
-        source={{ uri }}
+        source={{ uri: activeUri }}
         style={[styles.image, style]}
         contentFit={contentFit}
         cachePolicy={cachePolicy}
+        onError={handleError}
       />
     </View>
   );

@@ -1,4 +1,5 @@
 import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
+import { resolvePhotoDisplayUri } from "@/features/plants/services/plantPhotoResolver";
 import type {
   HealthInsight,
   HealthSignalSummary,
@@ -43,7 +44,10 @@ function getPhotoTimestamp(photo: Photo) {
 
 function getRenderablePhotos(data: PlantWithRelations) {
   return [...data.photos]
-    .filter((photo) => photo.localUri || photo.remoteUrl)
+    .filter(
+      (photo) =>
+        resolvePhotoDisplayUri(photo, { context: "detail" }) != null,
+    )
     .sort((left, right) =>
       getPhotoTimestamp(right).localeCompare(getPhotoTimestamp(left)),
     );

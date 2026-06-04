@@ -1,5 +1,4 @@
 import { BlurView } from "expo-blur";
-import { Image } from "expo-image";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -20,6 +19,7 @@ import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
+import { PlantPhotoImage } from "@/features/plants/components/PlantPhotoImage";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
 
 const CAUSE_OPTIONS = [
@@ -157,17 +157,14 @@ export function MemorialEntrySheet({
                     },
                   ]}
                 >
-                  {memorial?.primaryPhotoUri ? (
-                    <Image
-                      source={{ uri: memorial.primaryPhotoUri }}
-                      style={styles.heroImage}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <View style={styles.heroFallback}>
-                      <Icon name="leaf" size={56} color={colors.primary} />
-                    </View>
-                  )}
+                  <PlantPhotoImage
+                    plant={memorial}
+                    context="detail"
+                    style={styles.heroImage}
+                    frameStyle={styles.heroImage}
+                    contentFit="cover"
+                    fallbackStyle={styles.heroFallback}
+                  />
                 </View>
 
                 <View style={styles.heroCopy}>

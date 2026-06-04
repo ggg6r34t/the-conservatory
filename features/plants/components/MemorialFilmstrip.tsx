@@ -1,13 +1,8 @@
-import { Image } from "expo-image";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
-import { resolvePhotoDisplayUri } from "@/features/plants/services/plantPhotoResolver";
+import { PlantPhotoImage } from "@/features/plants/components/PlantPhotoImage";
 import type { Photo } from "@/types/models";
-
-function resolvePhotoUri(photo: Photo): string | null {
-  return resolvePhotoDisplayUri(photo, { context: "detail" });
-}
 
 function formatPhotoDate(photo: Photo) {
   const source = photo.takenAt ?? photo.createdAt;
@@ -44,37 +39,30 @@ export function MemorialFilmstrip({ photos }: MemorialFilmstripProps) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={[styles.filmstrip, { paddingHorizontal: spacing.lg }]}
       >
-        {photos.map((photo) => {
-          const uri = resolvePhotoUri(photo);
-          return (
-            <View key={photo.id} style={styles.filmCell}>
-              <View
-                style={[
-                  styles.filmImageWrap,
-                  { backgroundColor: colors.inverseSurface },
-                ]}
-              >
-                {uri ? (
-                  <Image
-                    source={{ uri }}
-                    style={styles.filmImage}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View
-                    style={[
-                      styles.filmImage,
-                      { backgroundColor: colors.surfaceContainerLow },
-                    ]}
-                  />
-                )}
-              </View>
-              <Text style={[styles.caption, { color: colors.onSurfaceVariant }]}>
-                {formatPhotoDate(photo)}
-              </Text>
+        {photos.map((photo) => (
+          <View key={photo.id} style={styles.filmCell}>
+            <View
+              style={[
+                styles.filmImageWrap,
+                { backgroundColor: colors.inverseSurface },
+              ]}
+            >
+              <PlantPhotoImage
+                photo={photo}
+                context="detail"
+                style={styles.filmImage}
+                frameStyle={styles.filmImage}
+                fallbackStyle={{
+                  backgroundColor: colors.surfaceContainerLow,
+                }}
+                contentFit="cover"
+              />
             </View>
-          );
-        })}
+            <Text style={[styles.caption, { color: colors.onSurfaceVariant }]}>
+              {formatPhotoDate(photo)}
+            </Text>
+          </View>
+        ))}
       </ScrollView>
     </View>
   );

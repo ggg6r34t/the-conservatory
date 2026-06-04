@@ -29,6 +29,7 @@ import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { useCareLogsForPlantIds } from "@/features/care-logs/hooks/useCareLogsForPlantIds";
 import { useMonthlyHighlights } from "@/features/journal/hooks/useMonthlyHighlights";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
+import { PlantPhotoImage } from "@/features/plants/components/PlantPhotoImage";
 import { usePullToRefreshSync } from "@/hooks/usePullToRefreshSync";
 import type { CareLog } from "@/types/models";
 
@@ -412,22 +413,15 @@ export default function JournalScreen() {
                             </Text>
                           </View>
 
-                          {plant.primaryPhotoUri ? (
-                            <Image
-                              source={{ uri: plant.primaryPhotoUri }}
-                              style={styles.entryThumb}
-                              contentFit="cover"
-                            />
-                          ) : (
-                            <View
-                              style={[
-                                styles.entryThumb,
-                                {
-                                  backgroundColor: colors.surfaceContainerHigh,
-                                },
-                              ]}
-                            />
-                          )}
+                          <PlantPhotoImage
+                            plant={plant}
+                            style={styles.entryThumb}
+                            frameStyle={styles.entryThumb}
+                            fallbackStyle={{
+                              backgroundColor: colors.surfaceContainerHigh,
+                            }}
+                            contentFit="cover"
+                          />
                         </View>
                       ))}
                     </View>

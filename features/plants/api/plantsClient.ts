@@ -273,14 +273,14 @@ async function resolvePhotoRowForDisplay(row: PhotoRow): Promise<PhotoRow> {
     local_uri = null;
   }
 
-  let remote_url = row.remote_url;
   const hasLocalUri = Boolean(local_uri?.trim());
-  const needsStorageSignedUrl =
+  let remote_url = row.remote_url;
+  const shouldResolveFromStorage =
     Boolean(row.storage_path) &&
     (!hasLocalUri ||
       !remote_url ||
-      !isHttpOrFileUri(remote_url));
-  const storageBacked = needsStorageSignedUrl
+      !isHttpOrFileUri(remote_url ?? ""));
+  const storageBacked = shouldResolveFromStorage
     ? await getStorageAssetUrl(row.storage_path)
     : null;
 
@@ -288,13 +288,11 @@ async function resolvePhotoRowForDisplay(row: PhotoRow): Promise<PhotoRow> {
     remote_url = storageBacked ?? remote_url;
   } else if (remote_url && !isHttpOrFileUri(remote_url)) {
     remote_url = storageBacked ?? remote_url;
+  } else if (!remote_url && storageBacked) {
+    remote_url = storageBacked;
   }
 
-  if (
-    remote_url &&
-    !isHttpOrFileUri(remote_url) &&
-    storageBacked
-  ) {
+  if (remote_url && !isHttpOrFileUri(remote_url) && storageBacked) {
     remote_url = storageBacked;
   }
 
@@ -307,6 +305,10 @@ async function resolvePhotoRowForDisplay(row: PhotoRow): Promise<PhotoRow> {
 
 function attachPrimaryPhotoFields(photo: Photo | undefined) {
   return buildPrimaryPhotoListFields(photo, { context: "card" });
+}
+
+function attachGraveyardPhotoFields(photo: Photo | undefined) {
+  return buildPrimaryPhotoListFields(photo, { context: "detail" });
 }
 
 async function hydratePhotosForDisplay(rows: PhotoRow[]) {
@@ -385,7 +387,7 @@ export async function listGraveyardPlants(userId: string) {
   const hasPrimaryPhotoByPlantId = new Map<string, boolean>();
 
   for (const photo of hydratedPhotos) {
-    if (!resolveRenderablePhotoUri(photo)) {
+    if (!resolvePhotoDisplayUri(photo, { context: "detail" })) {
       continue;
     }
 
@@ -420,7 +422,7 @@ export async function listGraveyardPlants(userId: string) {
     speciesName: row.species_name,
     nickname: row.nickname,
     plantNotes: row.notes,
-    ...attachPrimaryPhotoFields(photoByPlantId.get(row.plant_id)),
+    ...attachGraveyardPhotoFields(photoByPlantId.get(row.plant_id)),
     photoCount: photoCountByPlantId.get(row.plant_id) ?? 0,
     careLogCount: careLogCountByPlantId.get(row.plant_id) ?? 0,
     hasPrimaryPhoto: hasPrimaryPhotoByPlantId.get(row.plant_id) ?? false,

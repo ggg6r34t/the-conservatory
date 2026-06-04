@@ -121,7 +121,7 @@ export default function MemorialDetailScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <MemorialHero
-          photoUri={memorial?.primaryPhotoUri}
+          plant={memorial}
           displayName={displayName}
           speciesLabel={speciesLabel}
           heroGradientColors={heroGradientColors}

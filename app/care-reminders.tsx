@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 
 import { BlurView } from "expo-blur";
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
   Modal,
@@ -24,6 +23,7 @@ import { useDeleteReminder } from "@/features/notifications/hooks/useDeleteRemin
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import { useSetReminder } from "@/features/notifications/hooks/useSetReminder";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
+import { PlantPhotoImage } from "@/features/plants/components/PlantPhotoImage";
 import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
 import { EmptyState } from "@/features/empty-states/components/EmptyState";
 import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
@@ -551,27 +551,16 @@ export default function CareRemindersScreen() {
                       { backgroundColor: colors.surfaceContainerLow },
                     ]}
                   >
-                    {plant.primaryPhotoUri ? (
-                      <Image
-                        source={{ uri: plant.primaryPhotoUri }}
-                        style={styles.reminderImage}
-                        contentFit="cover"
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.reminderFallback,
-                          { backgroundColor: colors.surfaceContainerHigh },
-                        ]}
-                      >
-                        <Icon
-                          family="MaterialCommunityIcons"
-                          name="sprout"
-                          size={22}
-                          color={colors.primary}
-                        />
-                      </View>
-                    )}
+                    <PlantPhotoImage
+                      plant={plant}
+                      style={styles.reminderImage}
+                      frameStyle={styles.reminderImage}
+                      fallbackStyle={[
+                        styles.reminderFallback,
+                        { backgroundColor: colors.surfaceContainerHigh },
+                      ]}
+                      contentFit="cover"
+                    />
                   </View>
 
                   <View style={styles.reminderCopy}>

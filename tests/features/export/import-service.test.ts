@@ -7,6 +7,7 @@ jest.mock('@/features/care-logs/services/careLogTagsService', () => ({
 }));
 jest.mock('@/features/plants/services/photoStorageService', () => ({
   downloadRemotePhotoAsset: jest.fn().mockRejectedValue(new Error('no-op')),
+  managedPhotoFileExists: jest.fn().mockResolvedValue(false),
 }));
 jest.mock('@/services/database/syncOutbox', () => ({
   insertSyncOutboxOperationInTransaction: jest.fn().mockResolvedValue(undefined),
@@ -19,11 +20,15 @@ import {
   type CollectionImportPayload,
 } from '@/features/export/services/importService';
 import { getDatabase } from '@/services/database/sqlite';
-import { downloadRemotePhotoAsset } from '@/features/plants/services/photoStorageService';
+import {
+  downloadRemotePhotoAsset,
+  managedPhotoFileExists,
+} from '@/features/plants/services/photoStorageService';
 import { setEntitlementState } from '@/services/entitlementState';
 
 const mockGetDatabase = getDatabase as jest.Mock;
 const mockDownloadRemotePhotoAsset = downloadRemotePhotoAsset as jest.Mock;
+const mockManagedPhotoFileExists = managedPhotoFileExists as jest.Mock;
 
 function makeMinimalPayload(overrides: Partial<CollectionImportPayload> = {}): CollectionImportPayload {
   return {
@@ -62,6 +67,7 @@ describe('importService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     setEntitlementState(true);
+    mockManagedPhotoFileExists.mockResolvedValue(true);
     mockDownloadRemotePhotoAsset.mockResolvedValue({
       localUri: 'file://documents/photos/user-1/plant-1/progress/photo-1.jpg',
       storagePath: 'user-1/plant-1/photo-1.jpg',
@@ -144,11 +150,11 @@ describe('importService', () => {
       }),
     );
     expect(runAsync).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT OR REPLACE INTO photos'),
-      'photo-1',
-      'user-1',
-      'plant-1',
-      'file://documents/photos/user-1/plant-1/progress/photo-1.jpg',
+      expect.stringContaining("INSERT OR REPLACE INTO photos"),
+      "photo-1",
+      "user-1",
+      "plant-1",
+      "file://documents/photos/user-1/plant-1/progress/photo-1.jpg",
       'https://storage.example/user-1/plant-1/photo-1.jpg',
       'user-1/plant-1/photo-1.jpg',
       'image/jpeg',
@@ -159,6 +165,61 @@ describe('importService', () => {
       null,
       'New leaf',
       0,
+      expect.any(String),
+      expect.any(String),
+      1,
+      null,
+      null,
+    );
+  });
+
+  it("does not persist ghost local URIs when cloud restore and disk checks fail", async () => {
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    mockImportDatabase({ runAsync });
+    mockDownloadRemotePhotoAsset.mockRejectedValueOnce(new Error("offline"));
+    mockManagedPhotoFileExists.mockResolvedValueOnce(false);
+
+    await restoreCollectionImport({
+      userId: "user-1",
+      payload: {
+        exportVersion: 1,
+        format: "json",
+        preferences: null,
+        plants: [],
+        careLogs: [],
+        photos: [
+          {
+            id: "photo-ghost",
+            plantId: "plant-1",
+            localUri: "file://cache/temporary.jpg",
+            remoteUrl: "https://storage.example/photo-ghost.jpg",
+            storagePath: "user-1/plant-1/photo-ghost.jpg",
+            mimeType: "image/jpeg",
+            photoRole: "primary",
+            isPrimary: 1,
+          },
+        ],
+        reminders: [],
+        memorialEntries: [],
+      },
+    });
+
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT OR REPLACE INTO photos"),
+      "photo-ghost",
+      "user-1",
+      "plant-1",
+      null,
+      "https://storage.example/photo-ghost.jpg",
+      "user-1/plant-1/photo-ghost.jpg",
+      "image/jpeg",
+      null,
+      null,
+      "primary",
+      expect.any(String),
+      null,
+      null,
+      1,
       expect.any(String),
       expect.any(String),
       1,

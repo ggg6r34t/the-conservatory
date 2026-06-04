@@ -23,7 +23,7 @@ Round 2 closes cloud/stale photo display gaps for list and detail: unified hydra
 | C-05 | Conditional signed URL (no network when local OK) | **Fully Resolved** | `needsStorageSignedUrl` gate L281–286 | `plants-client-list-photo-hydration.test.ts` “does not request a signed URL…” |
 | C-06 | List hydration test | **Fully Resolved** | — | `tests/features/plants/plants-client-list-photo-hydration.test.ts` |
 | C-07 | `getPlantById` parity | **Fully Resolved** | `getPlantById` L635 `hydratePhotosForDisplay` | Same test file `hydrates getPlantById…` |
-| C-08 | Image `onError` fallback | **Deferred** | `PlantPhotoImage` null URI fallback only | Prior photo-display audit F-21b |
+| C-08 | Image `onError` fallback | **Fully Resolved** | `PlantPhotoImage.tsx` `onError` + `PHOTO_DISPLAY_HARDENING_AUDIT_ROUND2_2026-06-04.md` H-04 | `plant-photo-resolver.test.ts` |
 | C-09 | Missing `storage_path` in DB | **Deferred** | Sync/repair must restore metadata | User: Backup Repair + Sync Now |
 | C-10 | Manual device QA | **Not Actionable** | — | Required for production sign-off |
 

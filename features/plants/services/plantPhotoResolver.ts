@@ -133,6 +133,78 @@ export function resolvePhotoDisplayUri(
   return null;
 }
 
+function buildPhotoDisplayUriChain(
+  photo: PhotoUriFields,
+  context: PlantPhotoDisplayContext,
+): Array<[PlantPhotoUriSource, string | null | undefined]> {
+  return context === "card"
+    ? [
+        ["thumbnail_local", photo.thumbnailLocalUri],
+        ["local", photo.localUri],
+        ["thumbnail_remote", photo.thumbnailRemoteUrl],
+        ["remote", photo.remoteUrl],
+      ]
+    : [
+        ["local", photo.localUri],
+        ["remote", photo.remoteUrl],
+        ["thumbnail_local", photo.thumbnailLocalUri],
+        ["thumbnail_remote", photo.thumbnailRemoteUrl],
+      ];
+}
+
+/** Next renderable URI in the display chain after a failed load. */
+export function resolvePhotoDisplayFallbackUri(
+  photo: PhotoUriFields,
+  failedUri: string,
+  options?: {
+    context?: PlantPhotoDisplayContext;
+    failedUris?: ReadonlySet<string> | readonly string[];
+  },
+): string | null {
+  const context = options?.context ?? "card";
+  const blocked = new Set(
+    [failedUri, ...(options?.failedUris ?? [])].filter(Boolean),
+  );
+
+  for (const [, raw] of buildPhotoDisplayUriChain(photo, context)) {
+    const uri = normalizeUri(raw);
+    if (!uri || blocked.has(uri) || !isLikelyRenderableUri(uri)) {
+      continue;
+    }
+
+    return uri;
+  }
+
+  return null;
+}
+
+/** Fallback for list DTOs when the first resolved URI fails to load. */
+export function resolvePlantListPhotoFallbackUri(
+  plant: PrimaryPhotoSummaryFields,
+  failedUri: string,
+  failedUris?: ReadonlySet<string> | readonly string[],
+): string | null {
+  const blocked = new Set(
+    [failedUri, ...(failedUris ?? [])].filter(Boolean),
+  );
+  const candidates = [
+    plant.primaryPhotoRemoteUrl,
+    plant.primaryPhotoLocalUri,
+    plant.primaryPhotoUri,
+  ];
+
+  for (const raw of candidates) {
+    const uri = normalizeUri(raw);
+    if (!uri || blocked.has(uri) || !isLikelyRenderableUri(uri)) {
+      continue;
+    }
+
+    return uri;
+  }
+
+  return null;
+}
+
 export function resolvePrimaryPlantPhoto<T extends PhotoUriFields & { id?: string }>(
   photos: T[],
 ): T | null {
