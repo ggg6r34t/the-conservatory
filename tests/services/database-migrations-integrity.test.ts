@@ -129,6 +129,56 @@ describe("database migrations integrity", () => {
 
     expect(alterCalls.some((sql) => sql.includes("plants"))).toBe(true);
     expect(alterCalls.some((sql) => sql.includes("care_reminders"))).toBe(true);
-    expect(CURRENT_SCHEMA_VERSION).toBe(2);
+    expect(CURRENT_SCHEMA_VERSION).toBe(3);
+  });
+
+  it("creates care_schedule_suggestions before any ALTER on that table", async () => {
+    const database = createMigrationDatabase({
+      photos: true,
+      care_logs: true,
+      care_reminders: true,
+      graveyard_plants: true,
+    });
+
+    await runDatabaseMigrations(database as never);
+
+    const createCallIndex = database.execAsync.mock.calls.findIndex((call) =>
+      String(call[0]).includes(
+        "CREATE TABLE IF NOT EXISTS care_schedule_suggestions",
+      ),
+    );
+    const alterCallIndex = database.execAsync.mock.calls.findIndex((call) =>
+      /ALTER TABLE care_schedule_suggestions/i.test(String(call[0])),
+    );
+    const pragmaCallIndex = database.getAllAsync.mock.calls.findIndex((call) =>
+      String(call[0]).includes("PRAGMA table_info(care_schedule_suggestions)"),
+    );
+
+    expect(createCallIndex).toBeGreaterThanOrEqual(0);
+    if (alterCallIndex >= 0) {
+      expect(alterCallIndex).toBeGreaterThan(createCallIndex);
+    }
+    if (pragmaCallIndex >= 0) {
+      expect(createCallIndex).toBeLessThan(pragmaCallIndex);
+    }
+  });
+
+  it("includes remote_id on care_schedule_suggestions CREATE so backfill does not require ALTER", async () => {
+    const database = createMigrationDatabase({
+      photos: true,
+      care_logs: true,
+      care_reminders: true,
+      graveyard_plants: true,
+    });
+
+    await runDatabaseMigrations(database as never);
+
+    const createSql = database.execAsync.mock.calls
+      .map((call) => String(call[0]))
+      .find((sql) =>
+        sql.includes("CREATE TABLE IF NOT EXISTS care_schedule_suggestions"),
+      );
+
+    expect(createSql).toContain("remote_id TEXT");
   });
 });

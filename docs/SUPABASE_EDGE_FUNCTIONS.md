@@ -1,5 +1,7 @@
 # Supabase Edge Functions Runbook
 
+See also: [ENV_AND_SUPABASE_SECRETS.md](./ENV_AND_SUPABASE_SECRETS.md) (full split between app `.env` / EAS and Supabase secrets).
+
 ## Required Secrets
 
 Set these in Supabase before deploying AI functions:

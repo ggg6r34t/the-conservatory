@@ -724,24 +724,6 @@ CREATE INDEX IF NOT EXISTS idx_photos_user_id ON photos(user_id);
 CREATE INDEX IF NOT EXISTS idx_care_reminders_user_id ON care_reminders(user_id);
 `);
 
-  const remoteIdTables = [
-    "plants",
-    "photos",
-    "care_logs",
-    "care_log_tags",
-    "care_reminders",
-    "care_schedule_suggestions",
-    "plant_status_snapshots",
-    "specimen_tags",
-    "archive_curation_overrides",
-    "graveyard_plants",
-    "feature_usage",
-  ] as const;
-
-  for (const table of remoteIdTables) {
-    await ensureColumn(database, table, "remote_id", "TEXT");
-  }
-
   await database.execAsync(`
 CREATE TABLE IF NOT EXISTS care_schedule_suggestions (
   id TEXT PRIMARY KEY NOT NULL,
@@ -768,6 +750,24 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_care_schedule_unique_plant_user_type
 CREATE INDEX IF NOT EXISTS idx_care_schedule_suggestions_user_id
   ON care_schedule_suggestions(user_id);
 `);
+
+  const remoteIdTables = [
+    "plants",
+    "photos",
+    "care_logs",
+    "care_log_tags",
+    "care_reminders",
+    "care_schedule_suggestions",
+    "plant_status_snapshots",
+    "specimen_tags",
+    "archive_curation_overrides",
+    "graveyard_plants",
+    "feature_usage",
+  ] as const;
+
+  for (const table of remoteIdTables) {
+    await ensureColumn(database, table, "remote_id", "TEXT");
+  }
 
   await recordSchemaMigrationVersion(database);
 }
