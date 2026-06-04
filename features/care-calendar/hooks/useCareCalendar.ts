@@ -148,5 +148,12 @@ export function useCareCalendar(input?: {
         suggestionsQuery.refetch(),
       ]);
     },
+    refreshAiSuggestions: async () => {
+      if (!cloudAllowed) {
+        return;
+      }
+
+      await suggestionsQuery.refetch();
+    },
   };
 }

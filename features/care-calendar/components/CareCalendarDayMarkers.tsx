@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
@@ -9,6 +9,7 @@ import type { CareCalendarDayMarkers } from "@/features/care-calendar/services/c
 interface CareCalendarDayMarkersProps {
   markers: CareCalendarDayMarkers;
   selected?: boolean;
+  onPlantLongPress?: (plantId: string) => void;
 }
 
 const AVATAR_SIZE = 14;
@@ -18,6 +19,7 @@ const CARE_ICON_SIZE = 11;
 export function CareCalendarDayMarkers({
   markers,
   selected = false,
+  onPlantLongPress,
 }: CareCalendarDayMarkersProps) {
   const { colors } = useTheme();
 
@@ -54,8 +56,15 @@ export function CareCalendarDayMarkers({
       {markers.plants.length > 0 ? (
         <View style={styles.avatarRow}>
           {markers.plants.map((plant, index) => (
-            <View
+            <Pressable
               key={plant.plantId}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${plant.plantName}`}
+              onLongPress={
+                onPlantLongPress
+                  ? () => onPlantLongPress(plant.plantId)
+                  : undefined
+              }
               style={[
                 styles.avatarWrap,
                 {
@@ -87,7 +96,7 @@ export function CareCalendarDayMarkers({
                   />
                 </View>
               )}
-            </View>
+            </Pressable>
           ))}
         </View>
       ) : null}

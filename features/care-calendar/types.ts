@@ -40,6 +40,8 @@ export type CareCalendarEvent = {
   isAiSuggested?: boolean;
   suggestionDerivation?: CareSuggestionDerivation;
   reminderId?: string;
+  /** ISO timestamp for reminder time-of-day when known */
+  dueAt?: string;
 };
 
 export type CareCalendarFilter =
@@ -50,6 +52,9 @@ export type CareCalendarFilter =
   | "repot"
   | "prune"
   | "inspect"
+  | "soil_change"
+  | "pest_check"
+  | "note"
   | "overdue"
   | "ai_suggested";
 

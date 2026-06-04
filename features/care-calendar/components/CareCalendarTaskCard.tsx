@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { formatCareCalendarDueTime } from "@/features/care-calendar/services/careCalendarEventTime";
 import { getCareTypeLabel, getCareTypeVerb } from "@/features/care-calendar/services/careCalendarLabels";
 import { getCareCalendarSourceLabel } from "@/features/care-calendar/services/careCalendarSourceLabels";
 import type { CareCalendarEvent } from "@/features/care-calendar/types";
@@ -10,7 +11,6 @@ import type { CareScheduleSuggestion } from "@/features/care-calendar/types";
 interface CareCalendarTaskCardProps {
   event: CareCalendarEvent;
   onLogCare: () => void;
-  onMarkDone: () => void;
   onReschedule: () => void;
   onEditReminder?: () => void;
   onAcceptSuggestion?: () => void;
@@ -78,7 +78,6 @@ function ActionChip({
 export function CareCalendarTaskCard({
   event,
   onLogCare,
-  onMarkDone,
   onReschedule,
   onEditReminder,
   onAcceptSuggestion,
@@ -88,6 +87,7 @@ export function CareCalendarTaskCard({
   const router = useRouter();
   const { colors } = useTheme();
   const isSuggestion = Boolean(event.isAiSuggested);
+  const dueTimeLabel = formatCareCalendarDueTime(event.dueAt);
 
   return (
     <View
@@ -95,11 +95,18 @@ export function CareCalendarTaskCard({
     >
       <View style={styles.header}>
         <View style={styles.copy}>
-          <Text style={[styles.plantName, { color: colors.primary }]}>
-            {event.plantName}
-          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${event.plantName}`}
+            onPress={() => router.push(`/plant/${event.plantId}`)}
+          >
+            <Text style={[styles.plantName, { color: colors.primary }]}>
+              {event.plantName}
+            </Text>
+          </Pressable>
           <Text style={[styles.careType, { color: colors.onSurface }]}>
             {getCareTypeVerb(event.careType)} · {getCareTypeLabel(event.careType)}
+            {dueTimeLabel ? ` · ${dueTimeLabel}` : ""}
           </Text>
         </View>
         <Text style={[styles.status, { color: colors.secondary }]}>
@@ -141,19 +148,10 @@ export function CareCalendarTaskCard({
               disabled={busy || event.status === "completed"}
               selected
             />
-            <ActionChip
-              label="Mark done"
-              onPress={onMarkDone}
-              disabled={busy || event.status === "completed"}
-            />
             <ActionChip label="Reschedule" onPress={onReschedule} />
             {onEditReminder ? (
               <ActionChip label="Edit reminder" onPress={onEditReminder} />
             ) : null}
-            <ActionChip
-              label="View plant"
-              onPress={() => router.push(`/plant/${event.plantId}`)}
-            />
           </>
         )}
       </View>

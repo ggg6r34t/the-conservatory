@@ -115,10 +115,14 @@ export async function scheduleReminderNotification(
     return null;
   }
 
+  const dueDateKey = nextDueAt.slice(0, 10);
   const identifier = await notifications.scheduleNotificationAsync({
     content: {
       title: `${plantName} needs care`,
       body: "Open The Conservatory to log today's ritual.",
+      data: {
+        url: `/care-calendar?date=${dueDateKey}`,
+      },
     },
     trigger: {
       type: notifications.SchedulableTriggerInputTypes.DATE,

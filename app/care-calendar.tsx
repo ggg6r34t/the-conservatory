@@ -1,41 +1,43 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import * as Haptics from "expo-haptics";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
   AccessibilityInfo,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
-import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
-import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { trackCareCalendarDaySelected } from "@/features/care-calendar/analytics";
-import { useCareCalendarAnalytics } from "@/features/care-calendar/hooks/useCareCalendarAnalytics";
-import { resolvePlantFocusedCalendarState } from "@/features/care-calendar/services/careCalendarDeepLink";
 import { CareCalendarAgenda } from "@/features/care-calendar/components/CareCalendarAgenda";
 import { CareCalendarFilters } from "@/features/care-calendar/components/CareCalendarFilters";
 import { CareCalendarMonthGrid } from "@/features/care-calendar/components/CareCalendarMonthGrid";
+import { CareCalendarMonthGridSkeleton } from "@/features/care-calendar/components/CareCalendarMonthGridSkeleton";
+import { CareCalendarMonthHeader } from "@/features/care-calendar/components/CareCalendarMonthHeader";
+import { CareCalendarPlantFocusChip } from "@/features/care-calendar/components/CareCalendarPlantFocusChip";
+import { CareCalendarRescheduleModal } from "@/features/care-calendar/components/CareCalendarRescheduleModal";
+import { CareCalendarToolbar } from "@/features/care-calendar/components/CareCalendarToolbar";
 import { useCareCalendar } from "@/features/care-calendar/hooks/useCareCalendar";
-import { useCareCalendarActions } from "@/features/care-calendar/hooks/useCareCalendarActions";
+import { useCareCalendarAnalytics } from "@/features/care-calendar/hooks/useCareCalendarAnalytics";
+import { useCareCalendarScreenActions } from "@/features/care-calendar/hooks/useCareCalendarScreenActions";
+import { resolveCareCalendarRouteState } from "@/features/care-calendar/services/careCalendarDeepLink";
+import { buildCareCalendarHorizonNotice } from "@/features/care-calendar/services/careCalendarHorizonNotice";
+import { shareCareCalendarIcs } from "@/features/care-calendar/services/careCalendarIcsExport";
+import { getVisibleCareCalendarFilters } from "@/features/care-calendar/services/careCalendarFilterOptions";
+import { buildCareCalendarToolbarSummary } from "@/features/care-calendar/services/careCalendarToolbarSummary";
+import type { CareCalendarOverflowAction } from "@/features/care-calendar/components/CareCalendarOverflowMenu";
 import {
   formatAgendaDayTitle,
-  formatMonthTitle,
   getDefaultCareCalendarDateKey,
   groupEventsByDate,
-  toLocalDateKey,
+  isVisibleMonthShowingToday,
   toggleSelectedDateKey,
 } from "@/features/care-calendar/services/careCalendarDerivationService";
-import type {
-  CareCalendarEvent,
-  CareCalendarFilter,
-  CareCalendarViewMode,
-  CareScheduleSuggestion,
-} from "@/features/care-calendar/types";
+import { useCareCalendarPrefsStore } from "@/features/care-calendar/stores/useCareCalendarPrefsStore";
+import type { CareCalendarViewMode } from "@/features/care-calendar/types";
 import { UpgradePrompt } from "@/features/billing/components/UpgradePrompt";
 import { EmptyState } from "@/features/empty-states/components/EmptyState";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
@@ -44,25 +46,26 @@ import { useSnackbar } from "@/hooks/useSnackbar";
 
 export default function CareCalendarScreen() {
   const router = useRouter();
-  const { plantId } = useLocalSearchParams<{ plantId?: string }>();
+  const { plantId, date: dateParam } = useLocalSearchParams<{
+    plantId?: string;
+    date?: string;
+  }>();
   const { colors } = useTheme();
-  const [filter, setFilter] = useState<CareCalendarFilter>("all");
-  const [viewMode, setViewMode] = useState<CareCalendarViewMode>("month");
+  const snackbar = useSnackbar();
+  const filter = useCareCalendarPrefsStore((state) => state.filter);
+  const setFilter = useCareCalendarPrefsStore((state) => state.setFilter);
+  const viewMode = useCareCalendarPrefsStore((state) => state.viewMode);
+  const setViewMode = useCareCalendarPrefsStore((state) => state.setViewMode);
   const todayKey = useMemo(() => getDefaultCareCalendarDateKey(), []);
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(`${todayKey}T12:00:00`),
   );
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(todayKey);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
-  const [rescheduleTarget, setRescheduleTarget] = useState<CareCalendarEvent | null>(
-    null,
-  );
-  const [rescheduleDays, setRescheduleDays] = useState("7");
+  const [refreshingAi, setRefreshingAi] = useState(false);
   const { onRefresh, refreshing } = usePullToRefreshSync();
-  const snackbar = useSnackbar();
-  const appliedPlantDeepLinkRef = useRef<string | null>(null);
+  const appliedRouteRef = useRef<string | null>(null);
   const calendar = useCareCalendar({ plantId, filter });
-  const actions = useCareCalendarActions();
   const grouped = useMemo(
     () => groupEventsByDate(calendar.allEvents),
     [calendar.allEvents],
@@ -74,19 +77,18 @@ export default function CareCalendarScreen() {
         : [],
     [calendar.events, selectedDateKey],
   );
-  const agendaEvents = useMemo(() => {
-    const upcoming = calendar.events.filter(
-      (event) => event.status !== "completed",
-    );
-    return upcoming.length ? upcoming : calendar.events;
-  }, [calendar.events]);
+  const agendaEvents = useMemo(() => calendar.events, [calendar.events]);
   const suggestionsById = useMemo(() => {
-    const map = new Map<string, CareScheduleSuggestion>();
-    for (const suggestion of calendar.suggestions) {
-      map.set(suggestion.id, suggestion);
-    }
+    const map = new Map(
+      calendar.suggestions.map((suggestion) => [suggestion.id, suggestion] as const),
+    );
     return map;
   }, [calendar.suggestions]);
+  const screenActions = useCareCalendarScreenActions({
+    plants: calendar.plants,
+    suggestionsById,
+    refresh: calendar.refresh,
+  });
   const hasPlants = calendar.plants.length > 0;
   const hasScheduledCare = calendar.allEvents.some(
     (event) => !event.isAiSuggested,
@@ -94,6 +96,38 @@ export default function CareCalendarScreen() {
   const focusedPlant = plantId
     ? calendar.plants.find((plant) => plant.id === plantId)
     : undefined;
+  const toolbarSummaryLabel = useMemo(
+    () => buildCareCalendarToolbarSummary(calendar.events, viewMode),
+    [calendar.events, viewMode],
+  );
+  const showAiFallbackHelp =
+    calendar.aiSuggestionsEnabled && calendar.aiSuggestionDerivation === "local";
+  const horizonNotice = useMemo(
+    () => buildCareCalendarHorizonNotice(calendar.allEvents),
+    [calendar.allEvents],
+  );
+  const aiSuggestionEvents = useMemo(
+    () => agendaEvents.filter((event) => event.isAiSuggested),
+    [agendaEvents],
+  );
+  const filterOptions = useMemo(
+    () =>
+      getVisibleCareCalendarFilters({
+        events: calendar.allEvents,
+        showAiFilter: calendar.aiSuggestionsEnabled,
+      }),
+    [calendar.aiSuggestionsEnabled, calendar.allEvents],
+  );
+  const routeState = useMemo(
+    () =>
+      resolveCareCalendarRouteState({
+        plantId,
+        plantName: focusedPlant?.name,
+        dateKey: typeof dateParam === "string" ? dateParam : undefined,
+        events: calendar.allEvents,
+      }),
+    [calendar.allEvents, dateParam, focusedPlant?.name, plantId],
+  );
 
   useCareCalendarAnalytics({
     source: plantId ? "plant_detail" : "dashboard",
@@ -113,21 +147,11 @@ export default function CareCalendarScreen() {
     };
   }, []);
 
-  const plantDeepLink = useMemo(
-    () =>
-      resolvePlantFocusedCalendarState({
-        plantId,
-        plantName: focusedPlant?.name,
-        events: calendar.allEvents,
-      }),
-    [calendar.allEvents, focusedPlant?.name, plantId],
-  );
-
   useEffect(() => {
     if (!calendar.aiSuggestionsEnabled && filter === "ai_suggested") {
       setFilter("all");
     }
-  }, [calendar.aiSuggestionsEnabled, filter]);
+  }, [calendar.aiSuggestionsEnabled, filter, setFilter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -136,86 +160,141 @@ export default function CareCalendarScreen() {
   );
 
   useEffect(() => {
-    if (!plantId) {
-      appliedPlantDeepLinkRef.current = null;
-      return;
-    }
-
+    const routeKey = `${plantId ?? ""}:${dateParam ?? ""}`;
     if (calendar.isLoading) {
       return;
     }
 
-    if (appliedPlantDeepLinkRef.current === plantId) {
+    if (appliedRouteRef.current === routeKey) {
       return;
     }
 
-    appliedPlantDeepLinkRef.current = plantId;
-    setSelectedDateKey(plantDeepLink.selectedDateKey);
-    setVisibleMonth(plantDeepLink.visibleMonth);
-  }, [calendar.isLoading, plantDeepLink, plantId]);
+    appliedRouteRef.current = routeKey;
+    setSelectedDateKey(routeState.selectedDateKey);
+    setVisibleMonth(routeState.visibleMonth);
+  }, [calendar.isLoading, dateParam, plantId, routeState]);
 
-  const findPlant = (event: CareCalendarEvent) =>
-    calendar.plants.find((plant) => plant.id === event.plantId);
+  const handleSelectDate = useCallback(
+    (dateKey: string) => {
+      const nextSelectedDateKey = toggleSelectedDateKey(selectedDateKey, dateKey);
+      void Haptics.selectionAsync();
 
-  const handleSelectDate = (dateKey: string) => {
-    const nextSelectedDateKey = toggleSelectedDateKey(selectedDateKey, dateKey);
-    if (nextSelectedDateKey === null) {
-      setSelectedDateKey(null);
-      return;
-    }
-
-    setSelectedDateKey(nextSelectedDateKey);
-    const taskCount = grouped.get(dateKey)?.length ?? 0;
-    const hasOverdue = (grouped.get(dateKey) ?? []).some(
-      (event) => event.status === "overdue",
-    );
-    trackCareCalendarDaySelected({ task_count: taskCount, has_overdue: hasOverdue });
-  };
-
-  const shiftMonth = (delta: number) => {
-    setVisibleMonth((current) => {
-      if (reduceMotionEnabled) {
-        const next = new Date(current);
-        next.setMonth(next.getMonth() + delta);
-        return next;
+      if (nextSelectedDateKey === null) {
+        setSelectedDateKey(null);
+        return;
       }
 
-      return new Date(current.getFullYear(), current.getMonth() + delta, 1);
-    });
-  };
-
-  const runReschedule = async () => {
-    if (!rescheduleTarget) {
-      return;
-    }
-
-    const plant = findPlant(rescheduleTarget);
-    if (!plant) {
-      return;
-    }
-
-    const frequencyDays = Number.parseInt(rescheduleDays, 10);
-    if (!Number.isFinite(frequencyDays) || frequencyDays <= 0) {
-      snackbar.success("Enter a valid interval in days.");
-      return;
-    }
-
-    try {
-      await actions.reschedule.mutateAsync({
-        event: rescheduleTarget,
-        plantName: plant.name,
-        speciesName: plant.speciesName,
-        frequencyDays,
-        nextDueAt: `${rescheduleTarget.dueDate}T09:00:00.000Z`,
+      setSelectedDateKey(nextSelectedDateKey);
+      const dayEvents = grouped.get(dateKey) ?? [];
+      trackCareCalendarDaySelected({
+        task_count: dayEvents.length,
+        has_overdue: dayEvents.some((event) => event.status === "overdue"),
       });
-      setRescheduleTarget(null);
-      snackbar.success("Care rescheduled.");
-      await calendar.refresh();
-    } catch (error) {
-      snackbar.success(
-        error instanceof Error ? error.message : "Could not reschedule care.",
-      );
+    },
+    [grouped, selectedDateKey],
+  );
+
+  const shiftMonth = useCallback(
+    (delta: number) => {
+      setVisibleMonth((current) => {
+        if (reduceMotionEnabled) {
+          const next = new Date(current);
+          next.setMonth(next.getMonth() + delta);
+          return next;
+        }
+
+        return new Date(current.getFullYear(), current.getMonth() + delta, 1);
+      });
+    },
+    [reduceMotionEnabled],
+  );
+
+  const jumpToToday = useCallback(() => {
+    setVisibleMonth(new Date(`${todayKey}T12:00:00`));
+    setSelectedDateKey(todayKey);
+  }, [todayKey]);
+
+  const handleExport = useCallback(async () => {
+    const result = await shareCareCalendarIcs(calendar.allEvents);
+    if (!result.ok) {
+      snackbar.error("Calendar export is not available on this device.");
     }
+  }, [calendar.allEvents, snackbar]);
+
+  const handleRefreshAi = useCallback(async () => {
+    setRefreshingAi(true);
+    try {
+      await calendar.refreshAiSuggestions();
+      snackbar.success("AI care suggestions refreshed.");
+    } catch {
+      snackbar.error("Could not refresh AI suggestions.");
+    } finally {
+      setRefreshingAi(false);
+    }
+  }, [calendar, snackbar]);
+
+  const setView = useCallback(
+    (mode: CareCalendarViewMode) => setViewMode(mode),
+    [setViewMode],
+  );
+
+  const overflowActions = useMemo(() => {
+    const actions: CareCalendarOverflowAction[] = [];
+
+    if (calendar.aiSuggestionDerivation === "local") {
+      actions.push({
+        id: "refresh-ai",
+        label: refreshingAi ? "Refreshing AI…" : "Refresh AI suggestions",
+        onPress: () => void handleRefreshAi(),
+      });
+    }
+
+    if (calendar.aiSuggestionsEnabled && aiSuggestionEvents.length > 1) {
+      actions.push({
+        id: "accept-all",
+        label: "Accept all AI suggestions",
+        onPress: () => void screenActions.acceptAllSuggestions(aiSuggestionEvents),
+      });
+    }
+
+    if (calendar.allEvents.length > 0) {
+      actions.push({
+        id: "export-ics",
+        label: "Export calendar (.ics)",
+        onPress: () => void handleExport(),
+      });
+    }
+
+    return actions;
+  }, [
+    aiSuggestionEvents,
+    calendar.aiSuggestionDerivation,
+    calendar.aiSuggestionsEnabled,
+    calendar.allEvents.length,
+    handleExport,
+    handleRefreshAi,
+    refreshingAi,
+    screenActions,
+  ]);
+
+  useEffect(() => {
+    if (!filterOptions.some((option) => option.id === filter)) {
+      setFilter("all");
+    }
+  }, [filter, filterOptions, setFilter]);
+
+  const agendaHandlers = {
+    events: agendaEvents,
+    suggestionsById,
+    showDayHeaders: viewMode === "agenda",
+    allowAiSuggestionActions: calendar.aiSuggestionsEnabled,
+    busy: screenActions.busy,
+    onLogCare: screenActions.logCare,
+    onReschedule: screenActions.openReschedule,
+    onEditReminder: screenActions.editReminder,
+    onAcceptSuggestion: screenActions.acceptSuggestion,
+    onDismissSuggestion: screenActions.dismissSuggestion,
+    collapseCompleted: true,
   };
 
   return (
@@ -225,8 +304,9 @@ export default function CareCalendarScreen() {
         subtitle="Botanical planner"
         title="Care rhythm"
         description={
-          plantDeepLink.description ??
-          "Upcoming watering, feeding, and gentle care — derived from your plants and reminders."
+          plantId
+            ? undefined
+            : "Upcoming watering, feeding, and gentle care — derived from your plants and reminders."
         }
         refreshing={refreshing}
         onRefresh={async () => {
@@ -262,11 +342,25 @@ export default function CareCalendarScreen() {
           />
         ) : (
           <>
+            {plantId && focusedPlant ? (
+              <CareCalendarPlantFocusChip
+                plantName={focusedPlant.name}
+                onClear={() => router.replace("/care-calendar")}
+              />
+            ) : null}
+
+            <CareCalendarToolbar
+              summaryLabel={toolbarSummaryLabel}
+              horizonNotice={horizonNotice}
+              showAiFallback={showAiFallbackHelp}
+              overflowActions={overflowActions}
+            />
+
             <View style={styles.segmented}>
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ selected: viewMode === "month" }}
-                onPress={() => setViewMode("month")}
+                onPress={() => setView("month")}
                 style={[
                   styles.segment,
                   {
@@ -294,7 +388,7 @@ export default function CareCalendarScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ selected: viewMode === "agenda" }}
-                onPress={() => setViewMode("agenda")}
+                onPress={() => setView("agenda")}
                 style={[
                   styles.segment,
                   {
@@ -323,49 +417,33 @@ export default function CareCalendarScreen() {
 
             <CareCalendarFilters
               value={filter}
+              options={filterOptions}
               onChange={setFilter}
-              showAiFilter={calendar.aiSuggestionsEnabled}
             />
 
             {viewMode === "month" ? (
               <View style={styles.monthSection}>
-                <View style={styles.monthHeader}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Previous month"
-                    onPress={() => shiftMonth(-1)}
-                  >
-                    <Icon
-                      family="MaterialCommunityIcons"
-                      name="chevron-left"
-                      color={colors.primary}
-                      size={24}
-                    />
-                  </Pressable>
-                  <Text style={[styles.monthTitle, { color: colors.primary }]}>
-                    {formatMonthTitle(visibleMonth)}
-                  </Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Next month"
-                    onPress={() => shiftMonth(1)}
-                  >
-                    <Icon
-                      family="MaterialCommunityIcons"
-                      name="chevron-right"
-                      color={colors.primary}
-                      size={24}
-                    />
-                  </Pressable>
-                </View>
-
-                <CareCalendarMonthGrid
-                  month={visibleMonth}
-                  selectedDateKey={selectedDateKey}
-                  events={calendar.events}
-                  plants={calendar.plants}
-                  onSelectDate={handleSelectDate}
+                <CareCalendarMonthHeader
+                  visibleMonth={visibleMonth}
+                  showTodayButton={!isVisibleMonthShowingToday(visibleMonth)}
+                  onPreviousMonth={() => shiftMonth(-1)}
+                  onNextMonth={() => shiftMonth(1)}
+                  onToday={jumpToToday}
                 />
+
+                {calendar.isLoading ? (
+                  <CareCalendarMonthGridSkeleton />
+                ) : (
+                  <CareCalendarMonthGrid
+                    month={visibleMonth}
+                    selectedDateKey={selectedDateKey}
+                    events={calendar.events}
+                    plants={calendar.plants}
+                    onSelectDate={handleSelectDate}
+                    onShiftMonth={shiftMonth}
+                    onPlantLongPress={(id) => router.push(`/plant/${id}`)}
+                  />
+                )}
 
                 {selectedDateKey ? (
                   <Text style={[styles.dayHeading, { color: colors.primary }]}>
@@ -381,79 +459,9 @@ export default function CareCalendarScreen() {
 
                 {selectedDateKey && selectedDayEvents.length ? (
                   <CareCalendarAgenda
+                    {...agendaHandlers}
                     events={selectedDayEvents}
-                    suggestionsById={suggestionsById}
                     showDayHeaders={false}
-                    allowAiSuggestionActions={calendar.aiSuggestionsEnabled}
-                    busy={actions.logCare.isPending}
-                    onLogCare={async (event) => {
-                      try {
-                        await actions.logCare.mutateAsync({ event });
-                        snackbar.success("Care logged.");
-                        await calendar.refresh();
-                      } catch (error) {
-                        snackbar.success(
-                          error instanceof Error
-                            ? error.message
-                            : "Could not log care.",
-                        );
-                      }
-                    }}
-                    onMarkDone={async (event) => {
-                      try {
-                        await actions.logCare.mutateAsync({ event });
-                        snackbar.success("Marked done.");
-                        await calendar.refresh();
-                      } catch (error) {
-                        snackbar.success(
-                          error instanceof Error
-                            ? error.message
-                            : "Could not complete care.",
-                        );
-                      }
-                    }}
-                    onReschedule={(event) => {
-                      setRescheduleTarget(event);
-                      setRescheduleDays(
-                        String(
-                          calendar.plants.find((plant) => plant.id === event.plantId)
-                            ?.wateringIntervalDays ?? 7,
-                        ),
-                      );
-                    }}
-                    onEditReminder={() => router.push("/care-reminders")}
-                    onAcceptSuggestion={async (event) => {
-                      const suggestion = suggestionsById.get(event.id);
-                      const plant = findPlant(event);
-                      if (!suggestion || !plant) {
-                        return;
-                      }
-
-                      try {
-                        await actions.acceptSuggestion.mutateAsync({
-                          suggestion,
-                          plantName: plant.name,
-                          speciesName: plant.speciesName,
-                        });
-                        snackbar.success("Care rhythm saved.");
-                        await calendar.refresh();
-                      } catch (error) {
-                        snackbar.success(
-                          error instanceof Error
-                            ? error.message
-                            : "Could not accept suggestion.",
-                        );
-                      }
-                    }}
-                    onDismissSuggestion={async (event) => {
-                      const suggestion = suggestionsById.get(event.id);
-                      if (!suggestion) {
-                        return;
-                      }
-
-                      await actions.dismissSuggestion.mutateAsync(suggestion);
-                      await calendar.refresh();
-                    }}
                   />
                 ) : selectedDateKey ? (
                   <EmptyState
@@ -463,159 +471,37 @@ export default function CareCalendarScreen() {
                       tone: "neutral",
                       analyticsKey: "care_calendar_empty_day",
                       title: "No care planned for this day",
-                      body: "Your plants have no scheduled care here.",
+                      body: "Add a reminder to schedule care for this date.",
+                      primaryActionLabel: "Create reminder",
                     }}
+                    primaryHref="/care-reminders"
                   />
                 ) : null}
               </View>
             ) : (
-              <CareCalendarAgenda
-                events={agendaEvents}
-                suggestionsById={suggestionsById}
-                allowAiSuggestionActions={calendar.aiSuggestionsEnabled}
-                busy={actions.logCare.isPending}
-                onLogCare={async (event) => {
-                  try {
-                    await actions.logCare.mutateAsync({ event });
-                    snackbar.success("Care logged.");
-                    await calendar.refresh();
-                  } catch (error) {
-                    snackbar.success(
-                      error instanceof Error ? error.message : "Could not log care.",
-                    );
-                  }
-                }}
-                onMarkDone={async (event) => {
-                  try {
-                    await actions.logCare.mutateAsync({ event });
-                        snackbar.success("Marked done.");
-                    await calendar.refresh();
-                  } catch (error) {
-                    snackbar.success(
-                      error instanceof Error
-                        ? error.message
-                        : "Could not complete care.",
-                    );
-                  }
-                }}
-                onReschedule={(event) => {
-                  setRescheduleTarget(event);
-                  setRescheduleDays(
-                    String(
-                      calendar.plants.find((plant) => plant.id === event.plantId)
-                        ?.wateringIntervalDays ?? 7,
-                    ),
-                  );
-                }}
-                onEditReminder={() => router.push("/care-reminders")}
-                onAcceptSuggestion={async (event) => {
-                  const suggestion = suggestionsById.get(event.id);
-                  const plant = findPlant(event);
-                  if (!suggestion || !plant) {
-                    return;
-                  }
-
-                  try {
-                    await actions.acceptSuggestion.mutateAsync({
-                      suggestion,
-                      plantName: plant.name,
-                      speciesName: plant.speciesName,
-                    });
-                        snackbar.success("Care rhythm saved.");
-                    await calendar.refresh();
-                  } catch (error) {
-                    snackbar.success(
-                      error instanceof Error
-                        ? error.message
-                        : "Could not accept suggestion.",
-                    );
-                  }
-                }}
-                onDismissSuggestion={async (event) => {
-                  const suggestion = suggestionsById.get(event.id);
-                  if (!suggestion) {
-                    return;
-                  }
-
-                  await actions.dismissSuggestion.mutateAsync(suggestion);
-                  await calendar.refresh();
-                }}
-              />
+              <CareCalendarAgenda {...agendaHandlers} />
             )}
 
             {!calendar.aiSuggestionsEnabled ? (
-              <View style={styles.aiUpsell}>
-                <Text
-                  style={[styles.aiNote, { color: colors.onSurfaceVariant }]}
-                >
-                  Showing your local care schedule. Premium adds optional AI-assisted
-                  rhythm suggestions.
-                </Text>
-                <UpgradePrompt
-                  compact
-                  message="Unlock AI care rhythms on your calendar."
-                  cta="Explore Premium"
-                />
-              </View>
-            ) : calendar.aiSuggestionDerivation === "local" ? (
-              <Text
-                style={[styles.aiNote, { color: colors.onSurfaceVariant }]}
-              >
-                Cloud AI is unavailable. Showing on-device rhythm hints until the
-                next refresh.
-              </Text>
+              <UpgradePrompt
+                compact
+                message="Unlock optional AI care rhythms on your calendar."
+                cta="Explore Premium"
+              />
             ) : null}
           </>
         )}
       </ProfileScreenScaffold>
 
-      <Modal
-        visible={rescheduleTarget != null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRescheduleTarget(null)}
-      >
-        <View style={[styles.modalBackdrop, { backgroundColor: colors.backdrop }]}>
-          <View
-            style={[
-              styles.modalCard,
-              { backgroundColor: colors.surfaceContainerHigh },
-            ]}
-          >
-            <Text style={[styles.modalTitle, { color: colors.primary }]}>
-              Reschedule care
-            </Text>
-            <Text style={[styles.modalBody, { color: colors.onSurfaceVariant }]}>
-              Set how often this care should repeat, starting{" "}
-              {rescheduleTarget?.dueDate ?? selectedDateKey ?? "the chosen day"}.
-            </Text>
-            <TextInput
-              value={rescheduleDays}
-              onChangeText={setRescheduleDays}
-              keyboardType="number-pad"
-              style={[
-                styles.input,
-                {
-                  color: colors.onSurface,
-                  backgroundColor: colors.surfaceContainerLow,
-                },
-              ]}
-              accessibilityLabel="Repeat every number of days"
-            />
-            <View style={styles.modalActions}>
-              <PrimaryButton label="Save" onPress={() => void runReschedule()} />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setRescheduleTarget(null)}
-              >
-                <Text style={[styles.cancel, { color: colors.secondary }]}>
-                  Cancel
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <CareCalendarRescheduleModal
+        visible={screenActions.rescheduleTarget != null}
+        target={screenActions.rescheduleTarget}
+        days={screenActions.rescheduleDays}
+        onChangeDays={screenActions.setRescheduleDays}
+        onSnooze={(days) => void screenActions.runSnooze(days)}
+        onSave={() => void screenActions.runReschedule()}
+        onClose={screenActions.closeReschedule}
+      />
     </Fragment>
   );
 }
@@ -638,16 +524,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   monthSection: { gap: 24 },
-  monthHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  monthTitle: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 24,
-    lineHeight: 30,
-  },
   dayHeading: {
     fontFamily: "NotoSerif_700Bold",
     fontSize: 22,
@@ -657,51 +533,5 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 15,
     lineHeight: 22,
-  },
-  aiUpsell: {
-    gap: 12,
-  },
-  aiNote: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 16,
-    lineHeight: 28,
-    maxWidth: 340,
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 24,
-  },
-  modalCard: {
-    borderRadius: 28,
-    padding: 24,
-    gap: 12,
-  },
-  modalTitle: {
-    fontFamily: "NotoSerif_700Bold",
-    fontSize: 24,
-    lineHeight: 30,
-  },
-  modalBody: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 16,
-    lineHeight: 28,
-  },
-  input: {
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontFamily: "Manrope_500Medium",
-    fontSize: 16,
-  },
-  modalActions: {
-    gap: 10,
-    alignItems: "flex-start",
-  },
-  cancel: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 13,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
   },
 });

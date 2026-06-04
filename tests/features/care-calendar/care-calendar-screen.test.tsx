@@ -65,6 +65,8 @@ jest.mock("@/hooks/useSnackbar", () => ({
   useSnackbar: () => ({
     show: jest.fn(),
     success: jest.fn(),
+    error: jest.fn(),
+    warning: jest.fn(),
   }),
 }));
 

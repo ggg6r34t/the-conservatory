@@ -1,4 +1,7 @@
-import { resolvePlantFocusedCalendarState } from "@/features/care-calendar/services/careCalendarDeepLink";
+import {
+  resolveCareCalendarRouteState,
+  resolvePlantFocusedCalendarState,
+} from "@/features/care-calendar/services/careCalendarDeepLink";
 import type { CareCalendarEvent } from "@/features/care-calendar/types";
 
 describe("resolvePlantFocusedCalendarState", () => {
@@ -56,5 +59,41 @@ describe("resolvePlantFocusedCalendarState", () => {
     });
 
     expect(state.selectedDateKey).toBe("2026-06-04");
+  });
+});
+
+describe("resolveCareCalendarRouteState", () => {
+  const now = new Date("2026-06-04T12:00:00.000Z");
+
+  it("honors explicit date query when not plant-focused", () => {
+    const state = resolveCareCalendarRouteState({
+      dateKey: "2026-06-18",
+      events: [],
+      now,
+    });
+
+    expect(state.selectedDateKey).toBe("2026-06-18");
+  });
+
+  it("honors explicit date over plant anchor day", () => {
+    const state = resolveCareCalendarRouteState({
+      plantId: "plant-1",
+      plantName: "Monstera",
+      dateKey: "2026-06-20",
+      events: [
+        {
+          id: "1",
+          plantId: "plant-1",
+          plantName: "Monstera",
+          careType: "water",
+          dueDate: "2026-06-10",
+          status: "upcoming",
+          source: "manual_reminder",
+        },
+      ],
+      now,
+    });
+
+    expect(state.selectedDateKey).toBe("2026-06-20");
   });
 });

@@ -124,7 +124,13 @@ jest.mock("@/hooks/useSnackbar", () => ({
   useSnackbar: () => ({
     show: jest.fn(),
     success: jest.fn(),
+    error: jest.fn(),
+    warning: jest.fn(),
   }),
+}));
+
+jest.mock("@/features/care-logs/utils/invalidateCareLogQueries", () => ({
+  invalidateCareLogQueries: jest.fn(async () => undefined),
 }));
 
 jest.mock("react-native-safe-area-context", () => ({

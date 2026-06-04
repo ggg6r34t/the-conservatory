@@ -25,6 +25,7 @@ import { ThemeBootstrapProvider } from "@/providers/ThemeBootstrapProvider";
 import { ThemeEntitlementSync } from "@/providers/ThemeEntitlementSync";
 import { ThemeHydrationGate } from "@/providers/ThemeHydrationGate";
 import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
+import { CareCalendarNotificationBridge } from "@/features/care-calendar/components/CareCalendarNotificationBridge";
 import {
   getDatabaseBootstrapState,
   markDatabaseBootstrapFailed,
@@ -99,6 +100,7 @@ export function Providers({ children }: PropsWithChildren) {
                           <BillingBootstrapProvider>
                             <ThemeEntitlementSync>
                               <SyncAutoFailureNotifier />
+                              <CareCalendarNotificationBridge />
                               {children}
                             </ThemeEntitlementSync>
                           </BillingBootstrapProvider>

@@ -4,33 +4,20 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { trackCareCalendarFilterUsed } from "@/features/care-calendar/analytics";
 import type { CareCalendarFilter } from "@/features/care-calendar/types";
 
-const FILTERS: { id: CareCalendarFilter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "water", label: "Water" },
-  { id: "feed", label: "Feed" },
-  { id: "mist", label: "Mist" },
-  { id: "repot", label: "Repot" },
-  { id: "prune", label: "Prune" },
-  { id: "inspect", label: "Inspect" },
-  { id: "overdue", label: "Overdue" },
-  { id: "ai_suggested", label: "AI suggested" },
-];
+type FilterOption = { id: CareCalendarFilter; label: string };
 
 interface CareCalendarFiltersProps {
   value: CareCalendarFilter;
+  options: FilterOption[];
   onChange: (value: CareCalendarFilter) => void;
-  showAiFilter: boolean;
 }
 
 export function CareCalendarFilters({
   value,
+  options,
   onChange,
-  showAiFilter,
 }: CareCalendarFiltersProps) {
   const { colors } = useTheme();
-  const options = showAiFilter
-    ? FILTERS
-    : FILTERS.filter((filter) => filter.id !== "ai_suggested");
 
   return (
     <ScrollView

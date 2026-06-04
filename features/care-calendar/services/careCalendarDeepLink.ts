@@ -1,9 +1,38 @@
 import { toLocalDateKey } from "@/features/care-calendar/services/careCalendarDerivationService";
 import type { CareCalendarEvent } from "@/features/care-calendar/types";
 
+export function resolveCareCalendarRouteState(input: {
+  plantId?: string;
+  plantName?: string | null;
+  dateKey?: string;
+  events: CareCalendarEvent[];
+  now?: Date;
+}) {
+  const now = input.now ?? new Date();
+  const parsedDateKey = input.dateKey?.trim();
+
+  if (!input.plantId) {
+    const selectedDateKey = parsedDateKey || toLocalDateKey(now);
+    return {
+      description: undefined as string | undefined,
+      selectedDateKey,
+      visibleMonth: new Date(`${selectedDateKey}T12:00:00`),
+    };
+  }
+
+  return resolvePlantFocusedCalendarState({
+    plantId: input.plantId,
+    plantName: input.plantName,
+    events: input.events,
+    now,
+    dateKey: parsedDateKey,
+  });
+}
+
 export function resolvePlantFocusedCalendarState(input: {
   plantId?: string;
   plantName?: string | null;
+  dateKey?: string;
   events: CareCalendarEvent[];
   now?: Date;
 }) {
@@ -26,7 +55,8 @@ export function resolvePlantFocusedCalendarState(input: {
     plantEvents.find((event) => event.status === "upcoming") ??
     plantEvents[0];
 
-  const selectedDateKey = anchorEvent?.dueDate ?? toLocalDateKey(input.now ?? new Date());
+  const selectedDateKey =
+    input.dateKey ?? anchorEvent?.dueDate ?? toLocalDateKey(input.now ?? new Date());
   const visibleMonth = new Date(`${selectedDateKey}T12:00:00`);
   const specimenLabel = input.plantName?.trim() || "This specimen";
 

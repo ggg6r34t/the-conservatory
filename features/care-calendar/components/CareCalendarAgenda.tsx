@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
 import { CareCalendarTaskCard } from "@/features/care-calendar/components/CareCalendarTaskCard";
@@ -10,7 +11,6 @@ interface CareCalendarAgendaProps {
   events: CareCalendarEvent[];
   suggestionsById: Map<string, CareScheduleSuggestion>;
   onLogCare: (event: CareCalendarEvent) => void;
-  onMarkDone: (event: CareCalendarEvent) => void;
   onReschedule: (event: CareCalendarEvent) => void;
   onEditReminder: (event: CareCalendarEvent) => void;
   onAcceptSuggestion: (event: CareCalendarEvent) => void;
@@ -18,22 +18,10 @@ interface CareCalendarAgendaProps {
   allowAiSuggestionActions?: boolean;
   busy?: boolean;
   showDayHeaders?: boolean;
+  collapseCompleted?: boolean;
 }
 
-export function CareCalendarAgenda({
-  events,
-  suggestionsById,
-  onLogCare,
-  onMarkDone,
-  onReschedule,
-  onEditReminder,
-  onAcceptSuggestion,
-  onDismissSuggestion,
-  allowAiSuggestionActions = true,
-  busy,
-  showDayHeaders = true,
-}: CareCalendarAgendaProps) {
-  const { colors, spacing } = useTheme();
+function groupByDate(events: CareCalendarEvent[]) {
   const grouped = new Map<string, CareCalendarEvent[]>();
 
   for (const event of events) {
@@ -42,10 +30,26 @@ export function CareCalendarAgenda({
     grouped.set(event.dueDate, bucket);
   }
 
-  const dates = [...grouped.keys()].sort();
+  return grouped;
+}
 
+function AgendaSection({
+  dates,
+  grouped,
+  suggestionsById,
+  showDayHeaders,
+  colors,
+  handlers,
+}: {
+  dates: string[];
+  grouped: Map<string, CareCalendarEvent[]>;
+  suggestionsById: Map<string, CareScheduleSuggestion>;
+  showDayHeaders: boolean;
+  colors: ReturnType<typeof useTheme>["colors"];
+  handlers: Omit<CareCalendarAgendaProps, "events" | "suggestionsById" | "showDayHeaders" | "collapseCompleted">;
+}) {
   return (
-    <View style={[styles.wrap, { gap: spacing.lg }]}>
+    <>
       {dates.map((dateKey) => (
         <View key={dateKey} style={styles.section}>
           {showDayHeaders ? (
@@ -59,21 +63,20 @@ export function CareCalendarAgenda({
                 key={event.id}
                 event={event}
                 suggestion={suggestionsById.get(event.id)}
-                busy={busy}
-                onLogCare={() => onLogCare(event)}
-                onMarkDone={() => onMarkDone(event)}
-                onReschedule={() => onReschedule(event)}
+                busy={handlers.busy}
+                onLogCare={() => handlers.onLogCare(event)}
+                onReschedule={() => handlers.onReschedule(event)}
                 onEditReminder={
-                  event.reminderId ? () => onEditReminder(event) : undefined
+                  event.reminderId ? () => handlers.onEditReminder(event) : undefined
                 }
                 onAcceptSuggestion={
-                  allowAiSuggestionActions && event.isAiSuggested
-                    ? () => onAcceptSuggestion(event)
+                  handlers.allowAiSuggestionActions && event.isAiSuggested
+                    ? () => handlers.onAcceptSuggestion(event)
                     : undefined
                 }
                 onDismissSuggestion={
-                  allowAiSuggestionActions && event.isAiSuggested
-                    ? () => onDismissSuggestion(event)
+                  handlers.allowAiSuggestionActions && event.isAiSuggested
+                    ? () => handlers.onDismissSuggestion(event)
                     : undefined
                 }
               />
@@ -81,6 +84,90 @@ export function CareCalendarAgenda({
           </View>
         </View>
       ))}
+    </>
+  );
+}
+
+export function CareCalendarAgenda({
+  events,
+  suggestionsById,
+  onLogCare,
+  onReschedule,
+  onEditReminder,
+  onAcceptSuggestion,
+  onDismissSuggestion,
+  allowAiSuggestionActions = true,
+  busy,
+  showDayHeaders = true,
+  collapseCompleted = true,
+}: CareCalendarAgendaProps) {
+  const { colors, spacing } = useTheme();
+  const [showCompleted, setShowCompleted] = useState(false);
+
+  const { activeEvents, completedEvents } = useMemo(() => {
+    const active: CareCalendarEvent[] = [];
+    const completed: CareCalendarEvent[] = [];
+
+    for (const event of events) {
+      if (event.status === "completed" || event.status === "skipped") {
+        completed.push(event);
+      } else {
+        active.push(event);
+      }
+    }
+
+    return { activeEvents: active, completedEvents: completed };
+  }, [events]);
+
+  const activeGrouped = groupByDate(activeEvents);
+  const completedGrouped = groupByDate(completedEvents);
+  const activeDates = [...activeGrouped.keys()].sort();
+  const completedDates = [...completedGrouped.keys()].sort();
+
+  const handlers = {
+    onLogCare,
+    onReschedule,
+    onEditReminder,
+    onAcceptSuggestion,
+    onDismissSuggestion,
+    allowAiSuggestionActions,
+    busy,
+  };
+
+  return (
+    <View style={[styles.wrap, { gap: spacing.lg }]}>
+      <AgendaSection
+        dates={activeDates}
+        grouped={activeGrouped}
+        suggestionsById={suggestionsById}
+        showDayHeaders={showDayHeaders}
+        colors={colors}
+        handlers={handlers}
+      />
+
+      {collapseCompleted && completedEvents.length > 0 ? (
+        <View style={styles.completedSection}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showCompleted }}
+            onPress={() => setShowCompleted((current) => !current)}
+          >
+            <Text style={[styles.completedToggle, { color: colors.secondary }]}>
+              {showCompleted ? "Hide" : "Show"} completed ({completedEvents.length})
+            </Text>
+          </Pressable>
+          {showCompleted ? (
+            <AgendaSection
+              dates={completedDates}
+              grouped={completedGrouped}
+              suggestionsById={suggestionsById}
+              showDayHeaders={showDayHeaders}
+              colors={colors}
+              handlers={handlers}
+            />
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -97,5 +184,14 @@ const styles = StyleSheet.create({
   },
   tasks: {
     gap: 16,
+  },
+  completedSection: {
+    gap: 12,
+  },
+  completedToggle: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 12,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
   },
 });

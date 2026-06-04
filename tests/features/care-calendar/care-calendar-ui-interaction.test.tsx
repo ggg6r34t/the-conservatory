@@ -65,6 +65,8 @@ describe("care calendar UI interactions", () => {
     expect(source).toContain("plants: PlantListItem[]");
     expect(source).not.toMatch(/styles\.marker,/);
     expect(source).not.toContain("CareCalendarDayOverflowBadge");
+    expect(source).toContain("onShiftMonth");
+    expect(source).not.toContain("CareCalendarMarkerHint");
   });
 
   it("omits agenda day headers in month day detail mode", () => {
@@ -74,7 +76,6 @@ describe("care calendar UI interactions", () => {
         suggestionsById={new Map()}
         showDayHeaders={false}
         onLogCare={jest.fn()}
-        onMarkDone={jest.fn()}
         onReschedule={jest.fn()}
         onEditReminder={jest.fn()}
         onAcceptSuggestion={jest.fn()}
@@ -98,6 +99,8 @@ describe("care calendar UI interactions", () => {
       "utf8",
     );
     expect(source).not.toContain("PrimaryButton");
+    expect(source).not.toContain("Mark done");
+    expect(source).not.toContain("View plant");
     expect(source).toContain('label="Log care"');
     expect(source).toContain("minHeight: 40");
     expect(source).toContain('flexDirection: "row"');
@@ -113,7 +116,9 @@ describe("care calendar UI interactions", () => {
     expect(source).toContain("useFocusEffect");
     expect(source).toContain("Select a day to view scheduled care.");
     expect(source).toContain("showDayHeaders={false}");
-    expect(source).toContain("appliedPlantDeepLinkRef");
+    expect(source).toContain("appliedRouteRef");
     expect(source).toContain("plants={calendar.plants}");
+    expect(source).toContain("CareCalendarMonthHeader");
+    expect(source).toContain("useCareCalendarScreenActions");
   });
 });

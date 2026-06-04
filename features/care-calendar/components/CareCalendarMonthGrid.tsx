@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useMemo, useRef } from "react";
+import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
 import { CareCalendarDayMarkers } from "@/features/care-calendar/components/CareCalendarDayMarkers";
@@ -20,6 +20,8 @@ interface CareCalendarMonthGridProps {
   events: CareCalendarEvent[];
   plants: PlantListItem[];
   onSelectDate: (dateKey: string) => void;
+  onShiftMonth?: (delta: number) => void;
+  onPlantLongPress?: (plantId: string) => void;
 }
 
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -31,8 +33,36 @@ export function CareCalendarMonthGrid({
   events,
   plants,
   onSelectDate,
+  onShiftMonth,
+  onPlantLongPress,
 }: CareCalendarMonthGridProps) {
   const { colors } = useTheme();
+  const swipeTriggered = useRef(false);
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          Math.abs(gesture.dx) > 24 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        onPanResponderRelease: (_, gesture) => {
+          if (!onShiftMonth || swipeTriggered.current) {
+            return;
+          }
+
+          if (gesture.dx <= -40) {
+            swipeTriggered.current = true;
+            onShiftMonth(1);
+          } else if (gesture.dx >= 40) {
+            swipeTriggered.current = true;
+            onShiftMonth(-1);
+          }
+
+          setTimeout(() => {
+            swipeTriggered.current = false;
+          }, 250);
+        },
+      }),
+    [onShiftMonth],
+  );
   const grouped = groupEventsByDate(events);
   const { days } = getMonthGridDates(month);
   const todayKey = toLocalDateKey(new Date());
@@ -42,7 +72,7 @@ export function CareCalendarMonthGrid({
   );
 
   return (
-    <View style={styles.wrap}>
+    <View style={styles.wrap} {...(onShiftMonth ? panResponder.panHandlers : {})}>
       <View style={styles.weekdays}>
         {WEEKDAY_LABELS.map((label, index) => (
           <Text
@@ -109,6 +139,7 @@ export function CareCalendarMonthGrid({
                 <CareCalendarDayMarkers
                   markers={markers}
                   selected={selected}
+                  onPlantLongPress={onPlantLongPress}
                 />
               </Pressable>
             </View>

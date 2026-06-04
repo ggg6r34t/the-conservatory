@@ -17,7 +17,14 @@ import type {
   ReminderType,
 } from "@/types/models";
 
-const DEFAULT_HORIZON_DAYS = 90;
+export const DEFAULT_HORIZON_DAYS = 90;
+
+function mergeDueAtWithDateKey(anchorIso: string, dueDateKey: string) {
+  const anchor = new Date(anchorIso);
+  const merged = new Date(`${dueDateKey}T12:00:00`);
+  merged.setHours(anchor.getHours(), anchor.getMinutes(), 0, 0);
+  return merged.toISOString();
+}
 
 export function reminderTypeToCareType(
   reminderType: ReminderType,
@@ -47,7 +54,7 @@ function startOfLocalDay(value: Date | string) {
   return date;
 }
 
-function addLocalDays(value: Date | string, days: number) {
+export function addLocalDays(value: Date | string, days: number) {
   const date = new Date(value);
   date.setDate(date.getDate() + days);
   return date;
@@ -121,6 +128,7 @@ function buildEvent(input: {
   reason?: string;
   confidence?: CareCalendarEvent["confidence"];
   isAiSuggested?: boolean;
+  dueAt?: string;
 }): CareCalendarEvent {
   const completed = isCareCompletedForDate({
     plantId: input.plantId,
@@ -145,6 +153,7 @@ function buildEvent(input: {
     reason: input.reason,
     isAiSuggested: input.isAiSuggested,
     reminderId: input.reminderId,
+    dueAt: input.dueAt,
   };
 }
 
@@ -232,8 +241,9 @@ export function deriveCareCalendarEvents(input: {
             dueDateKey,
             source: "manual_reminder",
             now,
-            logs: input.logs,
+            logs: plantLogs,
             reminderId: reminder.id,
+            dueAt: mergeDueAtWithDateKey(reminder.nextDueAt, dueDateKey),
           }),
         );
       }
@@ -396,6 +406,10 @@ export function isSameLocalMonth(left: Date, right: Date) {
     left.getFullYear() === right.getFullYear() &&
     left.getMonth() === right.getMonth()
   );
+}
+
+export function isVisibleMonthShowingToday(visibleMonth: Date, now = new Date()) {
+  return isSameLocalMonth(visibleMonth, now);
 }
 
 export function formatMonthTitle(month: Date) {
