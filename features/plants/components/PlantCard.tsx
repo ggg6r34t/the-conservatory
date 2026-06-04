@@ -1,10 +1,10 @@
 import { memo } from "react";
-import { Image } from "expo-image";
 import { Link } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
+import { PlantPhotoImage } from "@/features/plants/components/PlantPhotoImage";
 import { formatDueLabel } from "@/utils/dateFormatter";
 
 interface PlantCardProps {
@@ -20,21 +20,12 @@ export const PlantCard = memo(function PlantCard({ plant }: PlantCardProps) {
       style={[styles.card, { backgroundColor: colors.surfaceContainerLowest }]}
     >
       <View style={styles.imageFrame}>
-        {plant.primaryPhotoUri ? (
-          <Image
-            source={{ uri: plant.primaryPhotoUri }}
-            style={styles.image}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-          />
-        ) : (
-          <View
-            style={[
-              styles.imageFallback,
-              { backgroundColor: colors.surfaceContainerHigh },
-            ]}
-          />
-        )}
+        <PlantPhotoImage
+          plant={plant}
+          analyticsScreen="plant_card"
+          style={styles.image}
+          fallbackStyle={styles.imageFallback}
+        />
       </View>
       <View style={styles.copy}>
         <Text style={[styles.name, { color: colors.onSurface }]}>

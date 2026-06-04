@@ -1,6 +1,5 @@
 import { memo, useEffect, useMemo } from "react";
 
-import { Image } from "expo-image";
 import { Link, useRouter } from "expo-router";
 import {
   FlatList,
@@ -21,6 +20,7 @@ import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
+import { PlantPhotoImage } from "@/features/plants/components/PlantPhotoImage";
 import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
 import { EmptyState } from "@/features/empty-states/components/EmptyState";
 import {
@@ -145,21 +145,15 @@ const LibraryCard = memo(function LibraryCard({
             },
           ]}
         >
-          {plant.primaryPhotoUri ? (
-            <Image
-              source={{ uri: plant.primaryPhotoUri }}
-              style={styles.image}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View
-              style={[
-                styles.fallback,
-                { backgroundColor: colors.surfaceContainerLow },
-              ]}
-            />
-          )}
+          <PlantPhotoImage
+            plant={plant}
+            analyticsScreen="library_card"
+            style={styles.image}
+            fallbackStyle={[
+              styles.fallback,
+              { backgroundColor: colors.surfaceContainerLow },
+            ]}
+          />
           {plantStatus ? (
             <PlantStatusBadge
               healthState={plantStatus.healthState}

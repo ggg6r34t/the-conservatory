@@ -8,6 +8,7 @@ import type { ArchiveCuratedPair } from "@/features/ai/types/ai";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
 import { cloudAllowedForFeature } from "@/features/billing/services/featureAccess";
 import { getPlantById } from "@/features/plants/api/plantsClient";
+import { resolvePhotoDisplayUri } from "@/features/plants/services/plantPhotoResolver";
 
 export function useArchiveCuration(input: {
   userId?: string;
@@ -27,7 +28,7 @@ export function useArchiveCuration(input: {
     const sortedPhotos = sortPhotosChronologically(
       plant?.photos.map((photo) => ({
         id: photo.id,
-        uri: photo.localUri ?? photo.remoteUrl ?? "",
+        uri: resolvePhotoDisplayUri(photo, { context: "detail" }) ?? "",
         capturedAt: photo.capturedAt,
         takenAt: photo.takenAt,
         createdAt: photo.createdAt,

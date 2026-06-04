@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/components/design-system/useTheme";
 import { CareLogForm } from "@/features/care-logs/components/CareLogForm";
 import { usePlant } from "@/features/plants/hooks/usePlant";
+import { resolvePhotoDisplayUri } from "@/features/plants/services/plantPhotoResolver";
+import { getPrimaryPlantPhoto } from "@/features/plants/services/plantActivityTimeline";
 
 export default function CareLogRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,11 +25,12 @@ export default function CareLogRoute() {
   const insets = useSafeAreaInsets();
   const plantQuery = usePlant(id ?? "");
   const plant = plantQuery.data?.plant;
-  const primaryPhoto =
-    plantQuery.data?.photos.find((photo) => photo.isPrimary === 1) ??
-    plantQuery.data?.photos[0];
+  const primaryPhoto = plantQuery.data
+    ? getPrimaryPlantPhoto(plantQuery.data)
+    : null;
   const plantImageUri =
-    primaryPhoto?.localUri ?? primaryPhoto?.remoteUrl ?? undefined;
+    resolvePhotoDisplayUri(primaryPhoto ?? undefined, { context: "detail" }) ??
+    undefined;
   const translateY = useRef(new Animated.Value(0)).current;
 
   const closeSheet = useCallback(() => {

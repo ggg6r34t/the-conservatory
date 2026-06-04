@@ -10,6 +10,8 @@ import { MoveToGraveyardSheet } from "@/features/plants/components/MoveToGraveya
 import { PlantForm } from "@/features/plants/components/PlantForm";
 import { useArchivePlant } from "@/features/plants/hooks/useArchivePlant";
 import { usePlant } from "@/features/plants/hooks/usePlant";
+import { getPrimaryPlantPhoto } from "@/features/plants/services/plantActivityTimeline";
+import { resolvePhotoDisplayUri } from "@/features/plants/services/plantPhotoResolver";
 import { useAlert } from "@/hooks/useAlert";
 
 function formatUpdatedAt(value: string) {
@@ -29,8 +31,10 @@ export default function EditPlantScreen() {
   const archivePlant = useArchivePlant(id ?? "");
   const [graveyardSheetVisible, setGraveyardSheetVisible] = useState(false);
   const plant = plantQuery.data;
-  const primaryPhoto =
-    plant?.photos.find((photo) => photo.isPrimary === 1) ?? plant?.photos[0];
+  const primaryPhoto = plant ? getPrimaryPlantPhoto(plant) : null;
+  const primaryPhotoUri =
+    resolvePhotoDisplayUri(primaryPhoto ?? undefined, { context: "detail" }) ??
+    undefined;
 
   const handleArchivePlant = () => {
     if (!plant) {
@@ -66,9 +70,7 @@ export default function EditPlantScreen() {
       <MoveToGraveyardSheet
         visible={graveyardSheetVisible}
         plantName={plant?.plant.name ?? "this specimen"}
-        photoUri={
-          primaryPhoto?.localUri ?? primaryPhoto?.remoteUrl ?? undefined
-        }
+        photoUri={primaryPhotoUri}
         initialMemorialNote={plant?.plant.notes}
         loading={archivePlant.isPending}
         onClose={() => {
@@ -135,10 +137,7 @@ export default function EditPlantScreen() {
                 location: plant.plant.location ?? "",
                 wateringIntervalDays: plant.plant.wateringIntervalDays,
                 notes: plant.plant.notes ?? "",
-                photoUri:
-                  primaryPhoto?.localUri ??
-                  primaryPhoto?.remoteUrl ??
-                  undefined,
+                photoUri: primaryPhotoUri,
               }}
             />
 

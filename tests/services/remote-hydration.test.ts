@@ -458,6 +458,83 @@ describe("remoteHydration photos", () => {
       null,
     );
   });
+
+  it("preserves existing local_uri when remote restore does not download a file", async () => {
+    mockDownloadRemotePhotoAsset.mockResolvedValue(null);
+    mockFrom.mockImplementation((table: string) => ({
+      select: () => ({
+        eq: async () => ({
+          data:
+            table === "photos"
+              ? [
+                  {
+                    id: "photo-1",
+                    user_id: "user-1",
+                    plant_id: "plant-1",
+                    remote_url: "https://storage.example/user-1/plant-1/photo-1.jpg",
+                    storage_path: "user-1/plant-1/photo-1.jpg",
+                    mime_type: "image/jpeg",
+                    width: 1200,
+                    height: 900,
+                    photo_role: "primary",
+                    captured_at: "2026-03-22T10:00:00.000Z",
+                    taken_at: "2026-03-22T10:00:00.000Z",
+                    caption: null,
+                    is_primary: 1,
+                    created_at: "2026-03-22T10:00:00.000Z",
+                    updated_at: "2026-03-24T10:00:00.000Z",
+                    updated_by: "user-1",
+                  },
+                ]
+              : [],
+          error: null,
+        }),
+      }),
+    }));
+
+    const runAsync = jest.fn().mockResolvedValue(undefined);
+    const getFirstAsync = jest.fn().mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM photos") && sql.includes("local_uri")) {
+        return { local_uri: "file:///existing-local.jpg" };
+      }
+      return { pending: 0, updated_at: "2026-03-01T00:00:00.000Z" };
+    });
+    const withTransactionAsync = jest.fn(
+      async (callback: () => Promise<void>) => callback(),
+    );
+    mockGetDatabase.mockResolvedValue({
+      getFirstAsync,
+      runAsync,
+      withTransactionAsync,
+    });
+
+    const { hydrateRemoteUserData } = require("@/services/database/remoteHydration");
+    await hydrateRemoteUserData("user-1");
+
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT OR REPLACE INTO photos"),
+      "photo-1",
+      "photo-1",
+      "user-1",
+      "plant-1",
+      "file:///existing-local.jpg",
+      "https://storage.example/user-1/plant-1/photo-1.jpg",
+      "user-1/plant-1/photo-1.jpg",
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      "primary",
+      expect.anything(),
+      expect.anything(),
+      null,
+      1,
+      expect.anything(),
+      expect.anything(),
+      0,
+      expect.anything(),
+      null,
+    );
+  });
 });
 
 describe("remoteHydration feature_usage", () => {

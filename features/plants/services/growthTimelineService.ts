@@ -1,4 +1,5 @@
 import { parseStructuredCareLogNote } from "@/features/ai/services/observationTaggingService";
+import { resolvePhotoDisplayUri } from "@/features/plants/services/plantPhotoResolver";
 import type { CareLog, Photo, PlantWithRelations } from "@/types/models";
 
 type GrowthTimelineLog = {
@@ -37,15 +38,7 @@ export function resolveGrowthTimelinePhotoRole(
 export function resolveGrowthTimelinePhotoUri(
   photo: Pick<Photo, "localUri" | "remoteUrl">,
 ) {
-  if (photo.remoteUrl) {
-    return photo.remoteUrl;
-  }
-
-  if (photo.localUri) {
-    return photo.localUri;
-  }
-
-  return null;
+  return resolvePhotoDisplayUri(photo, { context: "detail" });
 }
 
 export function resolveGrowthTimelinePhotoTimestamp(

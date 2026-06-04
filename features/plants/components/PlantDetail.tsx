@@ -21,6 +21,7 @@ import { useAddPlantProgressPhoto } from "@/features/plants/hooks/useAddPlantPro
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { FREE_CARE_LOG_HISTORY_DAYS } from "@/features/billing/constants";
 import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
+import { resolvePhotoDisplayUri } from "@/features/plants/services/plantPhotoResolver";
 import { buildGrowthTimeline } from "@/features/plants/services/growthTimelineService";
 import { derivePlantStatus } from "@/features/plants/services/plantStatusService";
 import {
@@ -264,6 +265,10 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
   const [waterNoteSheetVisible, setWaterNoteSheetVisible] = useState(false);
   const [activeWaterLogId, setActiveWaterLogId] = useState<string | null>(null);
   const primaryPhoto = getPrimaryPhoto(data);
+  const heroPhotoUri = useMemo(
+    () => resolvePhotoDisplayUri(primaryPhoto ?? undefined, { context: "detail" }),
+    [primaryPhoto],
+  );
   const careGuide = useMemo(
     () => buildCareGuide(data.plant, colors),
     [colors, data.plant],
@@ -444,10 +449,10 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
       />
 
       <View style={styles.heroWrap}>
-        {primaryPhoto?.localUri || primaryPhoto?.remoteUrl ? (
+        {heroPhotoUri ? (
           <Image
             source={{
-              uri: primaryPhoto.localUri ?? primaryPhoto.remoteUrl ?? undefined,
+              uri: heroPhotoUri,
             }}
             style={styles.heroImage}
             contentFit="cover"

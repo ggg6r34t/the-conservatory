@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { queryKeys } from "@/config/constants";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { archivePlant } from "@/features/plants/api/plantsClient";
+import { invalidatePlantPhotoQueries } from "@/features/plants/hooks/invalidatePlantPhotoQueries";
 
 interface ArchivePlantInput {
   causeOfPassing?: string;
@@ -22,18 +22,7 @@ export function useArchivePlant(plantId: string) {
         memorialNote: input.memorialNote,
       }),
     onSuccess: () => {
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.plants })
-        .catch(() => undefined);
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.dashboard })
-        .catch(() => undefined);
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.graveyard })
-        .catch(() => undefined);
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.plant(plantId) })
-        .catch(() => undefined);
+      invalidatePlantPhotoQueries(queryClient, plantId);
     },
   });
 }

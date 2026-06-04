@@ -7,6 +7,7 @@ import { enforceHealthInsightSafety } from "@/features/ai/services/healthInsight
 import { buildHealthSignalAnalysis } from "@/features/ai/services/healthSignalAnalysisService";
 import { incrementUsage } from "@/features/billing/services/usageClient";
 import { trackAiFeatureUsed } from "@/services/analytics/analyticsService";
+import { resolvePhotoDisplayUri } from "@/features/plants/services/plantPhotoResolver";
 import { getDatabase } from "@/services/database/sqlite";
 import type { HealthInsight } from "@/features/ai/types/ai";
 import type { PlantWithRelations } from "@/types/models";
@@ -18,7 +19,9 @@ function buildHealthInsightCacheKey(plantId: string, revision: string) {
 }
 
 function getRenderablePhotos(data: PlantWithRelations) {
-  return data.photos.filter((photo) => photo.localUri || photo.remoteUrl);
+  return data.photos.filter(
+    (photo) => resolvePhotoDisplayUri(photo, { context: "detail" }) != null,
+  );
 }
 
 export function buildHealthInsightRevision(data: PlantWithRelations) {
@@ -73,7 +76,10 @@ export async function getHealthInsight(input: {
     speciesName: input.data.plant.speciesName,
     photoUris: getRenderablePhotos(input.data)
       .slice(0, 4)
-      .map((photo) => photo.localUri ?? photo.remoteUrl ?? "")
+      .map(
+        (photo) =>
+          resolvePhotoDisplayUri(photo, { context: "detail" }) ?? "",
+      )
       .filter(Boolean),
     recentLogNotes: input.data.logs
       .slice(0, 5)

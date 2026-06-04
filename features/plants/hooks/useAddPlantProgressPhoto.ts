@@ -6,6 +6,7 @@ import { canUseFeature } from "@/features/billing/services/entitlementService";
 import { useBillingStore } from "@/features/billing/stores/useBillingStore";
 import { useUsageLimits } from "@/features/billing/hooks/useUsageLimits";
 import { addPlantProgressPhoto } from "@/features/plants/api/plantsClient";
+import { invalidatePlantPhotoQueries } from "@/features/plants/hooks/invalidatePlantPhotoQueries";
 import type { PlantImageAsset } from "@/features/plants/services/photoService";
 
 export function useAddPlantProgressPhoto(plantId: string) {
@@ -39,12 +40,7 @@ export function useAddPlantProgressPhoto(plantId: string) {
       });
     },
     onSuccess: (data) => {
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.plants })
-        .catch(() => undefined);
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.dashboard })
-        .catch(() => undefined);
+      invalidatePlantPhotoQueries(queryClient, plantId);
       queryClient.setQueryData(queryKeys.plant(plantId), data);
     },
   });

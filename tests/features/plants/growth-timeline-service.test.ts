@@ -1,4 +1,7 @@
-import { buildGrowthTimeline } from "@/features/plants/services/growthTimelineService";
+import {
+  buildGrowthTimeline,
+  resolveGrowthTimelinePhotoUri,
+} from "@/features/plants/services/growthTimelineService";
 import type { PlantWithRelations } from "@/types/models";
 
 const baseData: PlantWithRelations = {
@@ -271,5 +274,14 @@ describe("buildGrowthTimeline", () => {
         body: "Deep watering after the soil dried out.",
       }),
     );
+  });
+
+  it("prefers local URI over stale remote URL for timeline display", () => {
+    expect(
+      resolveGrowthTimelinePhotoUri({
+        localUri: "file:///progress-local.jpg",
+        remoteUrl: "https://cdn.example.com/expired.jpg",
+      }),
+    ).toBe("file:///progress-local.jpg");
   });
 });

@@ -41,6 +41,15 @@ import {
 import { logger } from "@/utils/logger";
 
 import { persistPhotoAsset } from "../services/photoStorageService";
+import {
+  buildPrimaryPhotoListFields,
+  resolvePhotoDisplayUri,
+  resolvePrimaryPlantPhoto,
+  resolveRenderablePhotoUri,
+  type PrimaryPhotoSummaryFields,
+} from "../services/plantPhotoResolver";
+
+export type { PrimaryPhotoSummaryFields };
 import { derivePlantStatus } from "../services/plantStatusService";
 
 async function queueSyncDeleteInTransaction(
@@ -222,32 +231,29 @@ function mapCareLog(row: {
   };
 }
 
-function resolveRenderablePhotoUri(photo: Photo | undefined) {
-  if (!photo) {
-    return null;
-  }
-
-  if (photo.remoteUrl) {
-    return photo.remoteUrl;
-  }
-
-  if (photo.localUri) {
-    return photo.localUri;
-  }
-
-  return null;
-}
-
 function buildPhotoByPlantIdMap(rows: PhotoRow[]) {
-  const photoByPlantId = new Map<string, Photo>();
+  const rowsByPlantId = new Map<string, PhotoRow[]>();
 
   for (const row of rows) {
-    if (!photoByPlantId.has(row.plant_id)) {
-      photoByPlantId.set(row.plant_id, toPhoto(row));
+    const existing = rowsByPlantId.get(row.plant_id) ?? [];
+    existing.push(row);
+    rowsByPlantId.set(row.plant_id, existing);
+  }
+
+  const photoByPlantId = new Map<string, Photo>();
+
+  for (const [plantId, plantRows] of rowsByPlantId) {
+    const primary = resolvePrimaryPlantPhoto(plantRows.map(toPhoto));
+    if (primary) {
+      photoByPlantId.set(plantId, primary as Photo);
     }
   }
 
   return photoByPlantId;
+}
+
+function attachPrimaryPhotoFields(photo: Photo | undefined) {
+  return buildPrimaryPhotoListFields(photo, { context: "card" });
 }
 
 async function hydratePhotosForDisplay(rows: PhotoRow[]) {
@@ -270,20 +276,19 @@ function computeNextWaterDueAt(lastWateredAt: string, intervalDays: number) {
   return due.toISOString();
 }
 
-export interface GraveyardPlantListItem extends GraveyardPlant {
+export interface GraveyardPlantListItem
+  extends GraveyardPlant,
+    PrimaryPhotoSummaryFields {
   name: string;
   speciesName: string;
   nickname?: string | null;
   plantNotes?: string | null;
-  primaryPhotoUri?: string | null;
   photoCount: number;
   careLogCount: number;
   hasPrimaryPhoto: boolean;
 }
 
-export interface PlantListItem extends Plant {
-  primaryPhotoUri?: string | null;
-}
+export interface PlantListItem extends Plant, PrimaryPhotoSummaryFields {}
 
 export async function listGraveyardPlants(userId: string) {
   const database = await getDatabase();
@@ -393,9 +398,7 @@ export async function listGraveyardPlants(userId: string) {
     speciesName: row.species_name,
     nickname: row.nickname,
     plantNotes: row.notes,
-    primaryPhotoUri: resolveRenderablePhotoUri(
-      photoByPlantId.get(row.plant_id),
-    ),
+    ...attachPrimaryPhotoFields(photoByPlantId.get(row.plant_id)),
     photoCount: photoCountByPlantId.get(row.plant_id) ?? 0,
     careLogCount: careLogCountByPlantId.get(row.plant_id) ?? 0,
     hasPrimaryPhoto: hasPrimaryPhotoByPlantId.get(row.plant_id) ?? false,
@@ -505,9 +508,7 @@ export async function listPlants(input: {
       const plant = toPlant(row);
       const listItem = {
         ...plant,
-        primaryPhotoUri: resolveRenderablePhotoUri(
-          photoByPlantId.get(plant.id),
-        ),
+        ...attachPrimaryPhotoFields(photoByPlantId.get(plant.id)),
       } satisfies PlantListItem;
 
       return {

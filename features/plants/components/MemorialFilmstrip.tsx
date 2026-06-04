@@ -2,10 +2,11 @@ import { Image } from "expo-image";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { resolvePhotoDisplayUri } from "@/features/plants/services/plantPhotoResolver";
 import type { Photo } from "@/types/models";
 
 function resolvePhotoUri(photo: Photo): string | null {
-  return photo.remoteUrl ?? photo.localUri ?? null;
+  return resolvePhotoDisplayUri(photo, { context: "detail" });
 }
 
 function formatPhotoDate(photo: Photo) {

@@ -4,6 +4,7 @@ import { queryKeys } from "@/config/constants";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBillingStore } from "@/features/billing/stores/useBillingStore";
 import { createPlant } from "@/features/plants/api/plantsClient";
+import { invalidatePlantPhotoQueries } from "@/features/plants/hooks/invalidatePlantPhotoQueries";
 
 export function useAddPlant() {
   const { user } = useAuth();
@@ -31,12 +32,7 @@ export function useAddPlant() {
         ...input,
       }),
     onSuccess: (data) => {
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.plants })
-        .catch(() => undefined);
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.dashboard })
-        .catch(() => undefined);
+      invalidatePlantPhotoQueries(queryClient, data.plant.id);
       queryClient.setQueryData(queryKeys.plant(data.plant.id), data);
     },
   });

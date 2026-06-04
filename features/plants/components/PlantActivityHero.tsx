@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { resolvePhotoDisplayUri } from "@/features/plants/services/plantPhotoResolver";
 import type { Photo, Plant } from "@/types/models";
 
 interface PlantActivityHeroProps {
@@ -11,6 +12,9 @@ interface PlantActivityHeroProps {
 
 export function PlantActivityHero({ plant, photo }: PlantActivityHeroProps) {
   const { colors, spacing } = useTheme();
+  const heroPhotoUri = resolvePhotoDisplayUri(photo ?? undefined, {
+    context: "detail",
+  });
 
   return (
     <View style={{ gap: spacing.lg }}>
@@ -31,9 +35,9 @@ export function PlantActivityHero({ plant, photo }: PlantActivityHeroProps) {
           },
         ]}
       >
-        {photo?.localUri || photo?.remoteUrl ? (
+        {heroPhotoUri ? (
           <Image
-            source={{ uri: photo.localUri ?? photo.remoteUrl ?? undefined }}
+            source={{ uri: heroPhotoUri }}
             style={styles.image}
             contentFit="cover"
           />

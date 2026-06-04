@@ -819,6 +819,12 @@ export async function hydrateRemoteUserData(userId: string) {
         continue;
       }
 
+      const existingPhoto = await database.getFirstAsync<{
+        local_uri: string | null;
+      }>(`SELECT local_uri FROM photos WHERE id = ? LIMIT 1;`, localId);
+      const mergedLocalUri =
+        row.restoredLocalUri ?? existingPhoto?.local_uri ?? null;
+
       await database.runAsync(
         `INSERT OR REPLACE INTO photos (
           id, remote_id, user_id, plant_id, local_uri, remote_url, storage_path, mime_type,
@@ -829,7 +835,7 @@ export async function hydrateRemoteUserData(userId: string) {
         row.id,
         row.user_id,
         localPlantId,
-        row.restoredLocalUri,
+        mergedLocalUri,
         row.resolvedRemoteUrl ?? null,
         row.normalizedStoragePath,
         row.mime_type,

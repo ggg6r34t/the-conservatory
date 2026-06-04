@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/constants";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { updatePlant } from "@/features/plants/api/plantsClient";
+import { invalidatePlantPhotoQueries } from "@/features/plants/hooks/invalidatePlantPhotoQueries";
 
 export function useUpdatePlant(plantId: string) {
   const { user } = useAuth();
@@ -28,15 +29,7 @@ export function useUpdatePlant(plantId: string) {
         patch,
       }),
     onSuccess: (data) => {
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.plants })
-        .catch(() => undefined);
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.dashboard })
-        .catch(() => undefined);
-      queryClient
-        .invalidateQueries({ queryKey: queryKeys.graveyard })
-        .catch(() => undefined);
+      invalidatePlantPhotoQueries(queryClient, plantId);
       queryClient.setQueryData(queryKeys.plant(plantId), data);
     },
   });

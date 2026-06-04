@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 
-import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -10,6 +9,7 @@ import { useTheme } from "@/components/design-system/useTheme";
 import { EmptyState } from "@/features/empty-states/components/EmptyState";
 import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
+import { PlantPhotoImage } from "@/features/plants/components/PlantPhotoImage";
 import { PlantStatusBadge } from "@/features/plants/components/PlantStatusBadge";
 import { selectPlantHighlights } from "@/features/plants/services/plantSelectionService";
 import type { CareLog, CareReminder } from "@/types/models";
@@ -32,11 +32,10 @@ function PlantImage({ plant, style }: { plant: PlantListItem; style: object }) {
 
   if (plant.primaryPhotoUri) {
     return (
-      <Image
-        source={{ uri: plant.primaryPhotoUri }}
+      <PlantPhotoImage
+        plant={plant}
+        analyticsScreen="dashboard_plant_highlights"
         style={style}
-        contentFit="cover"
-        cachePolicy="memory-disk"
       />
     );
   }
