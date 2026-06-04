@@ -1,3 +1,7 @@
+import {
+  buildDayMarkerAccessibilityDetail,
+  type CareCalendarDayMarkers,
+} from "@/features/care-calendar/services/careCalendarDayMarkers";
 import { derivePlantStatus } from "@/features/plants/services/plantStatusService";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import type {
@@ -434,7 +438,7 @@ export function toggleSelectedDateKey(
 
 export function buildDayAccessibilityLabel(input: {
   date: Date;
-  taskCount: number;
+  markers: CareCalendarDayMarkers;
 }) {
   const dayLabel = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -442,13 +446,5 @@ export function buildDayAccessibilityLabel(input: {
     day: "numeric",
   }).format(input.date);
 
-  if (input.taskCount === 0) {
-    return `${dayLabel}. No care tasks scheduled.`;
-  }
-
-  if (input.taskCount === 1) {
-    return `${dayLabel}. One care task scheduled.`;
-  }
-
-  return `${dayLabel}. ${input.taskCount} care tasks scheduled.`;
+  return `${dayLabel}. ${buildDayMarkerAccessibilityDetail(input.markers)}`;
 }

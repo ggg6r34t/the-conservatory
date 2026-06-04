@@ -136,7 +136,7 @@ This file tracks the app's current route screens and route-adjacent files so pro
 23. `/care-calendar`
     Screen: Care Calendar
     File: `app/care-calendar.tsx`
-    Notes: Drill-in botanical care planner with month/agenda views; primary entry from Garden, secondary from Reminders and Plant Detail.
+    Notes: Drill-in botanical care planner with month/agenda views; month cells show care-type icons (max 2) and plant photo avatars (max 3) under each date; primary entry from Garden, secondary from Reminders and Plant Detail.
 
 24. `/interface-theme`
     Screen: Interface Theme

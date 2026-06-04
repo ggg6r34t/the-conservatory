@@ -363,6 +363,7 @@ export default function CareCalendarScreen() {
                   month={visibleMonth}
                   selectedDateKey={selectedDateKey}
                   events={calendar.events}
+                  plants={calendar.plants}
                   onSelectDate={handleSelectDate}
                 />
 

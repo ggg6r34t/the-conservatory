@@ -60,8 +60,11 @@ describe("care calendar UI interactions", () => {
       "utf8",
     );
     expect(source).toContain("borderRadius: CARE_CALENDAR_DAY_MARKER_SIZE / 2");
-    expect(source).toContain("styles.dayPressable");
-    expect(source).not.toMatch(/selected &&[\s\S]*styles\.cell/);
+    expect(source).toContain("CareCalendarDayMarkers");
+    expect(source).toContain("deriveCareCalendarDayMarkers");
+    expect(source).toContain("plants: PlantListItem[]");
+    expect(source).not.toMatch(/styles\.marker,/);
+    expect(source).not.toContain("CareCalendarDayOverflowBadge");
   });
 
   it("omits agenda day headers in month day detail mode", () => {
@@ -111,5 +114,6 @@ describe("care calendar UI interactions", () => {
     expect(source).toContain("Select a day to view scheduled care.");
     expect(source).toContain("showDayHeaders={false}");
     expect(source).toContain("appliedPlantDeepLinkRef");
+    expect(source).toContain("plants={calendar.plants}");
   });
 });

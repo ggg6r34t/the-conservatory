@@ -1,6 +1,9 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { CareCalendarDayMarkers } from "@/features/care-calendar/components/CareCalendarDayMarkers";
+import { deriveCareCalendarDayMarkers } from "@/features/care-calendar/services/careCalendarDayMarkers";
 import {
   buildDayAccessibilityLabel,
   getMonthGridDates,
@@ -9,11 +12,13 @@ import {
   toLocalDateKey,
 } from "@/features/care-calendar/services/careCalendarDerivationService";
 import type { CareCalendarEvent } from "@/features/care-calendar/types";
+import type { PlantListItem } from "@/features/plants/api/plantsClient";
 
 interface CareCalendarMonthGridProps {
   month: Date;
   selectedDateKey: string | null;
   events: CareCalendarEvent[];
+  plants: PlantListItem[];
   onSelectDate: (dateKey: string) => void;
 }
 
@@ -24,12 +29,17 @@ export function CareCalendarMonthGrid({
   month,
   selectedDateKey,
   events,
+  plants,
   onSelectDate,
 }: CareCalendarMonthGridProps) {
   const { colors } = useTheme();
   const grouped = groupEventsByDate(events);
   const { days } = getMonthGridDates(month);
   const todayKey = toLocalDateKey(new Date());
+  const plantById = useMemo(
+    () => new Map(plants.map((plant) => [plant.id, plant] as const)),
+    [plants],
+  );
 
   return (
     <View style={styles.wrap}>
@@ -48,19 +58,23 @@ export function CareCalendarMonthGrid({
         {days.map((day) => {
           const dateKey = toLocalDateKey(day);
           const inMonth = isSameLocalMonth(day, month);
-          const taskCount = grouped.get(dateKey)?.length ?? 0;
+          const dayEvents = grouped.get(dateKey) ?? [];
+          const markers = deriveCareCalendarDayMarkers({
+            events: dayEvents,
+            plantById,
+          });
           const selected =
             selectedDateKey != null && dateKey === selectedDateKey;
           const isToday = dateKey === todayKey;
-          const hasOverdue = (grouped.get(dateKey) ?? []).some(
-            (event) => event.status === "overdue",
-          );
 
           return (
             <View key={dateKey} style={styles.cell}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={buildDayAccessibilityLabel({ date: day, taskCount })}
+                accessibilityLabel={buildDayAccessibilityLabel({
+                  date: day,
+                  markers,
+                })}
                 accessibilityState={{ selected }}
                 onPress={() => onSelectDate(dateKey)}
                 style={styles.dayPressable}
@@ -92,23 +106,11 @@ export function CareCalendarMonthGrid({
                     {day.getDate()}
                   </Text>
                 </View>
+                <CareCalendarDayMarkers
+                  markers={markers}
+                  selected={selected}
+                />
               </Pressable>
-              {taskCount > 0 ? (
-                <View style={styles.markerRow}>
-                  <View
-                    style={[
-                      styles.marker,
-                      {
-                        backgroundColor: hasOverdue
-                          ? colors.error
-                          : colors.secondary,
-                      },
-                    ]}
-                  />
-                </View>
-              ) : (
-                <View style={styles.markerSpacer} />
-              )}
             </View>
           );
         })}
@@ -138,12 +140,12 @@ const styles = StyleSheet.create({
   cell: {
     width: `${100 / 7}%`,
     alignItems: "center",
-    paddingVertical: 6,
-    gap: 4,
+    paddingVertical: 4,
   },
   dayPressable: {
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
+    gap: 2,
   },
   dayBubble: {
     width: CARE_CALENDAR_DAY_MARKER_SIZE,
@@ -157,18 +159,5 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_600SemiBold",
     fontSize: 14,
     lineHeight: 18,
-  },
-  markerRow: {
-    minHeight: 6,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  marker: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  markerSpacer: {
-    minHeight: 6,
   },
 });
