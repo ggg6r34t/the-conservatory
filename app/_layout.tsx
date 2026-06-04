@@ -164,6 +164,7 @@ function RootNavigator({
       <Stack.Screen name="change-password" options={drillInScreenOptions} />
       <Stack.Screen name="highlights" options={drillInScreenOptions} />
       <Stack.Screen name="care-reminders" options={drillInScreenOptions} />
+      <Stack.Screen name="care-calendar" options={drillInScreenOptions} />
       <Stack.Screen name="profile-edit" options={drillInScreenOptions} />
       <Stack.Screen name="archive-gallery" options={drillInScreenOptions} />
       <Stack.Screen name="specimen-tags" options={drillInScreenOptions} />

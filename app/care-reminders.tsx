@@ -14,6 +14,7 @@ import {
 } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { trackCareCalendarOpened } from "@/features/care-calendar/analytics";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
@@ -33,9 +34,12 @@ import { ensureNotificationsForDelivery } from "@/features/permissions/ensureNot
 import { useAlert } from "@/hooks/useAlert";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { shadowScale, shadowWithColor } from "@/styles/shadows";
+import {
+  getDefaultFrequencyDays,
+  getReminderTypeLabel,
+  REMINDER_TYPES,
+} from "@/features/notifications/constants/reminderTypes";
 import type { CareReminder, ReminderType } from "@/types/models";
-
-const REMINDER_TYPES: ReminderType[] = ["water", "mist", "feed"];
 
 interface ReminderRow {
   plant: PlantListItem;
@@ -50,21 +54,6 @@ interface ReminderDraft {
   reminderType: ReminderType;
   frequencyDays: string;
   enabled: boolean;
-}
-
-function getDefaultFrequencyDays(
-  type: ReminderType,
-  wateringIntervalDays: number,
-) {
-  if (type === "mist") return 3;
-  if (type === "feed") return 30;
-  return wateringIntervalDays;
-}
-
-function getReminderTypeLabel(type: ReminderType) {
-  if (type === "mist") return "Mist";
-  if (type === "feed") return "Feed";
-  return "Water";
 }
 
 function formatReminderCopy(input: {
@@ -94,6 +83,18 @@ function formatReminderCopy(input: {
 
   if (reminderType === "feed") {
     return `Feed every ${frequencyDays} days`;
+  }
+
+  if (reminderType === "repot") {
+    return `Repot every ${frequencyDays} days`;
+  }
+
+  if (reminderType === "prune") {
+    return `Prune every ${frequencyDays} days`;
+  }
+
+  if (reminderType === "inspect") {
+    return `Inspect every ${frequencyDays} days`;
   }
 
   return `Water every ${frequencyDays} days`;
@@ -126,6 +127,27 @@ function getReminderIcon(input: {
     return {
       family: "MaterialCommunityIcons" as const,
       name: "water-plus-outline",
+    };
+  }
+
+  if (reminderType === "repot") {
+    return {
+      family: "MaterialCommunityIcons" as const,
+      name: "flower-tulip-outline",
+    };
+  }
+
+  if (reminderType === "prune") {
+    return {
+      family: "MaterialCommunityIcons" as const,
+      name: "content-cut",
+    };
+  }
+
+  if (reminderType === "inspect") {
+    return {
+      family: "MaterialCommunityIcons" as const,
+      name: "magnify-scan",
     };
   }
 
@@ -382,7 +404,28 @@ export default function CareRemindersScreen() {
   };
 
   return (
-    <ProfileScreenScaffold title="Care Reminders" subtitle="Your schedule">
+    <ProfileScreenScaffold
+      title="Care Reminders"
+      subtitle="Your schedule"
+      headerRight={
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open care calendar"
+          hitSlop={10}
+          onPress={() => {
+            trackCareCalendarOpened("reminders");
+            router.push("/care-calendar" as const);
+          }}
+        >
+          <Icon
+            family="MaterialCommunityIcons"
+            name="calendar-month-outline"
+            size={22}
+            color={colors.primary}
+          />
+        </Pressable>
+      }
+    >
       <View style={styles.content}>
         <View
           style={[

@@ -22,6 +22,10 @@ This folder is organized around the core production docs the repo actively keeps
   High-level application architecture, feature boundaries, and routing model.
 - [architecture/SYNC_AND_DATA_MODEL.md](./architecture/SYNC_AND_DATA_MODEL.md)
   Local-first data model, sync behavior, backup/export truthfulness, and queue semantics.
+- [architecture/PREMIUM_ENTITLEMENTS.md](./architecture/PREMIUM_ENTITLEMENTS.md)
+  Premium vs free capabilities, quotas, and enforcement paths.
+- [architecture/PREMIUM_POST_IMPLEMENTATION_AUDIT.md](./architecture/PREMIUM_POST_IMPLEMENTATION_AUDIT.md)
+  Enterprise verification audit register (pass 1 / pass 2).
 - [architecture/NAVIGATION_MAP.md](./architecture/NAVIGATION_MAP.md)
   Route grouping, user flows, and navigation responsibilities.
 

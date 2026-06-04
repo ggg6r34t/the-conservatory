@@ -15,7 +15,6 @@ const AI_FUNCTIONS = [
 const PREMIUM_FUNCTIONS = [
   "generate-dashboard-insight",
   "generate-journal-summary",
-  "optimize-reminders",
   "curate-archive-gallery",
 ];
 

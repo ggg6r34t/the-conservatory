@@ -51,13 +51,36 @@ const PREMIUM_FEATURES = [
     icon: "cloud-sync-outline",
     label: "Full Cloud Backup",
     detail:
-      "Plants, care logs, reminders, and progress photos upload when Premium and cloud sync are active.",
+      "Plants, care logs, and reminders sync for all accounts. Progress photo backup requires Premium when cloud sync is active.",
+  },
+  {
+    icon: "calendar-month",
+    label: "Care Calendar AI Rhythms",
+    detail:
+      "Optional AI-assisted repot, inspect, and mist suggestions on your botanical planner.",
+  },
+  {
+    icon: "filter-variant",
+    label: "Advanced Library Filters",
+    detail: "Sort and filter your collection with premium library views.",
+  },
+  {
+    icon: "database-export",
+    label: "Enhanced Export",
+    detail:
+      "Export full care history, photo metadata, status snapshots, and specimen tags.",
   },
   {
     icon: "qrcode",
     label: "Specimen Tags",
     detail:
       "Create and print botanical QR labels to bridge your physical and digital collection with Premium.",
+  },
+  {
+    icon: "palette-outline",
+    label: "Premium Themes",
+    detail:
+      "Additional interface themes with an active monthly or annual subscription.",
   },
 ];
 

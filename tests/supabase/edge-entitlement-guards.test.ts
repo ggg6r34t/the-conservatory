@@ -4,9 +4,10 @@ import path from "path";
 const PREMIUM_ONLY_FUNCTIONS = [
   "generate-dashboard-insight",
   "generate-journal-summary",
-  "optimize-reminders",
   "curate-archive-gallery",
 ];
+
+const FREE_QUOTA_FUNCTIONS = ["optimize-reminders"];
 
 describe("Supabase Edge Function entitlement guards", () => {
   it("provides a shared RevenueCat-backed premium entitlement guard", () => {
@@ -28,6 +29,26 @@ describe("Supabase Edge Function entitlement guards", () => {
     expect(source).toContain("expires_date");
     expect(source).not.toContain("billingContext.isPremium");
   });
+
+  it.each(FREE_QUOTA_FUNCTIONS)(
+    "allows %s for authenticated users with quota only (no premium gate)",
+    (functionName) => {
+      const source = fs.readFileSync(
+        path.join(
+          process.cwd(),
+          "supabase",
+          "functions",
+          functionName,
+          "index.ts",
+        ),
+        "utf8",
+      );
+
+      expect(source).not.toContain("assertPremiumEntitlement");
+      expect(source).toContain("assertAiUsageQuota");
+      expect(source).toContain("smart_reminder_optimization");
+    },
+  );
 
   it.each(PREMIUM_ONLY_FUNCTIONS)(
     "guards %s before processing request body",

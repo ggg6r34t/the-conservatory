@@ -1,8 +1,9 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { getHydrationCardCopy } from "@/features/empty-states/getEmptyStateForContext";
+import { dashboardUtilityCardStyles } from "@/styles/dashboardEntryCards";
 
 interface HydrationCardProps {
   totalPlants: number;
@@ -27,10 +28,13 @@ export function HydrationCard({
 
   return (
     <View
-      style={[styles.card, { backgroundColor: colors.surfaceContainerLow }]}
+      style={[
+        dashboardUtilityCardStyles.card,
+        { backgroundColor: colors.surfaceContainerLow },
+      ]}
     >
-      <View style={styles.header}>
-        <View style={styles.iconWrap}>
+      <View style={dashboardUtilityCardStyles.header}>
+        <View style={dashboardUtilityCardStyles.iconWrap}>
           <Icon
             family="MaterialIcons"
             color={colors.primary}
@@ -38,16 +42,16 @@ export function HydrationCard({
             size={18}
           />
         </View>
-        <Text style={[styles.title, { color: colors.onSurface }]}>
+        <Text style={[dashboardUtilityCardStyles.title, { color: colors.onSurface }]}>
           Hydration
         </Text>
       </View>
       <View>
-        <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
+        <Text style={[dashboardUtilityCardStyles.body, { color: colors.onSurfaceVariant }]}>
           {statusCopy}
         </Text>
         {cycleCopy ? (
-          <Text style={[styles.meta, { color: colors.onSurfaceVariant }]}>
+          <Text style={[dashboardUtilityCardStyles.meta, { color: colors.onSurfaceVariant }]}>
             {cycleCopy}
           </Text>
         ) : null}
@@ -55,37 +59,3 @@ export function HydrationCard({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: 28,
-    minHeight: 114,
-    paddingHorizontal: 22,
-    paddingVertical: 26,
-    gap: 10,
-    justifyContent: "center",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  iconWrap: {
-    marginTop: 1,
-  },
-  title: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  body: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  meta: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 14,
-    lineHeight: 22,
-  },
-});

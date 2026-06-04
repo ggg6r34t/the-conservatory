@@ -7,7 +7,7 @@ function mapReminder(row: {
   id: string;
   user_id: string;
   plant_id: string;
-  reminder_type: "water" | "mist" | "feed";
+  reminder_type: ReminderType;
   frequency_days: number;
   enabled: number;
   next_due_at: string | null;
@@ -46,7 +46,7 @@ export async function listReminders(userId: string, plantId?: string) {
         id: string;
         user_id: string;
         plant_id: string;
-        reminder_type: "water" | "mist" | "feed";
+        reminder_type: ReminderType;
         frequency_days: number;
         enabled: number;
         next_due_at: string | null;
@@ -67,7 +67,7 @@ export async function listReminders(userId: string, plantId?: string) {
         id: string;
         user_id: string;
         plant_id: string;
-        reminder_type: "water" | "mist" | "feed";
+        reminder_type: ReminderType;
         frequency_days: number;
         enabled: number;
         next_due_at: string | null;
@@ -183,7 +183,7 @@ export async function upsertReminder(input: {
           id: string;
           user_id: string;
           plant_id: string;
-          reminder_type: "water" | "mist" | "feed";
+          reminder_type: ReminderType;
           frequency_days: number;
           enabled: number;
           next_due_at: string | null;
@@ -247,7 +247,7 @@ export async function upsertReminder(input: {
         id: string;
         user_id: string;
         plant_id: string;
-        reminder_type: "water" | "mist" | "feed";
+        reminder_type: ReminderType;
         frequency_days: number;
         enabled: number;
         next_due_at: string | null;

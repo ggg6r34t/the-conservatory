@@ -23,7 +23,8 @@ Key domains include:
 - graveyard plants and memorials
 - photos
 - care logs
-- reminders
+- reminders (water, mist, feed, repot, prune, inspect)
+- accepted AI care schedules (`care_schedule_suggestions` for non-reminder care types)
 - user preferences
 
 These domains appear across:

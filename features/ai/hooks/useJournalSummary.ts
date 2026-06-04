@@ -4,6 +4,7 @@ import {
   buildJournalSummaryStateSignature,
   getJournalMonthlySummary,
 } from "@/features/ai/services/journalSummaryService";
+import { cloudAllowedForFeature } from "@/features/billing/services/featureAccess";
 import type { CareLog, Plant } from "@/types/models";
 
 export function useJournalSummary(input: {
@@ -13,6 +14,10 @@ export function useJournalSummary(input: {
   photoCount: number;
   isPremium: boolean;
 }) {
+  const cloudAllowed = cloudAllowedForFeature(
+    "ai_journal_narrative",
+    input.isPremium,
+  );
   const monthKey = new Date().toISOString().slice(0, 7);
   const signature = buildJournalSummaryStateSignature({
     logs: input.logs,
@@ -27,7 +32,7 @@ export function useJournalSummary(input: {
       input.userId ?? "guest",
       monthKey,
       signature,
-      input.isPremium,
+      cloudAllowed,
     ],
     enabled: Boolean(input.userId),
     staleTime: 1000 * 60 * 30,
@@ -37,7 +42,7 @@ export function useJournalSummary(input: {
         logs: input.logs,
         plants: input.plants,
         photoCount: input.photoCount,
-        cloudAllowed: input.isPremium,
+        cloudAllowed,
       }),
   });
 }

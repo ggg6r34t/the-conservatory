@@ -11,7 +11,6 @@ import {
   readJsonWithLimit,
   safeErrorResponse,
 } from "../_shared/edge.ts";
-import { assertPremiumEntitlement } from "../_shared/entitlements.ts";
 import { jsonResponse } from "../_shared/json.ts";
 
 const FUNCTION_NAME = "optimize-reminders";
@@ -80,16 +79,12 @@ Deno.serve(async (request) => {
   let context;
   try {
     context = await createEdgeContext(request, FUNCTION_NAME);
-    const entitlementError = await assertPremiumEntitlement(request);
-    if (entitlementError) {
-      return entitlementError;
-    }
     const body = validateAiRequest<OptimizeRemindersRequest>(
       FUNCTION_NAME,
       await readJsonWithLimit(request),
     );
     await assertAiUsageQuota(context, "smart_reminder_optimization", {
-      isPremium: true,
+      isPremium: false,
     });
 
     const response = validateAiResponse<OptimizeRemindersResponse>(

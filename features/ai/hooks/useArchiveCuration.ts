@@ -6,6 +6,7 @@ import { getArchiveCuration } from "@/features/ai/services/archiveCurationServic
 import { listArchiveCurationOverrides } from "@/features/ai/services/archiveCurationOverridesService";
 import type { ArchiveCuratedPair } from "@/features/ai/types/ai";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
+import { cloudAllowedForFeature } from "@/features/billing/services/featureAccess";
 import { getPlantById } from "@/features/plants/api/plantsClient";
 
 export function useArchiveCuration(input: {
@@ -48,12 +49,26 @@ export function useArchiveCuration(input: {
     )
     .join("|");
 
+  const cloudAllowed = cloudAllowedForFeature(
+    "ai_archive_curation",
+    input.isPremium,
+  );
+
   const curationQuery = useQuery({
-    queryKey: ["ai", "archive-curation", input.userId ?? "guest", revision, input.isPremium],
+    queryKey: [
+      "ai",
+      "archive-curation",
+      input.userId ?? "guest",
+      revision,
+      cloudAllowed,
+    ],
     enabled: Boolean(input.userId && revision),
     staleTime: 1000 * 60 * 30,
     queryFn: () =>
-      getArchiveCuration(items.filter((item) => item.photoUris.length >= 2), input.isPremium),
+      getArchiveCuration(
+        items.filter((item) => item.photoUris.length >= 2),
+        cloudAllowed,
+      ),
   });
   const overridesQuery = useQuery({
     queryKey: ["ai", "archive-curation-overrides", input.userId ?? "guest"],

@@ -15,7 +15,8 @@ declare
     'specimen_tags',
     'archive_curation_overrides',
     'graveyard_plants',
-    'feature_usage'
+    'feature_usage',
+    'care_schedule_suggestions'
   ];
   t text;
   con_name text;

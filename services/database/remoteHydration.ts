@@ -12,7 +12,7 @@ import {
   getStorageAssetUrl,
   normalizeStoragePath,
 } from "@/services/supabase/storage";
-import type { CareLogCondition } from "@/types/models";
+import type { CareLogCondition, ReminderType, ScheduledCareType } from "@/types/models";
 import { logger } from "@/utils/logger";
 
 interface MergeableRemoteRow {
@@ -118,11 +118,25 @@ interface RemoteCareLogTagRow extends MergeableRemoteRow {
 interface RemoteReminderRow extends MergeableRemoteRow {
   user_id: string;
   plant_id: string;
-  reminder_type: "water" | "mist" | "feed";
+  reminder_type: ReminderType;
   frequency_days: number;
   enabled: boolean;
   next_due_at: string | null;
   last_triggered_at: string | null;
+  created_at: string;
+  updated_by: string | null;
+}
+
+interface RemoteCareScheduleSuggestionRow extends MergeableRemoteRow {
+  user_id: string;
+  plant_id: string;
+  care_type: ScheduledCareType;
+  frequency_days: number;
+  enabled: boolean;
+  next_due_at: string;
+  reason: string | null;
+  confidence: string | null;
+  source: string;
   created_at: string;
   updated_by: string | null;
 }
@@ -438,6 +452,7 @@ export async function hydrateRemoteUserData(userId: string) {
     photosResult,
     careLogsResult,
     remindersResult,
+    schedulesResult,
     careLogTagsResult,
     statusSnapshotsResult,
     specimenTagsResult,
@@ -512,6 +527,26 @@ export async function hydrateRemoteUserData(userId: string) {
         "enabled",
         "next_due_at",
         "last_triggered_at",
+        "created_at",
+        "updated_at",
+        "updated_by",
+      ].join(", "),
+      userId,
+    ),
+    fetchRemoteRowsSafe<RemoteCareScheduleSuggestionRow>(
+      "care_schedule_suggestions",
+      [
+        "id",
+        "client_id",
+        "user_id",
+        "plant_id",
+        "care_type",
+        "frequency_days",
+        "enabled",
+        "next_due_at",
+        "reason",
+        "confidence",
+        "source",
         "created_at",
         "updated_at",
         "updated_by",
@@ -605,6 +640,7 @@ export async function hydrateRemoteUserData(userId: string) {
   const photos = photosResult.rows;
   const careLogs = careLogsResult.rows;
   const reminders = remindersResult.rows;
+  const schedules = schedulesResult.rows;
   const careLogTags = careLogTagsResult.rows;
   const statusSnapshots = statusSnapshotsResult.rows;
   const specimenTags = specimenTagsResult.rows;
@@ -865,6 +901,45 @@ export async function hydrateRemoteUserData(userId: string) {
       );
     }
 
+    for (const row of schedules) {
+      const localId = getLocalEntityId(row);
+      const localPlantId = plantIdByRemote.get(row.plant_id) ?? row.plant_id;
+      if (
+        !(await shouldReplaceLocalRow(
+          database,
+          "care_schedule_suggestions",
+          localId,
+          row.updated_at,
+        ))
+      ) {
+        continue;
+      }
+
+      await database.runAsync(
+        `INSERT OR REPLACE INTO care_schedule_suggestions (
+          id, remote_id, user_id, plant_id, care_type, frequency_days, next_due_at, enabled,
+          reason, confidence, source, created_at, updated_at, updated_by, pending, synced_at, sync_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        localId,
+        row.id,
+        row.user_id,
+        localPlantId,
+        row.care_type,
+        row.frequency_days,
+        row.enabled ? 1 : 0,
+        row.next_due_at,
+        row.reason,
+        row.confidence,
+        row.source,
+        row.created_at,
+        row.updated_at,
+        row.updated_by ?? row.user_id,
+        0,
+        syncedAt,
+        null,
+      );
+    }
+
     for (const row of careLogTags) {
       const localId = getLocalEntityId(row);
       const localPlantId = plantIdByRemote.get(row.plant_id) ?? row.plant_id;
@@ -1069,6 +1144,15 @@ export async function hydrateRemoteUserData(userId: string) {
         table: "care_reminders",
         userId,
         remoteIds: reminders.map((row) => getLocalEntityId(row)),
+      });
+    }
+
+    if (schedulesResult.ok) {
+      await reconcileRemoteDeletions({
+        database,
+        table: "care_schedule_suggestions",
+        userId,
+        remoteIds: schedules.map((row) => getLocalEntityId(row)),
       });
     }
 

@@ -14,6 +14,7 @@ import type {
   CareLogCondition,
   CareLogType,
   CareReminder,
+  ReminderType,
   GraveyardPlant,
   Photo,
   Plant,
@@ -129,7 +130,7 @@ interface ReminderRow {
   id: string;
   user_id: string;
   plant_id: string;
-  reminder_type: "water" | "mist" | "feed";
+  reminder_type: ReminderType;
   frequency_days: number;
   enabled: number;
   next_due_at: string | null;

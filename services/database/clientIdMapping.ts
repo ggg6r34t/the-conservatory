@@ -9,6 +9,7 @@ export const CLIENT_ID_ENTITY_TABLES = [
   "care_logs",
   "care_log_tags",
   "care_reminders",
+  "care_schedule_suggestions",
   "plant_status_snapshots",
   "specimen_tags",
   "archive_curation_overrides",

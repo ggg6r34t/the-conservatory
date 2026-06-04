@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
-    "test:e2e": "jest tests/e2e/auth-onboarding-flow.test.tsx --runInBand --forceExit",
+    "test:e2e": "jest tests/e2e --runInBand --forceExit",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit"
   },

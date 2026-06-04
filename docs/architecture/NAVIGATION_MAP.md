@@ -99,6 +99,13 @@ Current account-safety drill-ins:
 - `/privacy-security`
 - `/change-password`
 
+### Care Calendar
+
+- Garden (`/(tabs)/index`) opens `/care-calendar` via the care rhythm CTA near hydration/upcoming care
+- `/care-reminders` links to `/care-calendar` (header icon and calendar view button)
+- Plant detail shows upcoming care preview with link to `/care-calendar?plantId=...`
+- `/care-calendar` is a drill-in only; it is not a tab
+
 ### Product Feedback
 
 Current product-feedback drill-ins:

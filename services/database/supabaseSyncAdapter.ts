@@ -30,6 +30,7 @@ type SyncableEntity =
   | "care_logs"
   | "care_log_tags"
   | "care_reminders"
+  | "care_schedule_suggestions"
   | "photos"
   | "plant_status_snapshots"
   | "specimen_tags"
@@ -43,6 +44,7 @@ function canTrackLocalSync(entity: string): entity is SyncableEntity {
     entity === "care_logs" ||
     entity === "care_log_tags" ||
     entity === "care_reminders" ||
+    entity === "care_schedule_suggestions" ||
     entity === "photos" ||
     entity === "plant_status_snapshots" ||
     entity === "specimen_tags" ||
@@ -249,7 +251,7 @@ async function loadReminderRecord(entityId: string) {
     id: string;
     user_id: string;
     plant_id: string;
-    reminder_type: "water" | "mist" | "feed";
+    reminder_type: string;
     frequency_days: number;
     enabled: number;
     next_due_at: string | null;
@@ -589,6 +591,42 @@ async function upsertRemoteRecord(
     await upsertByClientId("care_reminders", item.entityId, {
       ...reminderPayload,
       plant_id: remotePlantId,
+    });
+    return;
+  }
+
+  if (item.entity === "care_schedule_suggestions") {
+    const database = await getDatabase();
+    const row = await database.getFirstAsync<{
+      id: string;
+      user_id: string;
+      plant_id: string;
+      care_type: string;
+      frequency_days: number;
+      next_due_at: string;
+      enabled: number;
+      reason: string | null;
+      confidence: string | null;
+      source: string;
+      created_at: string;
+      updated_at: string;
+      updated_by: string | null;
+    }>(
+      "SELECT * FROM care_schedule_suggestions WHERE id = ? LIMIT 1;",
+      item.entityId,
+    );
+    if (!row) {
+      return buildDeletedBeforeSyncOutcome("care_schedule_suggestions");
+    }
+    const remotePlantId = await resolveRemoteId("plants", row.plant_id);
+    if (!remotePlantId) {
+      return buildParentNotSyncedOutcome("plants");
+    }
+    const { id: _localId, plant_id: _localPlantId, ...schedulePayload } = row;
+    await upsertByClientId("care_schedule_suggestions", item.entityId, {
+      ...schedulePayload,
+      plant_id: remotePlantId,
+      enabled: Boolean(row.enabled),
     });
     return;
   }

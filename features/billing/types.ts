@@ -60,6 +60,7 @@ export type GatedFeature =
   | 'ai_archive_curation'
   | 'ai_species_identification'
   | 'smart_reminder_optimization'
+  | 'ai_care_schedule'
   | 'specimen_tag_create'
   | 'advanced_library_filters'
   | 'premium_export';

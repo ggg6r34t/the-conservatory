@@ -99,6 +99,7 @@ describe('canUseFeature', () => {
         'plant_create', 'progress_photo_upload', 'ai_health_insight',
         'ai_journal_narrative', 'ai_dashboard_editorial', 'ai_archive_curation',
         'ai_species_identification', 'smart_reminder_optimization',
+        'ai_care_schedule',
         'specimen_tag_create', 'advanced_library_filters', 'premium_export',
       ];
       expect(features).not.toContain('graveyard_access');

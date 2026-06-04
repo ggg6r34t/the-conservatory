@@ -57,7 +57,7 @@ const SPECIES_PROFILES: SpeciesProfile[] = [
   },
 ];
 
-function resolveSpeciesProfile(speciesName: string) {
+export function resolveSpeciesProfile(speciesName: string) {
   const normalized = speciesName.trim().toLowerCase();
   return (
     SPECIES_PROFILES.find((profile) =>

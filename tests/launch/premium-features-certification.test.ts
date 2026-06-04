@@ -31,6 +31,24 @@ describe("Premium features certification (code evidence)", () => {
       expect(read("features/export/services/exportAccessPolicy.ts")).toContain(
         '"premium_export"',
       );
+      expect(read("features/billing/services/featureAccess.ts")).toContain(
+        "assertFeatureAccess",
+      );
+      expect(read("features/care-calendar/hooks/useCareCalendarActions.ts")).toContain(
+        'assertFeatureAccess("ai_care_schedule"',
+      );
+      expect(read("features/care-calendar/hooks/useCareCalendar.ts")).toContain(
+        "cloudAllowedForFeature",
+      );
+      expect(read("features/care-calendar/api/careScheduleSuggestionsClient.ts")).toContain(
+        'assertFeatureAccess("ai_care_schedule"',
+      );
+      expect(read("features/plants/services/plantLibraryFilterService.ts")).toContain(
+        'isFeatureAllowed("advanced_library_filters"',
+      );
+      expect(read("features/ai/hooks/useJournalSummary.ts")).toContain(
+        "cloudAllowedForFeature",
+      );
       expect(read("features/ai/api/aiClient.ts")).toContain(
         "FEATURE_REQUIRES_PREMIUM",
       );
@@ -65,7 +83,7 @@ describe("Premium features certification (code evidence)", () => {
         "getEntitlementState()",
       );
       expect(read("features/plants/services/specimenTagsService.ts")).toContain(
-        "Premium is required to create specimen tags.",
+        'assertFeatureAccess("specimen_tag_create"',
       );
     });
 

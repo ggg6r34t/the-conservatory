@@ -12,7 +12,38 @@ export type CareLogType =
   | "pest"
   | "note";
 export type CareLogCondition = "Healthy" | "Needs Attention" | "Declining";
-export type ReminderType = "water" | "mist" | "feed";
+export type ReminderType =
+  | "water"
+  | "mist"
+  | "feed"
+  | "repot"
+  | "prune"
+  | "inspect";
+
+export type ScheduledCareType =
+  | ReminderType
+  | "soil_change"
+  | "pest_check"
+  | "note";
+
+export interface CareScheduleSuggestionRecord {
+  id: string;
+  userId: string;
+  plantId: string;
+  careType: ScheduledCareType;
+  frequencyDays: number;
+  nextDueAt: string;
+  enabled: number;
+  reason?: string | null;
+  confidence?: string | null;
+  source: "ai_suggested" | "manual";
+  createdAt: string;
+  updatedAt: string;
+  updatedBy?: string | null;
+  pending: number;
+  syncedAt?: string | null;
+  syncError?: string | null;
+}
 
 export interface AppUser {
   id: string;

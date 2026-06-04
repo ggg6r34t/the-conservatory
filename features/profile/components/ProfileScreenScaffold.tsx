@@ -1,7 +1,14 @@
 import type { ReactNode } from "react";
 
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/common/Icon/Icon";
@@ -14,6 +21,8 @@ interface ProfileScreenScaffoldProps {
   /** Defaults to "Settings" for existing drill-in screens. */
   navigationTitle?: string;
   headerRight?: ReactNode;
+  refreshing?: boolean;
+  onRefresh?: () => void | Promise<void>;
   children: ReactNode;
 }
 
@@ -23,6 +32,8 @@ export function ProfileScreenScaffold({
   description,
   navigationTitle = "Settings",
   headerRight,
+  refreshing,
+  onRefresh,
   children,
 }: ProfileScreenScaffoldProps) {
   const router = useRouter();
@@ -30,10 +41,22 @@ export function ProfileScreenScaffold({
 
   return (
     <SafeAreaView
+      edges={["top"]}
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={refreshing ?? false}
+              onRefresh={() => {
+                void onRefresh();
+              }}
+              tintColor={colors.primary}
+            />
+          ) : undefined
+        }
         contentContainerStyle={[
           styles.content,
           {

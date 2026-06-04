@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 export const bootstrapSql = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -730,6 +730,7 @@ CREATE INDEX IF NOT EXISTS idx_care_reminders_user_id ON care_reminders(user_id)
     "care_logs",
     "care_log_tags",
     "care_reminders",
+    "care_schedule_suggestions",
     "plant_status_snapshots",
     "specimen_tags",
     "archive_curation_overrides",
@@ -740,6 +741,33 @@ CREATE INDEX IF NOT EXISTS idx_care_reminders_user_id ON care_reminders(user_id)
   for (const table of remoteIdTables) {
     await ensureColumn(database, table, "remote_id", "TEXT");
   }
+
+  await database.execAsync(`
+CREATE TABLE IF NOT EXISTS care_schedule_suggestions (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  plant_id TEXT NOT NULL,
+  care_type TEXT NOT NULL,
+  frequency_days INTEGER NOT NULL,
+  next_due_at TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  reason TEXT,
+  confidence TEXT,
+  source TEXT NOT NULL DEFAULT 'manual',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  pending INTEGER NOT NULL DEFAULT 1,
+  synced_at TEXT,
+  sync_error TEXT,
+  remote_id TEXT,
+  FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_care_schedule_unique_plant_user_type
+  ON care_schedule_suggestions(plant_id, user_id, care_type);
+CREATE INDEX IF NOT EXISTS idx_care_schedule_suggestions_user_id
+  ON care_schedule_suggestions(user_id);
+`);
 
   await recordSchemaMigrationVersion(database);
 }

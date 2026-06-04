@@ -23,7 +23,10 @@ import { useCareLogsForPlantIds } from "@/features/care-logs/hooks/useCareLogsFo
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
 import { HydrationCard } from "@/features/dashboard/components/HydrationCard";
 import { SpeciesCounter } from "@/features/dashboard/components/SpeciesCounter";
+import { CareCalendarCta } from "@/features/care-calendar/components/CareCalendarCta";
 import { UpcomingCare } from "@/features/dashboard/components/UpcomingCare";
+import { buildCareCalendarDashboardSummary } from "@/features/care-calendar/services/careCalendarDashboardSummary";
+import { deriveCareCalendarEvents } from "@/features/care-calendar/services/careCalendarDerivationService";
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
 import { buildDashboardHeroCopy } from "@/features/dashboard/services/dashboardHeroCopy";
 import { useReminders } from "@/features/notifications/hooks/useReminders";
@@ -94,6 +97,14 @@ export default function HomeScreen() {
   });
   const logs = logsQuery.data ?? [];
   const { currentStreak: currentStreakDays } = useCollectionStreak();
+  const calendarPreview = buildCareCalendarDashboardSummary(
+    deriveCareCalendarEvents({
+      plants: dashboard.plants,
+      reminders: remindersQuery.data ?? [],
+      logs,
+      horizonDays: 14,
+    }),
+  );
   const insightQuery = useDashboardInsight({
     userId: user?.id,
     plants: dashboard.plants,
@@ -164,6 +175,10 @@ export default function HomeScreen() {
           overdue={overdueCount}
           nextCycleHours={dashboard.nextCycleHours}
         />
+
+        {dashboard.plants.length > 0 ? (
+          <CareCalendarCta body={calendarPreview.body} />
+        ) : null}
 
         {insightQuery.data && hasCurrentWateringNeed ? (
           <DashboardInsightCard insight={insightQuery.data} />

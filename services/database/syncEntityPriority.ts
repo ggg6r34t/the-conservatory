@@ -4,6 +4,7 @@ export const SYNC_ENTITY_PRIORITY: Record<string, number> = {
   plants: 10,
   care_logs: 20,
   care_reminders: 25,
+  care_schedule_suggestions: 26,
   care_log_tags: 30,
   plant_status_snapshots: 35,
   specimen_tags: 40,

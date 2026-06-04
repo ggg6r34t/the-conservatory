@@ -8,6 +8,7 @@ import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { PlantDetailHealthInsight } from "@/features/ai/components/PlantDetailHealthInsight";
+import { PlantUpcomingCarePreview } from "@/features/care-calendar/components/PlantUpcomingCarePreview";
 import { EmptyState } from "@/features/empty-states/components/EmptyState";
 import { getEmptyStateForContext } from "@/features/empty-states/getEmptyStateForContext";
 import { buildCareDefaults } from "@/features/ai/services/careDefaultsService";
@@ -520,6 +521,8 @@ export const PlantDetail = memo(function PlantDetail({ data }: PlantDetailProps)
       </View>
 
       <PlantDetailHealthInsight plantId={data.plant.id} data={data} />
+
+      <PlantUpcomingCarePreview data={data} />
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>

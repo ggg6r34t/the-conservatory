@@ -133,7 +133,12 @@ This file tracks the app's current route screens and route-adjacent files so pro
     Screen: Care Reminders
     File: `app/care-reminders.tsx`
 
-23. `/interface-theme`
+23. `/care-calendar`
+    Screen: Care Calendar
+    File: `app/care-calendar.tsx`
+    Notes: Drill-in botanical care planner with month/agenda views; primary entry from Garden, secondary from Reminders and Plant Detail.
+
+24. `/interface-theme`
     Screen: Interface Theme
     File: `app/interface-theme.tsx`
 

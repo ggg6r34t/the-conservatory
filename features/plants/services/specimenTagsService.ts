@@ -1,5 +1,6 @@
 import { getDatabase } from "@/services/database/sqlite";
 import { runAtomicMutationWithSyncOutbox } from "@/services/database/syncOutbox";
+import { assertFeatureAccess } from "@/features/billing/services/featureAccess";
 import { getEntitlementState } from "@/services/entitlementState";
 import type { Plant } from "@/types/models";
 import { createId } from "@/utils/id";
@@ -225,9 +226,7 @@ export async function ensureSpecimenTag(input: {
   userId: string;
   plant: Plant;
 }) {
-  if (!getEntitlementState()) {
-    throw new Error("Premium is required to create specimen tags.");
-  }
+  assertFeatureAccess("specimen_tag_create", getEntitlementState());
 
   const database = await getDatabase();
   const existing = await database.getFirstAsync<

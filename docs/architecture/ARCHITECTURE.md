@@ -124,6 +124,8 @@ Important implications:
 
 See [SYNC_AND_DATA_MODEL.md](./SYNC_AND_DATA_MODEL.md) for the operational model.
 
+See [PREMIUM_ENTITLEMENTS.md](./PREMIUM_ENTITLEMENTS.md) for premium vs free capabilities and enforcement paths. Post-implementation audits: [PREMIUM_POST_IMPLEMENTATION_AUDIT.md](./PREMIUM_POST_IMPLEMENTATION_AUDIT.md).
+
 ## Design Principle for Architecture
 
 Product surfaces should not own backend truth ad hoc.

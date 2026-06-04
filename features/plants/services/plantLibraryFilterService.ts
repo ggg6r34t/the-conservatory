@@ -1,3 +1,4 @@
+import { isFeatureAllowed } from "@/features/billing/services/featureAccess";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import type { PlantLibraryFilter } from "@/types/ui";
 
@@ -18,7 +19,10 @@ export function resolvePlantLibraryFilter(
   filter: PlantLibraryFilter,
   isPremium: boolean,
 ): PlantLibraryFilter {
-  if (isPremiumLibraryFilter(filter) && !isPremium) {
+  if (
+    isPremiumLibraryFilter(filter) &&
+    !isFeatureAllowed("advanced_library_filters", isPremium)
+  ) {
     return "all";
   }
 
