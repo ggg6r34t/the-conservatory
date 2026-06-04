@@ -228,7 +228,7 @@ export async function getBackupSummary(userId: string): Promise<BackupSummary> {
 }
 
 export async function runBackupSync(userId: string) {
-  await runUserDataSync({
+  return runUserDataSync({
     userId,
     trigger: "manual",
   });

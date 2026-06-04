@@ -21,6 +21,17 @@ describe("backupSyncMessaging", () => {
     ).toMatch(/Backup Repair/i);
   });
 
+  it("explains follow-up queue work without treating sync as a failure", () => {
+    expect(
+      getBackupSyncSuccessMessage({
+        remoteCanSync: true,
+        hasIssues: false,
+        hasPending: false,
+        completedWithFollowups: true,
+      }),
+    ).toMatch(/waiting on earlier cloud records/i);
+  });
+
   it("reports queued work without claiming every record is uploaded", () => {
     expect(
       getBackupSyncSuccessMessage({

@@ -2,9 +2,14 @@ export function getBackupSyncSuccessMessage(input: {
   remoteCanSync: boolean;
   hasIssues: boolean;
   hasPending: boolean;
+  completedWithFollowups?: boolean;
 }) {
   if (!input.remoteCanSync) {
     return "Your local backup summary has been refreshed on this device.";
+  }
+
+  if (input.completedWithFollowups) {
+    return "Sync finished. Some items are waiting on earlier cloud records and will retry on the next sync.";
   }
 
   if (input.hasIssues) {

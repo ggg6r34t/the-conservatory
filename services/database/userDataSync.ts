@@ -23,7 +23,13 @@ export interface UserDataSyncSnapshot {
   lastError: string | null;
 }
 
+export type UserDataSyncOutcome =
+  | "success"
+  | "completed_with_followups"
+  | "failed";
+
 export interface UserDataSyncResult {
+  outcome: UserDataSyncOutcome;
   processed: number;
   successful: number;
   failed: number;
@@ -75,7 +81,7 @@ async function executeUserDataSync(
   }
 
   await repairLocalPhotoRecords(userId);
-  let report: UserDataSyncResult = {
+  let report: Omit<UserDataSyncResult, "outcome"> = {
     processed: 0,
     successful: 0,
     failed: 0,
@@ -137,7 +143,7 @@ async function executeUserDataSync(
     }
   }
 
-  if (report.failed > 0 || report.blockingRemaining > 0) {
+  if (report.failed > 0) {
     const failedLabel =
       report.failed === 1 ? "1 failed item" : `${report.failed} failed items`;
     const remainingLabel =
@@ -148,6 +154,9 @@ async function executeUserDataSync(
       `Sync completed with ${failedLabel} and ${remainingLabel}.`,
     );
   }
+
+  const completedWithFollowups = report.blockingRemaining > 0;
+
   try {
     await hydrateRemoteUserData(userId);
     report = { ...report, hydrationApplied: true };
@@ -158,19 +167,38 @@ async function executeUserDataSync(
   }
   await repairLocalPhotoRecords(userId);
 
-  logger.info("sync.execution.completed", {
-    userId,
-    trigger,
-    processed: report.processed,
-    successful: report.successful,
-    failed: report.failed,
-    remaining: report.remaining,
-    blockingRemaining: report.blockingRemaining,
-    deferredRemaining: report.deferredRemaining,
-    hydrationApplied: report.hydrationApplied,
-  });
+  const outcome: UserDataSyncOutcome = completedWithFollowups
+    ? "completed_with_followups"
+    : "success";
+
+  if (completedWithFollowups) {
+    logger.info("sync.execution.completed_with_followups", {
+      userId,
+      trigger,
+      processed: report.processed,
+      successful: report.successful,
+      failed: report.failed,
+      remaining: report.remaining,
+      blockingRemaining: report.blockingRemaining,
+      deferredRemaining: report.deferredRemaining,
+      hydrationApplied: report.hydrationApplied,
+    });
+  } else {
+    logger.info("sync.execution.completed", {
+      userId,
+      trigger,
+      processed: report.processed,
+      successful: report.successful,
+      failed: report.failed,
+      remaining: report.remaining,
+      blockingRemaining: report.blockingRemaining,
+      deferredRemaining: report.deferredRemaining,
+      hydrationApplied: report.hydrationApplied,
+    });
+  }
 
   return {
+    outcome,
     processed: report.processed,
     successful: report.successful,
     failed: report.failed,

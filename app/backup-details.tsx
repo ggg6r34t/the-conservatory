@@ -63,12 +63,14 @@ export default function BackupDetailsScreen() {
 
   const handleSync = () => {
     syncMutation.mutate(undefined, {
-      onSuccess: () => {
+      onSuccess: (result) => {
         snackbar.success(
           getBackupSyncSuccessMessage({
             remoteCanSync: remoteAvailability.canSync,
             hasIssues,
             hasPending,
+            completedWithFollowups:
+              result.outcome === "completed_with_followups",
           }),
         );
       },

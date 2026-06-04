@@ -11,7 +11,7 @@ jest.mock("@/config/env", () => ({
 }));
 
 jest.mock("@/services/database/syncAuthGuard", () => ({
-  isPremiumDeferredOutcome: (reasonCode?: string) =>
+  isNonBlockingDeferOutcome: (reasonCode?: string) =>
     reasonCode === "PREMIUM_PHOTO_DEFERRED",
 }));
 

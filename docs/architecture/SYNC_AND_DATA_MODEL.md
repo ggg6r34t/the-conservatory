@@ -91,7 +91,8 @@ The sync flow currently:
 - refuses sync when backend conditions do not support it
 - runs the bootstrap sync process when allowed
 - processes the sync queue in dependency order (plants before reminders/photos/child rows) via `syncEntityPriority.ts`
-- defers child rows with `PARENT_NOT_SYNCED` when a parent `remote_id` is not available yet
+- defers child rows with `PARENT_NOT_SYNCED` when a parent `remote_id` is not available yet (retryable `pending` queue row; premium photo deferrals use terminal `deferred` status)
+- treats a sync run as **failed** only when queue items actually **failed** replay; zero failures with processable queue work still waiting yields **completed with followups** (hydration still runs, UI shows success—not an error modal)
 - invalidates related queries after success
 
 Operationally, this means UI should distinguish between:

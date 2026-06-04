@@ -89,6 +89,11 @@ export async function assertSyncItemMatchesAuthenticatedUser(
   return authUserId;
 }
 
-export function isPremiumDeferredOutcome(reasonCode?: string) {
+export function isNonBlockingDeferOutcome(reasonCode?: string) {
   return reasonCode === SYNC_OUTCOME_REASON_CODES.PREMIUM_PHOTO_DEFERRED;
+}
+
+/** @deprecated Prefer {@link isNonBlockingDeferOutcome} */
+export function isPremiumDeferredOutcome(reasonCode?: string) {
+  return isNonBlockingDeferOutcome(reasonCode);
 }

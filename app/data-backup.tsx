@@ -47,13 +47,17 @@ export default function DataBackupScreen() {
   const handleSync = () => {
     trackGtmEvent("backup_sync_started");
     syncMutation.mutate(undefined, {
-      onSuccess: () => {
-        trackGtmEvent("backup_sync_completed");
+      onSuccess: (result) => {
+        trackGtmEvent("backup_sync_completed", {
+          outcome: result.outcome,
+        });
         snackbar.success(
           getBackupSyncSuccessMessage({
             remoteCanSync: remoteAvailability.canSync,
             hasIssues,
             hasPending,
+            completedWithFollowups:
+              result.outcome === "completed_with_followups",
           }),
         );
       },

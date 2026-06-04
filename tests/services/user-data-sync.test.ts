@@ -156,6 +156,7 @@ describe("userDataSync", () => {
         trigger: "manual",
       }),
     ).resolves.toMatchObject({
+      outcome: "success",
       failed: 0,
       blockingRemaining: 0,
       deferred: 1,
@@ -190,6 +191,7 @@ describe("userDataSync", () => {
         trigger: "manual",
       }),
     ).resolves.toEqual({
+      outcome: "success",
       processed: 27,
       successful: 27,
       failed: 0,
@@ -204,5 +206,40 @@ describe("userDataSync", () => {
 
     expect(mockSyncPendingChanges).toHaveBeenCalledTimes(2);
     expect(mockHydrateRemoteUserData).toHaveBeenCalledWith("user-1");
+  });
+
+  it("completes with followups when queue work remains but nothing failed", async () => {
+    mockSyncPendingChanges
+      .mockResolvedValueOnce({
+        processed: 2,
+        successful: 2,
+        failed: 0,
+        remaining: 2,
+        blockingRemaining: 2,
+      })
+      .mockResolvedValueOnce({
+        processed: 0,
+        successful: 0,
+        failed: 0,
+        remaining: 2,
+        blockingRemaining: 2,
+      });
+
+    const { runUserDataSync } = require("@/services/database/userDataSync");
+
+    await expect(
+      runUserDataSync({
+        userId: "user-1",
+        trigger: "manual",
+      }),
+    ).resolves.toMatchObject({
+      outcome: "completed_with_followups",
+      failed: 0,
+      blockingRemaining: 2,
+      hydrationApplied: true,
+    });
+
+    expect(mockHydrateRemoteUserData).toHaveBeenCalledWith("user-1");
+    expect(mockSyncPendingChanges).toHaveBeenCalledTimes(2);
   });
 });

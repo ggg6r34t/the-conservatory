@@ -1,5 +1,5 @@
 import { env } from "@/config/env";
-import { isPremiumDeferredOutcome } from "@/services/database/syncAuthGuard";
+import { isNonBlockingDeferOutcome } from "@/services/database/syncAuthGuard";
 import { compareSyncQueueItems } from "@/services/database/syncEntityPriority";
 import { processSyncQueueItemWithSupabase } from "@/services/database/supabaseSyncAdapter";
 import { getDatabase } from "@/services/database/sqlite";
@@ -427,7 +427,7 @@ export function createSyncQueueService(storage: SyncQueueStorage) {
           const result = await processOperation(item);
           const finishedAt = new Date().toISOString();
           if (result?.status === "deferred") {
-            if (isPremiumDeferredOutcome(result.reasonCode)) {
+            if (isNonBlockingDeferOutcome(result.reasonCode)) {
               await storage.markPremiumDeferred(item.id, result.reason, finishedAt);
             } else {
               await storage.markDeferred(item.id, result.reason, finishedAt);
