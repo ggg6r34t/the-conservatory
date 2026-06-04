@@ -7,6 +7,7 @@ import {
 import type {
   ArchiveCuratedPair,
   DashboardInsight,
+  GenerateCareScheduleResponse,
   GenerateDashboardInsightResponse,
   GenerateHealthInsightResponse,
   GenerateJournalSummaryResponse,
@@ -91,6 +92,16 @@ const reminderTimingSchema = z.object({
   shouldSchedule: z.boolean(),
 });
 
+const careScheduleSuggestionSchema = z.object({
+  plantId: z.string().trim().min(1).max(120),
+  plantName: z.string().trim().min(1).max(80),
+  careType: z.enum(["water", "mist", "feed", "repot", "prune", "inspect"]),
+  suggestedDueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  frequencyDays: z.number().int().min(1).max(365),
+  confidence: z.enum(["low", "medium", "high"]),
+  reason: z.string().trim().min(1).max(280),
+});
+
 export function parseSpeciesSuggestionResponse(
   response: IdentifyPlantResponse | null | undefined,
 ): Omit<SpeciesSuggestion, "source"> | null {
@@ -150,4 +161,14 @@ export function parseReminderOptimizationResponse(
 ): OptimizedReminderTiming | null {
   const parsed = reminderTimingSchema.safeParse(response?.result);
   return parsed.success ? parsed.data : null;
+}
+
+export function parseCareScheduleSuggestionsResponse(
+  response: GenerateCareScheduleResponse | null | undefined,
+) {
+  const parsed = z
+    .array(careScheduleSuggestionSchema)
+    .max(12)
+    .safeParse(response?.suggestions ?? []);
+  return parsed.success ? parsed.data : [];
 }

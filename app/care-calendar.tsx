@@ -522,6 +522,13 @@ export default function CareCalendarScreen() {
                   cta="Explore Premium"
                 />
               </View>
+            ) : calendar.aiSuggestionDerivation === "local" ? (
+              <Text
+                style={[styles.aiNote, { color: colors.onSurfaceVariant }]}
+              >
+                Cloud AI is unavailable. Showing on-device rhythm hints until the
+                next refresh.
+              </Text>
             ) : null}
           </>
         )}

@@ -1,3 +1,4 @@
+import { requestCareScheduleSuggestions } from "@/features/ai/api/aiClient";
 import {
   buildLocalCareScheduleSuggestions,
   getCareScheduleSuggestions,
@@ -9,6 +10,15 @@ jest.mock("@/features/ai/services/aiCache", () => ({
   getCachedValue: jest.fn(async () => null),
   setCachedValue: jest.fn(async () => undefined),
 }));
+
+jest.mock("@/features/ai/api/aiClient", () => ({
+  requestCareScheduleSuggestions: jest.fn(),
+}));
+
+const mockRequestCareScheduleSuggestions =
+  requestCareScheduleSuggestions as jest.MockedFunction<
+    typeof requestCareScheduleSuggestions
+  >;
 
 function createPlant(overrides?: Partial<PlantListItem>): PlantListItem {
   return {
@@ -27,6 +37,10 @@ function createPlant(overrides?: Partial<PlantListItem>): PlantListItem {
 
 describe("care calendar AI schedule", () => {
   const now = new Date("2026-06-04T12:00:00.000Z");
+
+  beforeEach(() => {
+    mockRequestCareScheduleSuggestions.mockReset();
+  });
 
   it("suggests misting for humidity-loving species when no mist reminder exists", () => {
     const suggestions = buildLocalCareScheduleSuggestions({
@@ -65,7 +79,49 @@ describe("care calendar AI schedule", () => {
     expect(suggestions.some((item) => item.careType === "mist")).toBe(false);
   });
 
-  it("returns local suggestions when cloud is allowed", async () => {
+  it("returns cloud suggestions when the edge response is verified", async () => {
+    mockRequestCareScheduleSuggestions.mockResolvedValue({
+      suggestions: [
+        {
+          plantId: "plant-fern",
+          plantName: "Fern",
+          careType: "prune",
+          suggestedDueDate: "2026-06-10",
+          frequencyDays: 14,
+          confidence: "medium",
+          reason: "Light seasonal trim may keep fronds even.",
+        },
+      ],
+      meta: {
+        provider: "openai",
+        model: "gpt-4.1-mini",
+        latencyMs: 1200,
+        inputTokens: 100,
+        outputTokens: 50,
+      },
+    });
+
+    const result = await getCareScheduleSuggestions({
+      userId: "user-1",
+      plants: [createPlant()],
+      reminders: [],
+      logs: [],
+      cloudAllowed: true,
+      now,
+    });
+
+    expect(result.source).toBe("cloud");
+    expect(result.suggestions.some((item) => item.careType === "prune")).toBe(
+      true,
+    );
+    expect(mockRequestCareScheduleSuggestions).toHaveBeenCalled();
+  });
+
+  it("falls back to local suggestions when cloud is unavailable", async () => {
+    mockRequestCareScheduleSuggestions.mockRejectedValue(
+      new Error("network"),
+    );
+
     const result = await getCareScheduleSuggestions({
       userId: "user-1",
       plants: [createPlant()],
@@ -76,10 +132,12 @@ describe("care calendar AI schedule", () => {
     });
 
     expect(result.source).toBe("local");
-    expect(result.suggestions.length).toBeGreaterThan(0);
+    expect(result.suggestions.some((item) => item.careType === "mist")).toBe(
+      true,
+    );
   });
 
-  it("still returns local suggestions when cloud is not allowed", async () => {
+  it("returns no suggestions when cloud is not allowed", async () => {
     const result = await getCareScheduleSuggestions({
       userId: "user-1",
       plants: [createPlant()],

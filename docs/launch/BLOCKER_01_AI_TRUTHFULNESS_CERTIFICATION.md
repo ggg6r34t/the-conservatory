@@ -20,6 +20,7 @@ Production AI infrastructure replaces fallback-echo edge handlers with multi-pro
 | Source labels | Responses include `meta`; client sets `source: "cloud"` only when `hasVerifiedModelGeneration()` |
 | Species vision | `encodeLocalImageForAi` + `imageBase64` required on `identify-plant` |
 | Confidence explanation | `confidenceExplanation` on species suggestions from model |
+| Care calendar AI | `generate-care-schedule` edge; `hasVerifiedModelGeneration` before cloud suggestions; on-device fallback labeled separately (`careCalendarSourceLabels.ts`) |
 
 ## Verification Commands
 

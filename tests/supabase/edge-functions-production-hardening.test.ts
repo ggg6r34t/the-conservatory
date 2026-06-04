@@ -10,12 +10,14 @@ const AI_FUNCTIONS = [
   "generate-streak-nudge",
   "optimize-reminders",
   "curate-archive-gallery",
+  "generate-care-schedule",
 ];
 
 const PREMIUM_FUNCTIONS = [
   "generate-dashboard-insight",
   "generate-journal-summary",
   "curate-archive-gallery",
+  "generate-care-schedule",
 ];
 
 function read(relativePath: string) {
@@ -67,6 +69,7 @@ describe("Supabase Edge Function production hardening", () => {
 
     expect(source).toContain("validateAiRequest");
     expect(source).toContain("validateAiResponse");
+    expect(source).toContain("validateCareScheduleResponse");
     expect(source).toContain("maxItems");
     expect(source).toContain("maxLength");
   });

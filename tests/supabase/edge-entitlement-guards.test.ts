@@ -5,6 +5,7 @@ const PREMIUM_ONLY_FUNCTIONS = [
   "generate-dashboard-insight",
   "generate-journal-summary",
   "curate-archive-gallery",
+  "generate-care-schedule",
 ];
 
 const FREE_QUOTA_FUNCTIONS = ["optimize-reminders"];

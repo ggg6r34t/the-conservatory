@@ -225,3 +225,36 @@ export interface GenerateJournalSummaryResponse {
   summary: Omit<JournalMonthlySummary, "monthKey" | "source"> | null;
   meta?: AiGenerationMeta;
 }
+
+export interface CareSchedulePlantContext {
+  plantId: string;
+  plantName: string;
+  speciesName: string;
+  wateringIntervalDays: number;
+  daysSinceWatered: number | null;
+  healthStatus: string;
+  enabledReminderTypes: string[];
+  recentCareTypes: string[];
+  speciesCareHint?: string;
+}
+
+export interface CareScheduleSuggestionPayload {
+  plantId: string;
+  plantName: string;
+  careType: string;
+  suggestedDueDate: string;
+  frequencyDays: number;
+  confidence: string;
+  reason: string;
+}
+
+export interface GenerateCareScheduleRequest {
+  horizonDays: number;
+  plants: CareSchedulePlantContext[];
+  fallbackSuggestions: CareScheduleSuggestionPayload[];
+}
+
+export interface GenerateCareScheduleResponse {
+  suggestions: CareScheduleSuggestionPayload[];
+  meta?: AiGenerationMeta;
+}

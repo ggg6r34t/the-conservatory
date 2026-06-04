@@ -124,7 +124,7 @@ Important implications:
 
 See [SYNC_AND_DATA_MODEL.md](./SYNC_AND_DATA_MODEL.md) for the operational model.
 
-See [PREMIUM_ENTITLEMENTS.md](./PREMIUM_ENTITLEMENTS.md) for premium vs free capabilities and enforcement paths. Post-implementation audits: [PREMIUM_POST_IMPLEMENTATION_AUDIT.md](./PREMIUM_POST_IMPLEMENTATION_AUDIT.md).
+See [PREMIUM_ENTITLEMENTS.md](./PREMIUM_ENTITLEMENTS.md) for premium vs free capabilities and enforcement paths. Premium Care Calendar AI uses the `generate-care-schedule` edge (`ai_care_schedule`) with on-device fallback. Post-implementation audits: [PREMIUM_POST_IMPLEMENTATION_AUDIT.md](./PREMIUM_POST_IMPLEMENTATION_AUDIT.md).
 
 ## Design Principle for Architecture
 

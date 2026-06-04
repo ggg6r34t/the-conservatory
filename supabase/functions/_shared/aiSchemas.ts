@@ -230,6 +230,92 @@ function validateStreakRequest(value: unknown) {
   return input;
 }
 
+const CARE_SCHEDULE_TYPES = new Set([
+  "water",
+  "mist",
+  "feed",
+  "repot",
+  "prune",
+  "inspect",
+]);
+
+function validateCareScheduleSuggestionItem(value: unknown, index: number) {
+  const item = object(value, `suggestion[${index}]`);
+  string(item.plantId, "plantId", 120);
+  string(item.plantName, "plantName", 80);
+  const careType = string(item.careType, "careType", 40);
+  if (!CARE_SCHEDULE_TYPES.has(careType)) {
+    fail("careType is invalid.");
+  }
+  const dueDate = string(item.suggestedDueDate, "suggestedDueDate", 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    fail("suggestedDueDate must use YYYY-MM-DD.");
+  }
+  number(item.frequencyDays, "frequencyDays", 1, 365);
+  const confidence = string(item.confidence, "confidence", 20);
+  if (!["low", "medium", "high"].includes(confidence)) {
+    fail("confidence is invalid.");
+  }
+  string(item.reason, "reason", 280);
+  return item;
+}
+
+function validateCareScheduleRequest(value: unknown) {
+  const input = object(value, "request");
+  number(input.horizonDays, "horizonDays", 7, 90);
+  array(
+    input.plants,
+    "plants",
+    (item, index) => {
+      const plant = object(item, `plants[${index}]`);
+      string(plant.plantId, "plantId", 120);
+      string(plant.plantName, "plantName", 80);
+      string(plant.speciesName, "speciesName", 120);
+      number(plant.wateringIntervalDays, "wateringIntervalDays", 1, 365);
+      if (
+        plant.daysSinceWatered != null &&
+        typeof plant.daysSinceWatered !== "number"
+      ) {
+        fail("daysSinceWatered must be a number or null.");
+      }
+      string(plant.healthStatus, "healthStatus", 40);
+      array(
+        plant.enabledReminderTypes,
+        "enabledReminderTypes",
+        (type) => string(type, "reminderType", 40),
+        8,
+      );
+      array(
+        plant.recentCareTypes,
+        "recentCareTypes",
+        (type) => string(type, "careType", 40),
+        12,
+      );
+      optionalString(plant.speciesCareHint, "speciesCareHint", 280);
+      return plant;
+    },
+    50,
+  );
+  array(
+    input.fallbackSuggestions,
+    "fallbackSuggestions",
+    validateCareScheduleSuggestionItem,
+    12,
+  );
+  return input;
+}
+
+function validateCareScheduleResponse(value: unknown) {
+  const input = object(value, "response");
+  array(
+    input.suggestions,
+    "suggestions",
+    validateCareScheduleSuggestionItem,
+    12,
+  );
+  return input;
+}
+
 function validateNonNullObject(value: unknown, label: string) {
   object(value, label);
   return value;
@@ -244,6 +330,7 @@ export const AI_REQUEST_VALIDATORS: Record<string, Validator> = {
   "generate-streak-nudge": validateStreakRequest,
   "optimize-reminders": validateReminderRequest,
   "curate-archive-gallery": validateArchiveRequest,
+  "generate-care-schedule": validateCareScheduleRequest,
 };
 
 export const AI_RESPONSE_VALIDATORS: Record<string, Validator> = {
@@ -258,6 +345,7 @@ export const AI_RESPONSE_VALIDATORS: Record<string, Validator> = {
   "generate-streak-nudge": (value) => validateNonNullObject(value, "response"),
   "optimize-reminders": (value) => validateNonNullObject(value, "response"),
   "curate-archive-gallery": (value) => validateNonNullObject(value, "response"),
+  "generate-care-schedule": validateCareScheduleResponse,
 };
 
 export function validateAiRequest<T>(functionName: string, value: unknown): T {

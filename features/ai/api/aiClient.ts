@@ -7,6 +7,8 @@ import type {
   GenerateDashboardInsightResponse,
   GenerateHealthInsightRequest,
   GenerateHealthInsightResponse,
+  GenerateCareScheduleRequest,
+  GenerateCareScheduleResponse,
   GenerateJournalSummaryRequest,
   GenerateJournalSummaryResponse,
   GenerateStreakNudgeRequest,
@@ -49,6 +51,7 @@ const AI_FUNCTION_FEATURES: Record<string, GatedFeature> = {
   "refine-care-log": "ai_health_insight",
   "curate-archive-gallery": "ai_archive_curation",
   "generate-streak-nudge": "ai_health_insight",
+  "generate-care-schedule": "ai_care_schedule",
 };
 
 function getEdgeErrorCode(data: unknown): EdgeFunctionErrorCode | null {
@@ -176,6 +179,15 @@ export function requestArchiveCuration(input: CurateArchiveGalleryRequest) {
     CurateArchiveGalleryRequest,
     CurateArchiveGalleryResponse
   >("curate-archive-gallery", input);
+}
+
+export function requestCareScheduleSuggestions(
+  input: GenerateCareScheduleRequest,
+) {
+  return invokeFunction<
+    GenerateCareScheduleRequest,
+    GenerateCareScheduleResponse
+  >("generate-care-schedule", input);
 }
 
 export function requestStreakNudge(input: GenerateStreakNudgeRequest) {

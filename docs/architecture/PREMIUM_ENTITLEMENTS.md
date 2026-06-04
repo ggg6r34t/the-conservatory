@@ -69,7 +69,7 @@ Post-implementation audit history: `docs/architecture/PREMIUM_POST_IMPLEMENTATIO
 | `advanced_library_filters` | Library views: group by **location**, group by **species** | Power-user organization; free users keep default list/search; filter downgrades to `all` via `resolvePlantLibraryFilter` |
 | `premium_export` | Enhanced export: full care log history, photo metadata, status snapshots, specimen tags in JSON | Portability for serious collectors; basic export stays free with 60-day log window |
 
-**Enforcement highlights:** `aiClient` returns null for premium features when not entitled; edge functions `generate-journal-summary`, `generate-dashboard-insight`, `curate-archive-gallery` use `assertPremiumEntitlement`. Care calendar: `useCareCalendar` + `useCareCalendarActions` + `careScheduleSuggestionsClient` when `source: "ai_suggested"`.
+**Enforcement highlights:** `aiClient` returns null for premium features when not entitled; edge functions `generate-journal-summary`, `generate-dashboard-insight`, `curate-archive-gallery`, `generate-care-schedule` use `assertPremiumEntitlement`. Care calendar: `useCareCalendar` + `useCareCalendarActions` + `careScheduleSuggestionsClient` when `source: "ai_suggested"`.
 
 ### Premium-only paths (not a `GatedFeature` flag)
 
@@ -125,7 +125,7 @@ Premium removes quotas (unlimited plants/photos/insights/IDs) and lifts the expo
 
 | Premium (`ai_care_schedule`) | Why |
 |------------------------------|-----|
-| AI-generated suggestions on the calendar | Optional rhythm hints (heuristics + cache today; cloud policy reserved for `ai_care_schedule`) |
+| AI-generated suggestions on the calendar | Premium subscribers call `generate-care-schedule` (quota-limited); on-device heuristics remain the fallback when cloud is unavailable |
 | Accept / dismiss suggestions | Persists reminders or AI-sourced schedules |
 | “AI suggested” filter | Surfaces only premium suggestion rows |
 | Upgrade prompt on calendar when free | Clear upsell without blocking the planner |

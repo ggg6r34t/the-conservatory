@@ -134,6 +134,15 @@ describe("Premium features certification (code evidence)", () => {
       expect(read("supabase/functions/curate-archive-gallery/index.ts")).toContain(
         "assertPremiumEntitlement",
       );
+      expect(read("supabase/functions/generate-care-schedule/index.ts")).toContain(
+        "assertPremiumEntitlement",
+      );
+      expect(read("features/ai/api/aiClient.ts")).toContain(
+        '"generate-care-schedule": "ai_care_schedule"',
+      );
+      expect(
+        read("features/care-calendar/services/careCalendarAiScheduleService.ts"),
+      ).toContain("hasVerifiedModelGeneration");
     });
   });
 

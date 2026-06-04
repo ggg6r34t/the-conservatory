@@ -124,6 +124,7 @@ export function trackAiFeatureUsed(
     | 'ai_journal_narrative'
     | 'ai_dashboard_editorial'
     | 'ai_archive_curation'
+    | 'ai_care_schedule'
     | 'ai_species_identification',
   properties?: Record<string, string | number | boolean | null>,
 ): void {

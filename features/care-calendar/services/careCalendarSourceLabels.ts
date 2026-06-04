@@ -1,6 +1,7 @@
 import type {
   CareCalendarEventSource,
   CareCalendarCareType,
+  CareSuggestionDerivation,
 } from "@/features/care-calendar/types";
 import { getCareTypeLabel } from "@/features/care-calendar/services/careCalendarLabels";
 
@@ -8,8 +9,15 @@ export function getCareCalendarSourceLabel(input: {
   source: CareCalendarEventSource;
   careType: CareCalendarCareType;
   isAiSuggested?: boolean;
+  suggestionDerivation?: CareSuggestionDerivation;
 }) {
   if (input.isAiSuggested || input.source === "ai_suggested") {
+    if (input.suggestionDerivation === "cloud") {
+      return "AI-assisted care rhythm";
+    }
+    if (input.suggestionDerivation === "local") {
+      return "On-device rhythm hint";
+    }
     return "Suggested care rhythm";
   }
 

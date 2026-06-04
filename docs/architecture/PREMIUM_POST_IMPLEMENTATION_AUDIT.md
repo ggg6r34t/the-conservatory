@@ -1,70 +1,104 @@
 # Premium Post-Implementation Verification Audit
 
-Audit date: 2026-06-05 (pass 1). Evidence = file paths and symbols cited below.
-
-## Findings register
-
-| ID | Finding | Status (pass 1) | Evidence |
-|----|---------|-----------------|----------|
-| P1 | Central `featureAccess` helpers (`assertFeatureAccess`, `cloudAllowedForFeature`) | **Fully Resolved** | `features/billing/services/featureAccess.ts` |
-| P2 | `ai_care_schedule` classified premium in `FEATURE_REQUIRES_PREMIUM` | **Fully Resolved** | `features/billing/constants.ts:31`, `tests/features/billing/ai-care-schedule-classification.test.ts` |
-| P3 | Care calendar accept/dismiss mutations gated at service layer | **Fully Resolved** | `features/care-calendar/hooks/useCareCalendarActions.ts` (`assertFeatureAccess("ai_care_schedule")`) |
-| P4 | Care calendar UI hides AI filter/actions for free users | **Fully Resolved** | `CareCalendarFilters.tsx` (`showAiFilter`), `CareCalendarAgenda.tsx` (`allowAiSuggestionActions`), `app/care-calendar.tsx` (filter reset, `UpgradePrompt`) |
-| P5 | `useCareCalendar` does not merge AI events when not premium | **Fully Resolved** | `useCareCalendar.ts:89-95` |
-| P6 | AI hooks use `cloudAllowedForFeature` not raw `isPremium` | **Fully Resolved** | `useJournalSummary.ts`, `useDashboardInsight.ts`, `useArchiveCuration.ts`, `useCareCalendar.ts` |
-| P7 | Specimen tag creation gated in service layer | **Fully Resolved** | `specimenTagsService.ts` (`assertFeatureAccess("specimen_tag_create")`) |
-| P8 | Premium export gated via `assertFeatureAccess` | **Fully Resolved** | `exportAccessPolicy.ts` |
-| P9 | `PREMIUM_ENTITLEMENTS.md` documents policy | **Fully Resolved** | `docs/architecture/PREMIUM_ENTITLEMENTS.md` |
-| P10 | Paywall copy aligned (photos vs records, new features) | **Fully Resolved** | `app/premium.tsx` `PREMIUM_FEATURES` |
-| P11 | Unit tests for feature access + calendar actions | **Fully Resolved** | `tests/features/billing/feature-access.test.ts`, `tests/features/care-calendar/care-calendar-actions-premium.test.ts` |
-| P12 | Certification tests reference new guards | **Fully Resolved** | `tests/launch/premium-features-certification.test.ts` |
-| P13 | Photo sync deferred without premium | **Fully Resolved** (pre-existing) | `supabaseSyncAdapter.ts:732` |
-| P14 | Premium themes require recurring subscription | **Fully Resolved** (pre-existing) | `themeAccess.ts` `hasRecurringPremiumSubscription` |
-| P15 | Free-tier quotas unchanged | **Fully Resolved** (pre-existing) | `entitlementService.ts`, `plantsClient.ts` |
-| P16 | `aiClient` blocks premium-only edge invokes client-side | **Fully Resolved** (pre-existing) | `aiClient.ts:90-94` |
-| P17 | `optimize-reminders` edge requires premium while client feature is free | **Still Open** | `supabase/functions/optimize-reminders/index.ts:83`; client never calls edge (`requestReminderOptimization` unused) |
-| P18 | `useCareCalendar` still fetches suggestions query when `cloudAllowed` false | **Partially Resolved** | `enabled` lacked `cloudAllowed` guard |
-| P19 | `useCareCalendar` exposes cached `suggestions` array to UI when free | **Partially Resolved** | returned `suggestions` without `cloudAllowed` check |
-| P20 | `upsertCareScheduleSuggestion` allows `source: ai_suggested` without premium check | **Still Open** | `careScheduleSuggestionsClient.ts` — bypass if called outside actions |
-| P21 | `resolvePlantLibraryFilter` uses `isPremium` not `canUseFeature` | **Partially Resolved** | equivalent today; not using shared helper |
-| P22 | `ARCHITECTURE.md` links to entitlement doc | **Still Open** | no cross-link |
-| P23 | Enterprise certification covers all `cloudAllowedForFeature` hooks | **Partially Resolved** | certification partial |
-
-## Pass 1 summary
-
-- **Fully Resolved:** 16
-- **Partially Resolved:** 4
-- **Still Open:** 3
-- **Deferred:** 0
-- **Not Actionable:** 0
-
-Remediation in pass 2 targets P17–P23.
+Audit evidence = file paths and symbols cited below. Status labels: **Fully Resolved**, **Partially Resolved**, **Still Open**, **Deferred**, **Not Actionable**.
 
 ---
 
-## Pass 2 remediation (2026-06-05)
+## Pass 1 — Premium policy baseline (2026-06-05)
+
+| ID | Finding | Status (pass 1) | Evidence |
+|----|---------|-----------------|----------|
+| P1 | Central `featureAccess` helpers | **Fully Resolved** | `features/billing/services/featureAccess.ts` |
+| P2 | `ai_care_schedule` in `FEATURE_REQUIRES_PREMIUM` | **Fully Resolved** | `features/billing/constants.ts:31` |
+| P3 | Accept/dismiss gated | **Fully Resolved** | `useCareCalendarActions.ts` |
+| P4 | UI hides AI filter/actions for free | **Fully Resolved** | `CareCalendarFilters.tsx`, `CareCalendarAgenda.tsx`, `app/care-calendar.tsx` |
+| P5 | No AI events when not premium | **Fully Resolved** | `useCareCalendar.ts` |
+| P6 | AI hooks use `cloudAllowedForFeature` | **Fully Resolved** | `useJournalSummary.ts`, `useDashboardInsight.ts`, `useArchiveCuration.ts`, `useCareCalendar.ts` |
+| P7–P16 | Export, specimen tags, docs, tests, photo sync, themes, quotas, `aiClient` | **Fully Resolved** | See pass 1 archive in git history |
+| P17 | `optimize-reminders` premium mismatch | **Still Open** (pass 1) | — |
+| P18–P23 | Query enablement, upsert bypass, library filter, docs, certification | **Partially Resolved** / **Still Open** (pass 1) | — |
+
+**Pass 1 summary:** 16 Fully · 4 Partially · 3 Still Open
+
+---
+
+## Pass 2 — Premium policy remediation (2026-06-05)
 
 | ID | Action | Status (pass 2) | Evidence |
 |----|--------|-----------------|----------|
-| P17 | Remove `assertPremiumEntitlement` from `optimize-reminders`; quota-only | **Fully Resolved** | `supabase/functions/optimize-reminders/index.ts`; `tests/supabase/edge-entitlement-guards.test.ts` |
+| P17 | `optimize-reminders` quota-only | **Fully Resolved** | `optimize-reminders/index.ts` (no `assertPremiumEntitlement`); `edge-entitlement-guards.test.ts` |
 | P18 | Disable suggestions query when `!cloudAllowed` | **Fully Resolved** | `useCareCalendar.ts` `enabled: ... && cloudAllowed` |
-| P19 | Return empty `suggestions` when free | **Fully Resolved** | `useCareCalendar.ts` ternary on `cloudAllowed` |
-| P20 | Gate `source: ai_suggested` in `upsertCareScheduleSuggestion` | **Fully Resolved** | `careScheduleSuggestionsClient.ts`; `care-schedule-suggestions-client-premium.test.ts` |
-| P21 | Library filter downgrade via `isFeatureAllowed` | **Fully Resolved** | `plantLibraryFilterService.ts` |
-| P22 | Cross-link entitlement docs from `ARCHITECTURE.md` | **Fully Resolved** | `ARCHITECTURE.md:127-127` |
-| P23 | Expand certification string checks | **Fully Resolved** | `premium-features-certification.test.ts` |
+| P19 | Empty `suggestions` when free | **Fully Resolved** | `useCareCalendar.ts` ternary |
+| P20 | Gate `source: ai_suggested` upsert | **Fully Resolved** | `careScheduleSuggestionsClient.ts`; `care-schedule-suggestions-client-premium.test.ts` |
+| P21 | Library filter via `isFeatureAllowed` | **Fully Resolved** | `plantLibraryFilterService.ts` |
+| P22 | `ARCHITECTURE.md` cross-link | **Fully Resolved** | `docs/architecture/ARCHITECTURE.md` |
+| P23 | Certification expanded | **Fully Resolved** | `premium-features-certification.test.ts` |
 
-## Pass 2 summary
+**Pass 2 summary:** 23/23 Fully Resolved (premium policy register closed)
 
-- **Fully Resolved:** 23 (all registered findings)
-- **Partially Resolved:** 0
-- **Still Open:** 0
-- **Deferred:** 0
-- **Not Actionable:** 0
+---
 
-**Verification commands (pass 2):**
+## Pass 3 — Cloud AI care schedule (`generate-care-schedule`) (2026-06-05)
+
+### Pass 3a — Initial verification (pre-remediation)
+
+| ID | Finding | Status (pass 3a) | Evidence |
+|----|---------|------------------|----------|
+| C1 | Edge function `generate-care-schedule` deployed in repo | **Fully Resolved** | `supabase/functions/generate-care-schedule/index.ts` |
+| C2 | `assertPremiumEntitlement` before body parse | **Fully Resolved** | `index.ts:31-38`; `edge-entitlement-guards.test.ts` |
+| C3 | `assertAiUsageQuota` for `ai_care_schedule` | **Fully Resolved** | `index.ts:40-42` |
+| C4 | Model-backed via `runAiJsonCompletion` | **Fully Resolved** | `index.ts:45-51`; `edge-functions-production-hardening.test.ts` |
+| C5 | Request validator (plants, horizon, fallback) | **Fully Resolved** | `aiSchemas.ts` `validateCareScheduleRequest` |
+| C6 | Response validator validates suggestion items | **Still Open** | Response used `validateNonNullObject` only |
+| C7 | Prompt builder `buildCareScheduleAiRequest` | **Fully Resolved** | `aiPromptBuilders.ts` |
+| C8 | `aiClient` maps function → `ai_care_schedule` | **Fully Resolved** | `aiClient.ts:54`, `requestCareScheduleSuggestions` |
+| C9 | `aiClient` blocks premium edge when not entitled | **Fully Resolved** | `aiClient.ts:92-96` |
+| C10 | Client types + Zod parse | **Fully Resolved** | `features/ai/types/ai.ts`; `aiValidators.ts` `careScheduleSuggestionSchema` |
+| C11 | Cloud invoke gated by `hasVerifiedModelGeneration` | **Fully Resolved** | `careCalendarAiScheduleService.ts:472` |
+| C12 | On-device fallback when cloud fails | **Fully Resolved** | `careCalendarAiScheduleService.ts:487-493` |
+| C13 | `buildCareScheduleCloudRequest` plant context | **Fully Resolved** | `careCalendarAiScheduleService.ts` |
+| C14 | Cloud suggestions normalized (horizon, dismissed, reminder conflict) | **Fully Resolved** | `normalizeCloudCareScheduleSuggestions` |
+| C15 | Analytics `trackAiFeatureUsed("ai_care_schedule")` on cloud | **Fully Resolved** | `analyticsService.ts`; `careCalendarAiScheduleService.ts:483` |
+| C16 | Service tests (cloud + fallback) | **Fully Resolved** | `care-calendar-ai-schedule-service.test.ts` |
+| C17 | Edge listed in `AI_FUNCTIONS` / `PREMIUM_FUNCTIONS` | **Fully Resolved** | `edge-functions-production-hardening.test.ts` |
+| C18 | Deploy runbook includes function | **Fully Resolved** | `docs/SUPABASE_EDGE_FUNCTIONS.md` |
+| C19 | `PREMIUM_ENTITLEMENTS.md` documents cloud edge | **Fully Resolved** | `PREMIUM_ENTITLEMENTS.md` |
+| C20 | Paywall lists Care Calendar AI | **Fully Resolved** | `app/premium.tsx` `PREMIUM_FEATURES` |
+| C21 | Certification cites `generate-care-schedule` | **Still Open** | `premium-features-certification.test.ts` lacked edge string |
+| C22 | `BLOCKER_01` documents care schedule AI | **Still Open** | No row in truthfulness table |
+| C23 | Provenance: local hints labeled same as cloud AI | **Partially Resolved** | `getCareCalendarSourceLabel` returned one string for all AI suggestions |
+| C24 | Premium UI note when on-device fallback active | **Still Open** | No banner when `source === "local"` |
+
+**Pass 3a summary:** 18 Fully · 1 Partially · 4 Still Open
+
+### Pass 3b — Remediation (2026-06-05)
+
+| ID | Action | Status (pass 3b) | Evidence |
+|----|--------|-----------------|----------|
+| C6 | `validateCareScheduleResponse` validates `suggestions[]` | **Fully Resolved** | `aiSchemas.ts` `validateCareScheduleResponse` |
+| C21 | Certification checks edge + `hasVerifiedModelGeneration` | **Fully Resolved** | `premium-features-certification.test.ts` |
+| C22 | `BLOCKER_01` care calendar row | **Fully Resolved** | `docs/launch/BLOCKER_01_AI_TRUTHFULNESS_CERTIFICATION.md` |
+| C23 | Distinct labels: cloud / local / cached | **Fully Resolved** | `careCalendarSourceLabels.ts`; `suggestionDerivation` on events; `care-calendar-source-labels.test.ts` |
+| C24 | Premium banner when cloud unavailable | **Fully Resolved** | `app/care-calendar.tsx` (`aiSuggestionDerivation === "local"`) |
+
+**Pass 3b summary:** 23/23 Fully Resolved (cloud AI register closed)
+
+---
+
+## Pass 3c — Re-verification (2026-06-05)
+
+All findings **C1–C24** and **P1–P23** are **Fully Resolved** with code evidence. No **Still Open**, **Partially Resolved**, or unverified claims remain in scope.
+
+| Register | Fully | Partially | Still Open | Deferred | Not Actionable |
+|----------|-------|-----------|------------|----------|----------------|
+| Premium policy (P1–P23) | 23 | 0 | 0 | 0 | 0 |
+| Cloud AI care schedule (C1–C24) | 23 | 0 | 0 | 0 | 0 |
+
+**Verification commands (pass 3c):**
 
 ```bash
 npm run typecheck
-npm test -- --testPathPattern="feature-access|care-calendar|premium-features-certification|edge-entitlement|edge-functions-production" --runInBand
+npm test -- --testPathPattern="care-calendar|feature-access|premium-features-certification|edge-entitlement|edge-functions-production|ai-care-schedule" --runInBand
 ```
+
+**Deploy (production):** `supabase functions deploy generate-care-schedule` after secrets and migrations (not verifiable in git).

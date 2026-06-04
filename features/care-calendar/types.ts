@@ -25,6 +25,8 @@ export type CareCalendarEventSource =
 
 export type CareCalendarConfidence = "low" | "medium" | "high";
 
+export type CareSuggestionDerivation = "cloud" | "local" | "cached";
+
 export type CareCalendarEvent = {
   id: string;
   plantId: string;
@@ -36,6 +38,7 @@ export type CareCalendarEvent = {
   confidence?: CareCalendarConfidence;
   reason?: string;
   isAiSuggested?: boolean;
+  suggestionDerivation?: CareSuggestionDerivation;
   reminderId?: string;
 };
 

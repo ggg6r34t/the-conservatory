@@ -1,5 +1,6 @@
 import type {
   CurateArchiveGalleryRequest,
+  GenerateCareScheduleRequest,
   GenerateDashboardInsightRequest,
   GenerateHealthInsightRequest,
   GenerateJournalSummaryRequest,
@@ -46,6 +47,15 @@ const CARE_LOG_SYSTEM = [
 const STREAK_SYSTEM = [
   "You write short streak recovery nudges for a plant care app.",
   "Return JSON: { \"nudge\": { \"body\": string } | null }.",
+].join(" ");
+
+const CARE_SCHEDULE_SYSTEM = [
+  "You suggest optional care rhythms for a botanical collection app.",
+  "Only propose care the plant likely needs beyond existing enabled reminders.",
+  "Do not duplicate reminders already enabled for the same care type within a few days.",
+  "Use calm, observational language. Never invent pests or diagnoses.",
+  "Return JSON: { \"suggestions\": [{ \"plantId\": string, \"plantName\": string, \"careType\": \"water\"|\"mist\"|\"feed\"|\"repot\"|\"prune\"|\"inspect\", \"suggestedDueDate\": \"YYYY-MM-DD\", \"frequencyDays\": number, \"confidence\": \"low\"|\"medium\"|\"high\", \"reason\": string }] }.",
+  "Maximum 8 suggestions. suggestedDueDate must fall within horizonDays from today context.",
 ].join(" ");
 
 export function buildHealthInsightAiRequest(body: GenerateHealthInsightRequest) {
@@ -111,5 +121,16 @@ export function buildStreakAiRequest(body: GenerateStreakNudgeRequest) {
   return {
     system: STREAK_SYSTEM,
     user: JSON.stringify(body.summary),
+  };
+}
+
+export function buildCareScheduleAiRequest(body: GenerateCareScheduleRequest) {
+  return {
+    system: CARE_SCHEDULE_SYSTEM,
+    user: JSON.stringify({
+      horizonDays: body.horizonDays,
+      plants: body.plants,
+      fallbackSuggestions: body.fallbackSuggestions,
+    }),
   };
 }

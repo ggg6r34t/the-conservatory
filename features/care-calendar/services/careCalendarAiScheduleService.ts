@@ -1,5 +1,13 @@
+import { requestCareScheduleSuggestions } from "@/features/ai/api/aiClient";
+import { hasVerifiedModelGeneration } from "@/features/ai/schemas/aiGenerationMeta";
+import { parseCareScheduleSuggestionsResponse } from "@/features/ai/schemas/aiValidators";
+import type {
+  CareSchedulePlantContext,
+  GenerateCareScheduleRequest,
+} from "@/features/ai/types/ai";
 import { getCachedValue, setCachedValue } from "@/features/ai/services/aiCache";
 import { resolveSpeciesProfile } from "@/features/ai/services/careDefaultsService";
+import { trackAiFeatureUsed } from "@/services/analytics/analyticsService";
 import { isReminderCareType } from "@/features/notifications/constants/reminderTypes";
 import {
   generateRecurringDueDates,
@@ -7,8 +15,10 @@ import {
 } from "@/features/care-calendar/services/careCalendarDerivationService";
 import type {
   CareCalendarCareType,
+  CareCalendarConfidence,
   CareCalendarEvent,
   CareScheduleSuggestion,
+  CareSuggestionDerivation,
 } from "@/features/care-calendar/types";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
 import { derivePlantStatus } from "@/features/plants/services/plantStatusService";
@@ -233,6 +243,17 @@ export function buildLocalCareScheduleSuggestions(input: {
     }
   }
 
+  return filterCareScheduleSuggestions(suggestions, {
+    reminders: input.reminders,
+  });
+}
+
+function filterCareScheduleSuggestions(
+  suggestions: CareScheduleSuggestion[],
+  input: {
+    reminders: CareReminder[];
+  },
+) {
   return suggestions.filter(
     (suggestion) =>
       !hasReminderConflict({
@@ -244,8 +265,127 @@ export function buildLocalCareScheduleSuggestions(input: {
   );
 }
 
+export function buildCareScheduleCloudRequest(input: {
+  plants: PlantListItem[];
+  reminders: CareReminder[];
+  logs: CareLog[];
+  fallbackSuggestions: CareScheduleSuggestion[];
+  now?: Date;
+}): GenerateCareScheduleRequest {
+  const now = input.now ?? new Date();
+
+  const plants = input.plants
+    .filter((plant) => plant.status === "active")
+    .map((plant): CareSchedulePlantContext => {
+      const plantReminders = input.reminders.filter(
+        (reminder) => reminder.plantId === plant.id,
+      );
+      const plantLogs = input.logs.filter((log) => log.plantId === plant.id);
+      const status = derivePlantStatus({
+        plant,
+        reminders: plantReminders,
+        logs: plantLogs,
+        now,
+      });
+      const profile = resolveSpeciesProfile(plant.speciesName);
+
+      return {
+        plantId: plant.id,
+        plantName: plant.name,
+        speciesName: plant.speciesName,
+        wateringIntervalDays: plant.wateringIntervalDays,
+        daysSinceWatered: status.daysSinceWatered,
+        healthStatus: status.healthState,
+        enabledReminderTypes: plantReminders
+          .filter((reminder) => reminder.enabled)
+          .map((reminder) => reminder.reminderType),
+        recentCareTypes: Array.from(
+          new Set(
+            plantLogs
+              .slice()
+              .sort(
+                (left, right) =>
+                  new Date(right.loggedAt).getTime() -
+                  new Date(left.loggedAt).getTime(),
+              )
+              .slice(0, 8)
+              .map((log) => log.logType),
+          ),
+        ),
+        speciesCareHint: profile.careProfileHint,
+      };
+    });
+
+  return {
+    horizonDays: HORIZON_DAYS,
+    plants,
+    fallbackSuggestions: input.fallbackSuggestions.map((suggestion) => ({
+      plantId: suggestion.plantId,
+      plantName: suggestion.plantName,
+      careType: suggestion.careType,
+      suggestedDueDate: suggestion.suggestedDueDate,
+      frequencyDays: suggestion.frequencyDays,
+      confidence: suggestion.confidence,
+      reason: suggestion.reason,
+    })),
+  };
+}
+
+function normalizeCloudCareScheduleSuggestions(input: {
+  raw: ReturnType<typeof parseCareScheduleSuggestionsResponse>;
+  plants: PlantListItem[];
+  reminders: CareReminder[];
+  dismissedIds: string[];
+  now: Date;
+}): CareScheduleSuggestion[] {
+  const plantById = new Map(
+    input.plants.map((plant) => [plant.id, plant] as const),
+  );
+  const dismissed = new Set(input.dismissedIds);
+  const horizonEnd = addLocalDays(input.now, HORIZON_DAYS);
+  const horizonStartKey = toLocalDateKey(input.now);
+  const horizonEndKey = toLocalDateKey(horizonEnd);
+  const suggestions: CareScheduleSuggestion[] = [];
+
+  for (const item of input.raw) {
+    const plant = plantById.get(item.plantId);
+    if (!plant || plant.status !== "active") {
+      continue;
+    }
+
+    if (
+      item.suggestedDueDate < horizonStartKey ||
+      item.suggestedDueDate > horizonEndKey
+    ) {
+      continue;
+    }
+
+    const careType = item.careType as CareCalendarCareType;
+    const suggestionId = `suggest:${item.plantId}:${careType}:${item.suggestedDueDate}`;
+    if (dismissed.has(suggestionId)) {
+      continue;
+    }
+
+    suggestions.push({
+      id: suggestionId,
+      plantId: item.plantId,
+      plantName: plant.name,
+      careType,
+      suggestedDueDate: item.suggestedDueDate,
+      frequencyDays: item.frequencyDays,
+      confidence: item.confidence as CareCalendarConfidence,
+      reason: item.reason,
+    });
+  }
+
+  return filterCareScheduleSuggestions(suggestions, {
+    reminders: input.reminders,
+  });
+}
+
 export function suggestionsToCalendarEvents(
   suggestions: CareScheduleSuggestion[],
+  derivation?: CareSuggestionDerivation,
 ): CareCalendarEvent[] {
   return suggestions.map((suggestion) => ({
     id: suggestion.id,
@@ -258,6 +398,7 @@ export function suggestionsToCalendarEvents(
     confidence: suggestion.confidence,
     reason: suggestion.reason,
     isAiSuggested: true,
+    suggestionDerivation: derivation,
   }));
 }
 
@@ -290,12 +431,13 @@ export async function getCareScheduleSuggestions(input: {
   now?: Date;
 }): Promise<{
   suggestions: CareScheduleSuggestion[];
-  source: "local" | "cached";
+  source: "local" | "cached" | "cloud";
 }> {
   if (!input.cloudAllowed) {
     return { suggestions: [], source: "local" };
   }
 
+  const now = input.now ?? new Date();
   const activePlants = input.plants.filter((plant) => plant.status === "active");
   const signature = buildSignature(activePlants.map((plant) => plant.id));
   const cacheKey = buildSuggestionCacheKey(input.userId, signature);
@@ -311,17 +453,47 @@ export async function getCareScheduleSuggestions(input: {
     };
   }
 
-  const suggestions = buildLocalCareScheduleSuggestions({
+  const localFallback = buildLocalCareScheduleSuggestions({
     plants: input.plants,
     reminders: input.reminders,
     logs: input.logs,
     dismissedIds,
-    now: input.now,
+    now,
   });
 
-  await setCachedValue(cacheKey, suggestions, SUGGESTION_CACHE_TTL_MS);
+  try {
+    const cloud = await requestCareScheduleSuggestions(
+      buildCareScheduleCloudRequest({
+        plants: input.plants,
+        reminders: input.reminders,
+        logs: input.logs,
+        fallbackSuggestions: localFallback,
+        now,
+      }),
+    );
+    const parsed = parseCareScheduleSuggestionsResponse(cloud);
+    if (hasVerifiedModelGeneration(cloud) && parsed.length > 0) {
+      const suggestions = normalizeCloudCareScheduleSuggestions({
+        raw: parsed,
+        plants: input.plants,
+        reminders: input.reminders,
+        dismissedIds,
+        now,
+      });
 
-  return { suggestions, source: "local" };
+      if (suggestions.length > 0) {
+        await setCachedValue(cacheKey, suggestions, SUGGESTION_CACHE_TTL_MS);
+        trackAiFeatureUsed("ai_care_schedule", { source: "cloud" });
+        return { suggestions, source: "cloud" };
+      }
+    }
+  } catch {
+    // Fall back to on-device heuristics when cloud is unavailable.
+  }
+
+  await setCachedValue(cacheKey, localFallback, SUGGESTION_CACHE_TTL_MS);
+
+  return { suggestions: localFallback, source: "local" };
 }
 
 export function expandAcceptedSuggestionToEvents(input: {

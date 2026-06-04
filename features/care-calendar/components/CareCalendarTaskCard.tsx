@@ -73,6 +73,7 @@ export function CareCalendarTaskCard({
           source: event.source,
           careType: event.careType,
           isAiSuggested: event.isAiSuggested,
+          suggestionDerivation: event.suggestionDerivation,
         })}
       </Text>
 

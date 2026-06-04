@@ -91,8 +91,11 @@ export function useCareCalendar(input?: {
       return [];
     }
 
-    return suggestionsToCalendarEvents(suggestionsQuery.data?.suggestions ?? []);
-  }, [cloudAllowed, suggestionsQuery.data?.suggestions]);
+    return suggestionsToCalendarEvents(
+      suggestionsQuery.data?.suggestions ?? [],
+      suggestionsQuery.data?.source,
+    );
+  }, [cloudAllowed, suggestionsQuery.data]);
 
   const allEvents = useMemo(() => {
     const merged = [...derivedEvents];
@@ -126,6 +129,9 @@ export function useCareCalendar(input?: {
       ? (suggestionsQuery.data?.suggestions ?? [])
       : [],
     aiSuggestionsEnabled: cloudAllowed,
+    aiSuggestionDerivation: cloudAllowed
+      ? suggestionsQuery.data?.source
+      : undefined,
     isLoading:
       plantsQuery.isLoading ||
       remindersQuery.isLoading ||

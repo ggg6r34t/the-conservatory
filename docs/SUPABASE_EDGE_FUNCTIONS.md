@@ -65,6 +65,7 @@ supabase functions deploy refine-care-log
 supabase functions deploy generate-streak-nudge
 supabase functions deploy optimize-reminders
 supabase functions deploy curate-archive-gallery
+supabase functions deploy generate-care-schedule
 supabase functions deploy delete-account
 ```
 
