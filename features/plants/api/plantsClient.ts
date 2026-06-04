@@ -40,7 +40,10 @@ import {
 } from "@/services/analytics/analyticsService";
 import { logger } from "@/utils/logger";
 
-import { persistPhotoAsset } from "../services/photoStorageService";
+import {
+  managedPhotoFileExists,
+  persistPhotoAsset,
+} from "../services/photoStorageService";
 import {
   buildPrimaryPhotoListFields,
   resolvePhotoDisplayUri,
@@ -232,24 +235,74 @@ function mapCareLog(row: {
 }
 
 function buildPhotoByPlantIdMap(rows: PhotoRow[]) {
-  const rowsByPlantId = new Map<string, PhotoRow[]>();
+  return buildPhotoByPlantIdMapFromPhotos(rows.map(toPhoto));
+}
 
-  for (const row of rows) {
-    const existing = rowsByPlantId.get(row.plant_id) ?? [];
-    existing.push(row);
-    rowsByPlantId.set(row.plant_id, existing);
+function buildPhotoByPlantIdMapFromPhotos(photos: Photo[]) {
+  const photosByPlantId = new Map<string, Photo[]>();
+
+  for (const photo of photos) {
+    const existing = photosByPlantId.get(photo.plantId) ?? [];
+    existing.push(photo);
+    photosByPlantId.set(photo.plantId, existing);
   }
 
   const photoByPlantId = new Map<string, Photo>();
 
-  for (const [plantId, plantRows] of rowsByPlantId) {
-    const primary = resolvePrimaryPlantPhoto(plantRows.map(toPhoto));
+  for (const [plantId, plantPhotos] of photosByPlantId) {
+    const primary = resolvePrimaryPlantPhoto(plantPhotos);
     if (primary) {
-      photoByPlantId.set(plantId, primary as Photo);
+      photoByPlantId.set(plantId, primary);
     }
   }
 
   return photoByPlantId;
+}
+
+function isHttpOrFileUri(value: string) {
+  return (
+    /^https?:\/\//i.test(value) ||
+    value.startsWith("file:") ||
+    value.startsWith("content:")
+  );
+}
+
+async function resolvePhotoRowForDisplay(row: PhotoRow): Promise<PhotoRow> {
+  let local_uri = row.local_uri;
+  if (local_uri && !(await managedPhotoFileExists(local_uri))) {
+    local_uri = null;
+  }
+
+  let remote_url = row.remote_url;
+  const hasLocalUri = Boolean(local_uri?.trim());
+  const needsStorageSignedUrl =
+    Boolean(row.storage_path) &&
+    (!hasLocalUri ||
+      !remote_url ||
+      !isHttpOrFileUri(remote_url));
+  const storageBacked = needsStorageSignedUrl
+    ? await getStorageAssetUrl(row.storage_path)
+    : null;
+
+  if (!hasLocalUri) {
+    remote_url = storageBacked ?? remote_url;
+  } else if (remote_url && !isHttpOrFileUri(remote_url)) {
+    remote_url = storageBacked ?? remote_url;
+  }
+
+  if (
+    remote_url &&
+    !isHttpOrFileUri(remote_url) &&
+    storageBacked
+  ) {
+    remote_url = storageBacked;
+  }
+
+  return {
+    ...row,
+    local_uri,
+    remote_url,
+  };
 }
 
 function attachPrimaryPhotoFields(photo: Photo | undefined) {
@@ -258,15 +311,7 @@ function attachPrimaryPhotoFields(photo: Photo | undefined) {
 
 async function hydratePhotosForDisplay(rows: PhotoRow[]) {
   return Promise.all(
-    rows.map(async (row) => {
-      const resolvedRemoteUrl =
-        row.remote_url ?? (await getStorageAssetUrl(row.storage_path)) ?? null;
-
-      return toPhoto({
-        ...row,
-        remote_url: resolvedRemoteUrl,
-      });
-    }),
+    rows.map(async (row) => toPhoto(await resolvePhotoRowForDisplay(row))),
   );
 }
 
@@ -335,30 +380,7 @@ export async function listGraveyardPlants(userId: string) {
     userId,
   );
   const hydratedPhotos = await hydratePhotosForDisplay(photos);
-  const photoByPlantId = buildPhotoByPlantIdMap(
-    hydratedPhotos.map((photo) => ({
-      id: photo.id,
-      user_id: photo.userId,
-      plant_id: photo.plantId,
-      local_uri: photo.localUri ?? null,
-      remote_url: photo.remoteUrl ?? null,
-      storage_path: photo.storagePath ?? null,
-      mime_type: photo.mimeType ?? null,
-      width: photo.width ?? null,
-      height: photo.height ?? null,
-      photo_role:
-        photo.photoRole ?? (photo.isPrimary === 1 ? "primary" : "progress"),
-      captured_at: photo.capturedAt ?? null,
-      taken_at: photo.takenAt ?? null,
-      caption: photo.caption ?? null,
-      is_primary: photo.isPrimary,
-      created_at: photo.createdAt,
-      updated_at: photo.updatedAt,
-      pending: photo.pending,
-      synced_at: photo.syncedAt ?? null,
-      sync_error: photo.syncError ?? null,
-    })),
-  );
+  const photoByPlantId = buildPhotoByPlantIdMapFromPhotos(hydratedPhotos);
   const photoCountByPlantId = new Map<string, number>();
   const hasPrimaryPhotoByPlantId = new Map<string, boolean>();
 
@@ -469,26 +491,8 @@ export async function listPlants(input: {
     ...plantIds,
   );
 
-  // For photos that have neither a stored remote_url nor a local_uri but do
-  // have a storage_path, generate a signed URL now. This is the edge case of
-  // a photo that exists only in cloud storage on this device (e.g. synced from
-  // another device). We scope to just those rows so the common case (remote_url
-  // or localUri already present) avoids any network calls.
-  const photosNeedingUrl = photos.filter(
-    (p) => !p.remote_url && !p.local_uri && Boolean(p.storage_path),
-  );
-  const resolvedPhotos =
-    photosNeedingUrl.length > 0
-      ? await (async () => {
-          const hydrated = await hydratePhotosForDisplay(photosNeedingUrl);
-          const urlById = new Map(hydrated.map((p) => [p.id, p.remoteUrl]));
-          return photos.map((p) =>
-            urlById.has(p.id) ? { ...p, remote_url: urlById.get(p.id) ?? null } : p,
-          );
-        })()
-      : photos;
-
-  const photoByPlantId = buildPhotoByPlantIdMap(resolvedPhotos);
+  const hydratedPhotos = await hydratePhotosForDisplay(photos);
+  const photoByPlantId = buildPhotoByPlantIdMapFromPhotos(hydratedPhotos);
   const remindersByPlantId = new Map<string, CareReminder[]>();
   for (const reminder of reminders.map(toReminder)) {
     const existing = remindersByPlantId.get(reminder.plantId) ?? [];

@@ -201,6 +201,20 @@ export async function downloadRemotePhotoAsset(
   };
 }
 
+export async function managedPhotoFileExists(uri: string | null | undefined) {
+  if (!uri?.trim()) {
+    return false;
+  }
+
+  if (!isManagedPhotoUri(uri)) {
+    return uri.startsWith("file:") || uri.startsWith("content:");
+  }
+
+  const file = new File(uri);
+  const info = await file.info();
+  return info.exists;
+}
+
 export async function deleteManagedPhoto(uri: string | null | undefined) {
   if (!uri || !isManagedPhotoUri(uri)) {
     return;

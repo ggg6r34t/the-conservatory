@@ -111,6 +111,17 @@ describe("photo storage service", () => {
     expect(isManagedPhotoUri("file://cache/temporary.jpg")).toBe(false);
   });
 
+  it("reports when a managed photo file is missing on disk", async () => {
+    mockInfo.mockResolvedValue({ exists: false });
+    const {
+      managedPhotoFileExists,
+    } = require("@/features/plants/services/photoStorageService");
+    const managedUri =
+      "file://documents/photos/user-1/plant-1/primary/photo-1.jpg";
+
+    await expect(managedPhotoFileExists(managedUri)).resolves.toBe(false);
+  });
+
   it("downloads hydrated remote photos into app-owned storage", async () => {
     mockInfo.mockResolvedValueOnce({ exists: false });
     mockInfo.mockResolvedValueOnce({ exists: true });
