@@ -2,6 +2,8 @@ import {
   deriveCareCalendarEvents,
   resolveEventStatus,
   toLocalDateKey,
+  getDefaultCareCalendarDateKey,
+  toggleSelectedDateKey,
 } from "@/features/care-calendar/services/careCalendarDerivationService";
 import type { CareLog, CareReminder } from "@/types/models";
 import type { PlantListItem } from "@/features/plants/api/plantsClient";
@@ -161,5 +163,15 @@ describe("care calendar derivation", () => {
         completed: false,
       }),
     ).toBe("due_today");
+  });
+
+  it("toggles selected date keys", () => {
+    expect(toggleSelectedDateKey("2026-06-04", "2026-06-04")).toBeNull();
+    expect(toggleSelectedDateKey(null, "2026-06-04")).toBe("2026-06-04");
+  });
+
+  it("defaults selection to the current local day", () => {
+    const now = new Date("2026-06-04T12:00:00.000Z");
+    expect(getDefaultCareCalendarDateKey(now)).toBe("2026-06-04");
   });
 });

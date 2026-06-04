@@ -14,6 +14,10 @@ jest.mock("expo-router", () => ({
     push: mockPush,
   }),
   useLocalSearchParams: () => ({}),
+  useFocusEffect: (callback: () => void | (() => void)) => {
+    const { useEffect } = require("react");
+    useEffect(() => callback(), [callback]);
+  },
 }));
 
 jest.mock("@/features/ai/services/aiCache", () => ({

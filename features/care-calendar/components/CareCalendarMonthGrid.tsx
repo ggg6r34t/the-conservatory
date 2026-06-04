@@ -12,12 +12,13 @@ import type { CareCalendarEvent } from "@/features/care-calendar/types";
 
 interface CareCalendarMonthGridProps {
   month: Date;
-  selectedDateKey: string;
+  selectedDateKey: string | null;
   events: CareCalendarEvent[];
   onSelectDate: (dateKey: string) => void;
 }
 
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+export const CARE_CALENDAR_DAY_MARKER_SIZE = 36;
 
 export function CareCalendarMonthGrid({
   month,
@@ -48,47 +49,50 @@ export function CareCalendarMonthGrid({
           const dateKey = toLocalDateKey(day);
           const inMonth = isSameLocalMonth(day, month);
           const taskCount = grouped.get(dateKey)?.length ?? 0;
-          const selected = dateKey === selectedDateKey;
+          const selected =
+            selectedDateKey != null && dateKey === selectedDateKey;
           const isToday = dateKey === todayKey;
           const hasOverdue = (grouped.get(dateKey) ?? []).some(
             (event) => event.status === "overdue",
           );
 
           return (
-            <Pressable
-              key={dateKey}
-              accessibilityRole="button"
-              accessibilityLabel={buildDayAccessibilityLabel({ date: day, taskCount })}
-              accessibilityState={{ selected }}
-              onPress={() => onSelectDate(dateKey)}
-              style={styles.cell}
-            >
-              <View
-                style={[
-                  styles.dayBubble,
-                  selected && { backgroundColor: colors.primaryContainer },
-                  isToday &&
-                    !selected && {
-                      borderWidth: 1,
-                      borderColor: colors.secondary,
-                    },
-                ]}
+            <View key={dateKey} style={styles.cell}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={buildDayAccessibilityLabel({ date: day, taskCount })}
+                accessibilityState={{ selected }}
+                onPress={() => onSelectDate(dateKey)}
+                style={styles.dayPressable}
               >
-                <Text
+                <View
                   style={[
-                    styles.dayNumber,
-                    {
-                      color: inMonth
-                        ? selected
-                          ? colors.onPrimaryContainer
-                          : colors.onSurface
-                        : colors.outline,
+                    styles.dayBubble,
+                    selected && {
+                      backgroundColor: colors.primary,
+                    },
+                    isToday && {
+                      borderWidth: 1.5,
+                      borderColor: colors.secondary,
                     },
                   ]}
                 >
-                  {day.getDate()}
-                </Text>
-              </View>
+                  <Text
+                    style={[
+                      styles.dayNumber,
+                      {
+                        color: inMonth
+                          ? selected
+                            ? colors.onPrimary
+                            : colors.onSurface
+                          : colors.outline,
+                      },
+                    ]}
+                  >
+                    {day.getDate()}
+                  </Text>
+                </View>
+              </Pressable>
               {taskCount > 0 ? (
                 <View style={styles.markerRow}>
                   <View
@@ -105,7 +109,7 @@ export function CareCalendarMonthGrid({
               ) : (
                 <View style={styles.markerSpacer} />
               )}
-            </Pressable>
+            </View>
           );
         })}
       </View>
@@ -137,12 +141,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     gap: 4,
   },
-  dayBubble: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  dayPressable: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  dayBubble: {
+    width: CARE_CALENDAR_DAY_MARKER_SIZE,
+    height: CARE_CALENDAR_DAY_MARKER_SIZE,
+    borderRadius: CARE_CALENDAR_DAY_MARKER_SIZE / 2,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
   dayNumber: {
     fontFamily: "Manrope_600SemiBold",

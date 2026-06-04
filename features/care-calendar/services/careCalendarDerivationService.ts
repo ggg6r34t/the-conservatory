@@ -421,6 +421,17 @@ export function formatAgendaDayTitle(dateKey: string, now = new Date()) {
   }).format(date);
 }
 
+export function getDefaultCareCalendarDateKey(now = new Date()) {
+  return toLocalDateKey(now);
+}
+
+export function toggleSelectedDateKey(
+  current: string | null,
+  dateKey: string,
+): string | null {
+  return current === dateKey ? null : dateKey;
+}
+
 export function buildDayAccessibilityLabel(input: {
   date: Date;
   taskCount: number;

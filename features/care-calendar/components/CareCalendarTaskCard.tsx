@@ -1,8 +1,6 @@
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
-import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
 import { useTheme } from "@/components/design-system/useTheme";
 import { getCareTypeLabel, getCareTypeVerb } from "@/features/care-calendar/services/careCalendarLabels";
 import { getCareCalendarSourceLabel } from "@/features/care-calendar/services/careCalendarSourceLabels";
@@ -34,6 +32,47 @@ function getStatusLabel(status: CareCalendarEvent["status"]) {
     default:
       return status;
   }
+}
+
+function ActionChip({
+  label,
+  onPress,
+  disabled,
+  selected,
+}: {
+  label: string;
+  onPress?: () => void;
+  disabled?: boolean;
+  selected?: boolean;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        {
+          backgroundColor: selected
+            ? colors.tertiaryContainer
+            : colors.surfaceContainerHigh,
+          opacity: disabled ? 0.45 : pressed ? 0.92 : 1,
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.chipLabel,
+          { color: selected ? colors.onTertiary : colors.onSurface },
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
 }
 
 export function CareCalendarTaskCard({
@@ -86,52 +125,35 @@ export function CareCalendarTaskCard({
       <View style={styles.actions}>
         {isSuggestion && onAcceptSuggestion && onDismissSuggestion ? (
           <>
-            <PrimaryButton
-              compact
+            <ActionChip
               label="Accept rhythm"
               onPress={onAcceptSuggestion}
               disabled={busy}
+              selected
             />
-            <SecondaryButton
-              label="Dismiss"
-              onPress={onDismissSuggestion}
-              variant="surface"
-            />
+            <ActionChip label="Dismiss" onPress={onDismissSuggestion} />
           </>
         ) : (
           <>
-            <PrimaryButton
-              compact
+            <ActionChip
               label="Log care"
               onPress={onLogCare}
               disabled={busy || event.status === "completed"}
+              selected
             />
-            <SecondaryButton
+            <ActionChip
               label="Mark done"
               onPress={onMarkDone}
-              variant="surface"
+              disabled={busy || event.status === "completed"}
             />
-            <SecondaryButton
-              label="Reschedule"
-              onPress={onReschedule}
-              variant="surface"
-            />
+            <ActionChip label="Reschedule" onPress={onReschedule} />
             {onEditReminder ? (
-              <SecondaryButton
-                label="Edit reminder"
-                onPress={onEditReminder}
-                variant="surface"
-              />
+              <ActionChip label="Edit reminder" onPress={onEditReminder} />
             ) : null}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`View ${event.plantName}`}
+            <ActionChip
+              label="View plant"
               onPress={() => router.push(`/plant/${event.plantId}`)}
-            >
-              <Text style={[styles.link, { color: colors.secondary }]}>
-                View plant
-              </Text>
-            </Pressable>
+            />
           </>
         )}
       </View>
@@ -183,15 +205,21 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   actions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
-    alignItems: "flex-start",
+    alignItems: "center",
   },
-  link: {
-    fontFamily: "Manrope_700Bold",
-    fontSize: 13,
-    lineHeight: 18,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    paddingVertical: 4,
+  chip: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    minHeight: 40,
+    justifyContent: "center",
+  },
+  chipLabel: {
+    fontFamily: "Manrope_600SemiBold",
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

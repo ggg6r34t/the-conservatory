@@ -17,6 +17,7 @@ interface CareCalendarAgendaProps {
   onDismissSuggestion: (event: CareCalendarEvent) => void;
   allowAiSuggestionActions?: boolean;
   busy?: boolean;
+  showDayHeaders?: boolean;
 }
 
 export function CareCalendarAgenda({
@@ -30,6 +31,7 @@ export function CareCalendarAgenda({
   onDismissSuggestion,
   allowAiSuggestionActions = true,
   busy,
+  showDayHeaders = true,
 }: CareCalendarAgendaProps) {
   const { colors, spacing } = useTheme();
   const grouped = new Map<string, CareCalendarEvent[]>();
@@ -46,9 +48,11 @@ export function CareCalendarAgenda({
     <View style={[styles.wrap, { gap: spacing.lg }]}>
       {dates.map((dateKey) => (
         <View key={dateKey} style={styles.section}>
-          <Text style={[styles.dayTitle, { color: colors.primary }]}>
-            {formatAgendaDayTitle(dateKey)}
-          </Text>
+          {showDayHeaders ? (
+            <Text style={[styles.dayTitle, { color: colors.primary }]}>
+              {formatAgendaDayTitle(dateKey)}
+            </Text>
+          ) : null}
           <View style={styles.tasks}>
             {(grouped.get(dateKey) ?? []).map((event) => (
               <CareCalendarTaskCard

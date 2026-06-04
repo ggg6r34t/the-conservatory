@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
   AccessibilityInfo,
   Modal,
@@ -23,9 +23,12 @@ import { CareCalendarMonthGrid } from "@/features/care-calendar/components/CareC
 import { useCareCalendar } from "@/features/care-calendar/hooks/useCareCalendar";
 import { useCareCalendarActions } from "@/features/care-calendar/hooks/useCareCalendarActions";
 import {
+  formatAgendaDayTitle,
   formatMonthTitle,
+  getDefaultCareCalendarDateKey,
   groupEventsByDate,
   toLocalDateKey,
+  toggleSelectedDateKey,
 } from "@/features/care-calendar/services/careCalendarDerivationService";
 import type {
   CareCalendarEvent,
@@ -45,10 +48,11 @@ export default function CareCalendarScreen() {
   const { colors } = useTheme();
   const [filter, setFilter] = useState<CareCalendarFilter>("all");
   const [viewMode, setViewMode] = useState<CareCalendarViewMode>("month");
-  const [visibleMonth, setVisibleMonth] = useState(() => new Date());
-  const [selectedDateKey, setSelectedDateKey] = useState(() =>
-    toLocalDateKey(new Date()),
+  const todayKey = useMemo(() => getDefaultCareCalendarDateKey(), []);
+  const [visibleMonth, setVisibleMonth] = useState(
+    () => new Date(`${todayKey}T12:00:00`),
   );
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(todayKey);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const [rescheduleTarget, setRescheduleTarget] = useState<CareCalendarEvent | null>(
     null,
@@ -56,6 +60,7 @@ export default function CareCalendarScreen() {
   const [rescheduleDays, setRescheduleDays] = useState("7");
   const { onRefresh, refreshing } = usePullToRefreshSync();
   const snackbar = useSnackbar();
+  const appliedPlantDeepLinkRef = useRef<string | null>(null);
   const calendar = useCareCalendar({ plantId, filter });
   const actions = useCareCalendarActions();
   const grouped = useMemo(
@@ -64,7 +69,9 @@ export default function CareCalendarScreen() {
   );
   const selectedDayEvents = useMemo(
     () =>
-      calendar.events.filter((event) => event.dueDate === selectedDateKey),
+      selectedDateKey
+        ? calendar.events.filter((event) => event.dueDate === selectedDateKey)
+        : [],
     [calendar.events, selectedDateKey],
   );
   const agendaEvents = useMemo(() => {
@@ -122,11 +129,27 @@ export default function CareCalendarScreen() {
     }
   }, [calendar.aiSuggestionsEnabled, filter]);
 
+  useFocusEffect(
+    useCallback(() => {
+      setSelectedDateKey((current) => current ?? todayKey);
+    }, [todayKey]),
+  );
+
   useEffect(() => {
-    if (!plantId || calendar.isLoading) {
+    if (!plantId) {
+      appliedPlantDeepLinkRef.current = null;
       return;
     }
 
+    if (calendar.isLoading) {
+      return;
+    }
+
+    if (appliedPlantDeepLinkRef.current === plantId) {
+      return;
+    }
+
+    appliedPlantDeepLinkRef.current = plantId;
     setSelectedDateKey(plantDeepLink.selectedDateKey);
     setVisibleMonth(plantDeepLink.visibleMonth);
   }, [calendar.isLoading, plantDeepLink, plantId]);
@@ -135,7 +158,13 @@ export default function CareCalendarScreen() {
     calendar.plants.find((plant) => plant.id === event.plantId);
 
   const handleSelectDate = (dateKey: string) => {
-    setSelectedDateKey(dateKey);
+    const nextSelectedDateKey = toggleSelectedDateKey(selectedDateKey, dateKey);
+    if (nextSelectedDateKey === null) {
+      setSelectedDateKey(null);
+      return;
+    }
+
+    setSelectedDateKey(nextSelectedDateKey);
     const taskCount = grouped.get(dateKey)?.length ?? 0;
     const hasOverdue = (grouped.get(dateKey) ?? []).some(
       (event) => event.status === "overdue",
@@ -177,7 +206,7 @@ export default function CareCalendarScreen() {
         plantName: plant.name,
         speciesName: plant.speciesName,
         frequencyDays,
-        nextDueAt: `${selectedDateKey}T09:00:00.000Z`,
+        nextDueAt: `${rescheduleTarget.dueDate}T09:00:00.000Z`,
       });
       setRescheduleTarget(null);
       snackbar.success("Care rescheduled.");
@@ -337,18 +366,23 @@ export default function CareCalendarScreen() {
                   onSelectDate={handleSelectDate}
                 />
 
-                <Text style={[styles.dayHeading, { color: colors.primary }]}>
-                  {new Intl.DateTimeFormat("en-US", {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                  }).format(new Date(`${selectedDateKey}T12:00:00`))}
-                </Text>
+                {selectedDateKey ? (
+                  <Text style={[styles.dayHeading, { color: colors.primary }]}>
+                    {formatAgendaDayTitle(selectedDateKey)}
+                  </Text>
+                ) : (
+                  <Text
+                    style={[styles.dayPrompt, { color: colors.onSurfaceVariant }]}
+                  >
+                    Select a day to view scheduled care.
+                  </Text>
+                )}
 
-                {selectedDayEvents.length ? (
+                {selectedDateKey && selectedDayEvents.length ? (
                   <CareCalendarAgenda
                     events={selectedDayEvents}
                     suggestionsById={suggestionsById}
+                    showDayHeaders={false}
                     allowAiSuggestionActions={calendar.aiSuggestionsEnabled}
                     busy={actions.logCare.isPending}
                     onLogCare={async (event) => {
@@ -420,7 +454,7 @@ export default function CareCalendarScreen() {
                       await calendar.refresh();
                     }}
                   />
-                ) : (
+                ) : selectedDateKey ? (
                   <EmptyState
                     screen="care-calendar"
                     reason="empty_day"
@@ -431,7 +465,7 @@ export default function CareCalendarScreen() {
                       body: "Your plants have no scheduled care here.",
                     }}
                   />
-                )}
+                ) : null}
               </View>
             ) : (
               <CareCalendarAgenda
@@ -551,7 +585,8 @@ export default function CareCalendarScreen() {
               Reschedule care
             </Text>
             <Text style={[styles.modalBody, { color: colors.onSurfaceVariant }]}>
-              Set how often this care should repeat, starting {selectedDateKey}.
+              Set how often this care should repeat, starting{" "}
+              {rescheduleTarget?.dueDate ?? selectedDateKey ?? "the chosen day"}.
             </Text>
             <TextInput
               value={rescheduleDays}
@@ -616,6 +651,11 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSerif_700Bold",
     fontSize: 22,
     lineHeight: 28,
+  },
+  dayPrompt: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 15,
+    lineHeight: 22,
   },
   aiUpsell: {
     gap: 12,

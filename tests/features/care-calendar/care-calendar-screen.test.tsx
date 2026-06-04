@@ -16,6 +16,10 @@ jest.mock("expo-router", () => ({
     push: jest.fn(),
   }),
   useLocalSearchParams: () => ({}),
+  useFocusEffect: (callback: () => void | (() => void)) => {
+    const { useEffect } = require("react");
+    useEffect(() => callback(), [callback]);
+  },
 }));
 
 jest.mock("@/features/billing/hooks/useSubscription", () => ({
