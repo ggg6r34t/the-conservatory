@@ -1,4 +1,7 @@
-import { addLocalDays, toLocalDateKey } from "@/features/care-calendar/services/careCalendarDerivationService";
+import {
+  addLocalDays,
+  toLocalDateKey,
+} from "@/features/care-calendar/services/careCalendarDerivationService";
 import type { CareCalendarEvent } from "@/features/care-calendar/types";
 
 export type CareCalendarMonthSummary = {
@@ -9,12 +12,14 @@ export type CareCalendarMonthSummary = {
 
 export function buildCareCalendarMonthSummary(
   events: CareCalendarEvent[],
-  now = new Date(),
+  now = new Date()
 ): CareCalendarMonthSummary {
   const todayKey = toLocalDateKey(now);
   const weekEndKey = toLocalDateKey(addLocalDays(now, 6));
 
-  const overdueCount = events.filter((event) => event.status === "overdue").length;
+  const overdueCount = events.filter(
+    (event) => event.status === "overdue"
+  ).length;
   const dueThisWeekCount = events.filter((event) => {
     if (event.status !== "due_today" && event.status !== "upcoming") {
       return false;
