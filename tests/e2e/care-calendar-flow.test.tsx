@@ -203,6 +203,12 @@ jest.mock("@/components/design-system/useTheme", () => ({
 describe("care calendar e2e flow", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-06-04T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("derives a water task and surfaces log care on the calendar screen", async () => {
