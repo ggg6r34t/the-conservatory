@@ -8,6 +8,7 @@ import Purchases, { LOG_LEVEL, PACKAGE_TYPE } from "react-native-purchases";
 
 import { billingConfig, validateBillingConfig } from "../config";
 import { PREMIUM_ENTITLEMENT_ID } from "../constants";
+import { isRevenueCatNativeAvailable } from "../services/revenueCatNative";
 import { buildBillingOffering } from "../services/offeringPackageResolution";
 import {
   logEmptyOfferingsDiagnostics,
@@ -127,6 +128,15 @@ export class RevenueCatAdapter implements BillingAdapter {
       console.warn(
         `[Billing] Missing RevenueCat config: ${missing.join(", ")}. Billing disabled.`,
       );
+      return;
+    }
+
+    if (!isRevenueCatNativeAvailable()) {
+      if (__DEV__) {
+        console.warn(
+          "[Billing] RevenueCat native module unavailable. Use EXPO_PUBLIC_USE_MOCK_BILLING=true in Expo Go or install a development build.",
+        );
+      }
       return;
     }
 

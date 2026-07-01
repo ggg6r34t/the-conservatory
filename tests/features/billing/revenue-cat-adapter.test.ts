@@ -6,6 +6,7 @@ const mockRemoveCustomerInfoUpdateListener = jest.fn();
 
 jest.mock("react-native", () => ({
   Platform: { OS: "ios" },
+  NativeModules: { RNPurchases: {} },
 }));
 
 jest.mock("react-native-purchases", () => ({

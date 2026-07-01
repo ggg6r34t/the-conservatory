@@ -12,6 +12,10 @@ const mockRequestPermission = jest.fn();
 const mockResolveSpecimenTagScan = jest.fn();
 let mockIsPremium = true;
 
+jest.mock("@/features/permissions/cameraAvailability", () => ({
+  isExpoCameraNativeAvailable: () => true,
+}));
+
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     back: mockBack,

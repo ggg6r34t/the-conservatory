@@ -45,6 +45,25 @@ export interface UserDataSyncResult {
 type Listener = (snapshot: UserDataSyncSnapshot) => void;
 
 const MAX_SYNC_BATCHES_PER_RUN = 20;
+const HYDRATION_COOLDOWN_MS = 60_000;
+
+const lastHydrationCompletedAtByUser = new Map<string, number>();
+
+function shouldSkipHydration(
+  userId: string,
+  trigger: UserDataSyncTrigger,
+): boolean {
+  if (trigger === "manual") {
+    return false;
+  }
+
+  const completedAt = lastHydrationCompletedAtByUser.get(userId);
+  if (!completedAt) {
+    return false;
+  }
+
+  return Date.now() - completedAt < HYDRATION_COOLDOWN_MS;
+}
 
 let inFlight: Promise<UserDataSyncResult> | null = null;
 let pendingReplay: {
@@ -157,13 +176,21 @@ async function executeUserDataSync(
 
   const completedWithFollowups = report.blockingRemaining > 0;
 
-  try {
-    await hydrateRemoteUserData(userId);
-    report = { ...report, hydrationApplied: true };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Remote hydration failed.";
-    throw new Error(`Cloud hydration failed after queue replay: ${message}`);
+  if (shouldSkipHydration(userId, trigger)) {
+    logger.info("sync.hydration.skipped_recent", {
+      userId,
+      trigger,
+    });
+  } else {
+    try {
+      await hydrateRemoteUserData(userId);
+      lastHydrationCompletedAtByUser.set(userId, Date.now());
+      report = { ...report, hydrationApplied: true };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Remote hydration failed.";
+      throw new Error(`Cloud hydration failed after queue replay: ${message}`);
+    }
   }
   await repairLocalPhotoRecords(userId);
 

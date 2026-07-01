@@ -75,7 +75,7 @@ const MIGRATED_SCREENS: {
     description: "care reminder notification pre-prompt",
   },
   {
-    file: "app/specimen-scan.tsx",
+    file: "features/plants/components/SpecimenScanCameraScreen.tsx",
     patterns: [/confirmBeforeSystemPermission/, /useAlert/],
     description: "specimen scan camera pre-prompt",
   },

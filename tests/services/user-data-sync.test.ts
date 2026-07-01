@@ -242,4 +242,41 @@ describe("userDataSync", () => {
     expect(mockHydrateRemoteUserData).toHaveBeenCalledWith("user-1");
     expect(mockSyncPendingChanges).toHaveBeenCalledTimes(2);
   });
+
+  it("skips hydration when a recent hydration completed for automatic triggers", async () => {
+    const { runUserDataSync } = require("@/services/database/userDataSync");
+
+    await runUserDataSync({
+      userId: "user-1",
+      trigger: "auto-queue",
+    });
+
+    expect(mockHydrateRemoteUserData).toHaveBeenCalledTimes(1);
+    mockHydrateRemoteUserData.mockClear();
+
+    await runUserDataSync({
+      userId: "user-1",
+      trigger: "auto-bootstrap",
+    });
+
+    expect(mockHydrateRemoteUserData).not.toHaveBeenCalled();
+  });
+
+  it("still hydrates on manual sync even after a recent automatic hydration", async () => {
+    const { runUserDataSync } = require("@/services/database/userDataSync");
+
+    await runUserDataSync({
+      userId: "user-1",
+      trigger: "auto-queue",
+    });
+
+    mockHydrateRemoteUserData.mockClear();
+
+    await runUserDataSync({
+      userId: "user-1",
+      trigger: "manual",
+    });
+
+    expect(mockHydrateRemoteUserData).toHaveBeenCalledWith("user-1");
+  });
 });

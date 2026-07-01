@@ -449,10 +449,32 @@ async function reconcileRemoteDeletions(params: {
   );
 }
 
+let hydrationInFlight: Promise<void> | null = null;
+let hydrationInFlightUserId: string | null = null;
+
 export async function hydrateRemoteUserData(userId: string) {
   if (!supabase) {
     return;
   }
+
+  if (hydrationInFlight && hydrationInFlightUserId === userId) {
+    await hydrationInFlight;
+    return;
+  }
+
+  const operation = hydrateRemoteUserDataUnchecked(userId);
+  hydrationInFlightUserId = userId;
+  hydrationInFlight = operation.finally(() => {
+    if (hydrationInFlightUserId === userId) {
+      hydrationInFlight = null;
+      hydrationInFlightUserId = null;
+    }
+  });
+
+  await hydrationInFlight;
+}
+
+async function hydrateRemoteUserDataUnchecked(userId: string) {
 
   const [
     preferencesResult,

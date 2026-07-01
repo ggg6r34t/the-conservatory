@@ -33,6 +33,8 @@ This folder is organized around the core production docs the repo actively keeps
 
 - [engineering/ENGINEERING_GUIDELINES.md](./engineering/ENGINEERING_GUIDELINES.md)
   Implementation conventions, code organization, and day-to-day engineering expectations.
+- [engineering/AI_MANUAL_TEST_CHECKLIST.md](./engineering/AI_MANUAL_TEST_CHECKLIST.md)
+  Manual QA checklist for local vs cloud AI features and Supabase edge functions.
 - [engineering/V1_IMPLEMENTATION_SUMMARY.md](./engineering/V1_IMPLEMENTATION_SUMMARY.md)
   Internal summary of completed V1 product and engineering implementation work.
 
