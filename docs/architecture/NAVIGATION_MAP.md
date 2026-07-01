@@ -71,6 +71,17 @@ Related memorial detail and care-log routes sit alongside them.
 
 Onboarding routes are separate from the main app and should not be treated like settings drill-ins.
 
+### Auth
+
+Unauthenticated routes in `app/(auth)`:
+
+- `login` — sign in; links to `forgot-password`
+- `signup` — create account
+- `forgot-password` — request reset email (neutral success copy)
+- `reset-password` — set new password after recovery deep link
+
+Password recovery deep links (`theconservatory://auth/reset-password` or `https://theconservatory.app/auth/reset-password`) are handled by `PasswordRecoveryBridge` and route to `reset-password`. After a successful update, users return to `login`.
+
 ### Debug
 
 Debug onboarding routes are dev-only surfaces and should not leak into production user navigation.

@@ -4,8 +4,10 @@ import {
   getInitialAuthUser,
   logout,
   requestPasswordReset,
+  shouldResumePasswordRecovery,
 } from "@/features/auth/api/authClient";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
+import { usePasswordRecoveryStore } from "@/features/auth/stores/usePasswordRecoveryStore";
 
 export function useAuth() {
   const user = useAuthStore((state) => state.user);
@@ -27,10 +29,14 @@ export function useAuth() {
     }
 
     getInitialAuthUser()
-      .then((sessionUser) => {
+      .then(async (sessionUser) => {
         if (sessionUser) {
           resolveUser(sessionUser, transitionId);
           return;
+        }
+
+        if (await shouldResumePasswordRecovery()) {
+          usePasswordRecoveryStore.getState().activate();
         }
 
         clearUser(transitionId);

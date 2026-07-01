@@ -139,6 +139,13 @@ export function trackGtmEvent(
   name:
     | 'user_signed_up'
     | 'user_logged_in'
+    | 'password_reset_requested'
+    | 'password_reset_request_succeeded'
+    | 'password_reset_request_failed'
+    | 'password_reset_link_opened'
+    | 'password_update_submitted'
+    | 'password_update_succeeded'
+    | 'password_update_failed'
     | 'app_session_started'
     | 'activation_first_plant_created'
     | 'subscription_activated'

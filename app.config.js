@@ -12,6 +12,10 @@ module.exports = {
     ios: {
       bundleIdentifier: "com.northfold.theconservatory",
       supportsTablet: true,
+      associatedDomains: [
+        "applinks:theconservatory.app",
+        "applinks:theconservatory.garden",
+      ],
       infoPlist: {
         NSCameraUsageDescription:
           "The Conservatory uses the camera so you can capture plant photos and scan specimen tags.",
@@ -24,6 +28,36 @@ module.exports = {
     },
     android: {
       package: "com.northfold.theconservatory",
+      intentFilters: [
+        {
+          action: "VIEW",
+          autoVerify: true,
+          data: [
+            {
+              scheme: "https",
+              host: "theconservatory.app",
+              pathPrefix: "/auth/reset-password",
+            },
+            {
+              scheme: "https",
+              host: "theconservatory.garden",
+              pathPrefix: "/auth/reset-password",
+            },
+          ],
+          category: ["BROWSABLE", "DEFAULT"],
+        },
+        {
+          action: "VIEW",
+          data: [
+            {
+              scheme: "theconservatory",
+              host: "auth",
+              pathPrefix: "/reset-password",
+            },
+          ],
+          category: ["BROWSABLE", "DEFAULT"],
+        },
+      ],
       permissions: [
         "android.permission.CAMERA",
         "android.permission.POST_NOTIFICATIONS",

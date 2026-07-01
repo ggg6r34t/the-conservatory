@@ -11,6 +11,7 @@ import "react-native-reanimated";
 import { ThemedStatusBar } from "@/components/design-system/ThemedStatusBar";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { usePasswordRecoveryStore } from "@/features/auth/stores/usePasswordRecoveryStore";
 import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding";
 import {
   resolveEntryRoute,
@@ -69,6 +70,11 @@ function RootNavigator({
   const pathname = usePathname();
   const { redirectTo } = useGlobalSearchParams<{ redirectTo?: string }>();
   const isAuthRoute = segments[0] === "(auth)";
+  const isResetPasswordRoute =
+    segments[0] === "(auth)" && segments[1] === "reset-password";
+  const passwordRecoveryActive = usePasswordRecoveryStore(
+    (state) => state.isActive,
+  );
   const isTabRoute = segments[0] === "(tabs)";
   const isIndexRoute = pathname === "/" && !isTabRoute;
   const isOnboardingRoute = segments[0] === "onboarding";
@@ -89,6 +95,10 @@ function RootNavigator({
       backgroundColor: colors.surface,
     },
   };
+
+  if (passwordRecoveryActive && !isResetPasswordRoute) {
+    return <Redirect href="/(auth)/reset-password" />;
+  }
 
   if (isDebugRoute && !__DEV__) {
     return <Redirect href={expectedPublicEntry} />;
@@ -120,7 +130,7 @@ function RootNavigator({
     return <Redirect href="/(tabs)" />;
   }
 
-  if (isAuthenticated && isAuthRoute) {
+  if (isAuthenticated && isAuthRoute && !isResetPasswordRoute) {
     return <Redirect href={safeRedirectTo} />;
   }
 

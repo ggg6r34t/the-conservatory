@@ -59,12 +59,10 @@ export default function ForgotPasswordScreen() {
     try {
       setIsSubmitting(true);
       await requestPasswordReset(parsed.data.email);
-      setSuccessMessage(
-        "If an account exists for this email, reset instructions will arrive shortly.",
-      );
-      snackbar.info(
-        "If an account exists for this email, reset instructions will arrive shortly.",
-      );
+      const successCopy =
+        "If an account exists for this address, we'll send instructions to reset your password.";
+      setSuccessMessage(successCopy);
+      snackbar.info(successCopy);
     } catch (submissionError) {
       void alert.show({
         variant: "error",
@@ -83,8 +81,8 @@ export default function ForgotPasswordScreen() {
   return (
     <AuthScreenScaffold
       eyebrow="ACCOUNT RECOVERY"
-      title="Reset Your Password"
-      body="Enter the email tied to your account and we'll send a secure reset link."
+      title="Reset your password"
+      body="Enter the email tied to your account. If an account exists for this address, we'll send instructions to reset your password."
       footer={
         <Link
           href={loginHref}
@@ -111,8 +109,12 @@ export default function ForgotPasswordScreen() {
           returnKeyType="go"
         />
         {successMessage ? (
-          <Text style={[styles.successMessage, { color: colors.primary }]}>
-            {successMessage}
+          <Text
+            accessibilityRole="text"
+            accessibilityLiveRegion="polite"
+            style={[styles.successMessage, { color: colors.primary }]}
+          >
+            Check your email. {successMessage}
           </Text>
         ) : null}
         <PrimaryButton

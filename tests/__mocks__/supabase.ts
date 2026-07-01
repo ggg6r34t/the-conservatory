@@ -3,6 +3,12 @@ export const mockSupabaseAuth = {
   signInWithPassword: jest.fn(),
   signUp: jest.fn(),
   resetPasswordForEmail: jest.fn(),
+  setSession: jest.fn(),
+  exchangeCodeForSession: jest.fn(),
+  updateUser: jest.fn(),
+  onAuthStateChange: jest.fn(() => ({
+    data: { subscription: { unsubscribe: jest.fn() } },
+  })),
   signOut: jest.fn(),
 };
 
@@ -23,6 +29,13 @@ export function resetSupabaseMocks() {
   mockSupabaseAuth.signInWithPassword.mockReset();
   mockSupabaseAuth.signUp.mockReset();
   mockSupabaseAuth.resetPasswordForEmail.mockReset();
+  mockSupabaseAuth.setSession.mockReset();
+  mockSupabaseAuth.exchangeCodeForSession.mockReset();
+  mockSupabaseAuth.updateUser.mockReset();
+  mockSupabaseAuth.onAuthStateChange.mockReset();
+  mockSupabaseAuth.onAuthStateChange.mockImplementation(() => ({
+    data: { subscription: { unsubscribe: jest.fn() } },
+  }));
   mockSupabaseAuth.signOut.mockReset();
   mockSupabaseUsersTable.upsert.mockClear();
   mockSupabaseUsersTable.select.mockClear();

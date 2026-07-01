@@ -46,6 +46,19 @@ export const changePasswordSchema = z
     path: ["confirmNewPassword"],
   });
 
+export const resetPasswordSchema = z
+  .object({
+    newPassword: passwordSchema.refine((value) => value === value.trim(), {
+      message: "Password can't start or end with spaces.",
+    }),
+    confirmNewPassword: z.string().min(1, "Confirm your new password."),
+  })
+  .refine((value) => value.newPassword === value.confirmNewPassword, {
+    message: "Your new passwords should match.",
+    path: ["confirmNewPassword"],
+  });
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

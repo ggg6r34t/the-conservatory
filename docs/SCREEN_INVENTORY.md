@@ -74,9 +74,13 @@ This file tracks the app's current route screens and route-adjacent files so pro
    Screen: Forgot Password
    File: `app/(auth)/forgot-password.tsx`
 
+10. `/(auth)/reset-password`
+    Screen: Reset Password (recovery link)
+    File: `app/(auth)/reset-password.tsx`
+
 ## Onboarding Screens
 
-10. `/onboarding/walkthrough`
+11. `/onboarding/walkthrough`
     Screen: Onboarding Walkthrough
     File: `app/onboarding/walkthrough.tsx`
 

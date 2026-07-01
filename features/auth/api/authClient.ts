@@ -1,7 +1,14 @@
 import { env } from "@/config/env";
 import { supabase } from "@/config/supabase";
+import { PASSWORD_RECOVERY_REDIRECT_URL } from "@/features/auth/constants/authRedirects";
+import type { PasswordRecoveryLinkPayload } from "@/features/auth/services/passwordRecoveryLink";
 import { syncOnboardingStatusToAccount } from "@/features/onboarding/services/onboardingStorage";
 import { clearFeatureRequestCache } from "@/features/product-feedback/services/featureRequestCacheService";
+import {
+  clearPasswordRecoveryPending,
+  isPasswordRecoveryPending,
+  markPasswordRecoveryPending,
+} from "@/services/auth/passwordRecoveryState";
 import {
   clearSession,
   readSession,
@@ -122,7 +129,60 @@ function mapSupabaseAuthError(error: unknown, fallbackMessage: string) {
     );
   }
 
+  if (
+    message.includes("rate limit") ||
+    message.includes("too many requests") ||
+    message.includes("email rate limit")
+  ) {
+    return createAuthError(
+      "rate_limited",
+      "Too many attempts right now. Please wait a few minutes and try again.",
+      true,
+    );
+  }
+
+  if (
+    message.includes("password") &&
+    (message.includes("weak") ||
+      message.includes("short") ||
+      message.includes("at least"))
+  ) {
+    return createAuthError(
+      "weak_password",
+      "Choose a stronger password that meets the requirements below.",
+    );
+  }
+
+  if (
+    message.includes("expired") ||
+    (message.includes("invalid") && message.includes("token")) ||
+    message.includes("otp_expired")
+  ) {
+    return createAuthError(
+      "expired_link",
+      "This reset link has expired. Request a new one from the sign-in screen.",
+      true,
+    );
+  }
+
   return createAuthError("auth_failed", fallbackMessage, false);
+}
+
+function mapPasswordResetRequestError(error: unknown) {
+  const mapped = mapSupabaseAuthError(
+    error,
+    "We couldn't start password recovery right now.",
+  );
+
+  if (mapped.code === "auth_failed") {
+    return createAuthError(
+      "unknown",
+      "We couldn't start password recovery right now. Try again in a moment.",
+      true,
+    );
+  }
+
+  return mapped;
 }
 
 function createLocalUser(email: string, displayName?: string): AppUser {
@@ -493,9 +553,33 @@ async function finalizeAuthenticatedUser(user: AppUser) {
   return user;
 }
 
+export async function shouldResumePasswordRecovery() {
+  if (!env.isSupabaseConfigured || !supabase) {
+    return false;
+  }
+
+  const recoveryPending = await isPasswordRecoveryPending();
+  if (!recoveryPending) {
+    return false;
+  }
+
+  const { data } = await supabase.auth.getSession();
+  return Boolean(data.session);
+}
+
 export async function getInitialAuthUser() {
   if (env.isSupabaseConfigured && supabase) {
     try {
+      const recoveryPending = await isPasswordRecoveryPending();
+      if (recoveryPending) {
+        const { data: recoverySession } = await supabase.auth.getSession();
+        if (!recoverySession.session) {
+          await clearPasswordRecoveryPending();
+        } else {
+          return null;
+        }
+      }
+
       const { data, error } = await supabase.auth.getSession();
 
       if (error) {
@@ -660,14 +744,22 @@ export async function requestPasswordReset(email: string) {
   const normalizedEmail = normalizeEmail(email);
 
   if (env.isSupabaseConfigured && supabase) {
-    const { error } =
-      await supabase.auth.resetPasswordForEmail(normalizedEmail);
+    trackGtmEvent("password_reset_requested");
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      normalizedEmail,
+      { redirectTo: PASSWORD_RECOVERY_REDIRECT_URL },
+    );
+
     if (error) {
-      throw mapSupabaseAuthError(
-        error,
-        "We couldn't start password recovery right now.",
-      );
+      const mapped = mapPasswordResetRequestError(error);
+      trackGtmEvent("password_reset_request_failed", {
+        reason: mapped.code,
+      });
+      throw mapped;
     }
+
+    trackGtmEvent("password_reset_request_succeeded");
     return;
   }
 
@@ -684,6 +776,115 @@ export async function requestPasswordReset(email: string) {
     "password_reset_local_only",
     "This build is running in local-only mode, so email password reset delivery is unavailable.",
   );
+}
+
+export async function establishPasswordRecoverySession(
+  payload: PasswordRecoveryLinkPayload,
+) {
+  if (!env.isSupabaseConfigured || !supabase) {
+    throw createAuthError(
+      "password_reset_unavailable",
+      getBackendUnavailableMessage(
+        "Password recovery isn't available in this build right now.",
+      ),
+    );
+  }
+
+  if (payload.kind === "code") {
+    const { error } = await supabase.auth.exchangeCodeForSession(payload.code);
+    if (error) {
+      throw mapSupabaseAuthError(
+        error,
+        "This reset link is no longer valid.",
+      );
+    }
+  } else {
+    const { error } = await supabase.auth.setSession({
+      access_token: payload.accessToken,
+      refresh_token: payload.refreshToken,
+    });
+
+    if (error) {
+      throw mapSupabaseAuthError(
+        error,
+        "This reset link is no longer valid.",
+      );
+    }
+  }
+
+  const { data, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !data.session) {
+    throw createAuthError(
+      "invalid_link",
+      "This reset link is no longer valid. Request a new one from the sign-in screen.",
+      true,
+    );
+  }
+
+  await markPasswordRecoveryPending();
+  trackGtmEvent("password_reset_link_opened");
+}
+
+export async function updatePasswordFromRecovery(newPassword: string) {
+  if (!env.isSupabaseConfigured || !supabase) {
+    throw createAuthError(
+      "password_reset_unavailable",
+      getBackendUnavailableMessage(
+        "Password recovery isn't available in this build right now.",
+      ),
+    );
+  }
+
+  const recoveryPending = await isPasswordRecoveryPending();
+  const { data, error: sessionError } = await supabase.auth.getSession();
+
+  if (sessionError || !data.session || !recoveryPending) {
+    throw createAuthError(
+      "expired_link",
+      "This reset link has expired. Request a new one from the sign-in screen.",
+      true,
+    );
+  }
+
+  trackGtmEvent("password_update_submitted");
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) {
+    const mapped = mapSupabaseAuthError(
+      error,
+      "We couldn't update your password right now.",
+    );
+    trackGtmEvent("password_update_failed", { reason: mapped.code });
+    throw mapped;
+  }
+
+  trackGtmEvent("password_update_succeeded");
+
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    logger.warn("auth.recovery.sign_out_failed");
+  }
+
+  await clearPasswordRecoveryPending();
+  await clearSession();
+}
+
+export async function cancelPasswordRecovery() {
+  await clearPasswordRecoveryPending();
+
+  if (env.isSupabaseConfigured && supabase) {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      logger.warn("auth.recovery.cancel_sign_out_failed");
+    }
+  }
+
+  await clearSession();
 }
 
 export async function changePassword(

@@ -17,6 +17,12 @@ describe("GTM funnel analytics wiring", () => {
       "activation_first_plant_created",
     );
     expect(read("services/analytics/analyticsService.ts")).toContain(
+      "password_reset_requested",
+    );
+    expect(read("services/analytics/analyticsService.ts")).toContain(
+      "password_update_failed",
+    );
+    expect(read("services/analytics/analyticsService.ts")).toContain(
       "subscription_downgraded",
     );
     expect(read("services/analytics/analyticsService.ts")).toContain(
@@ -30,6 +36,12 @@ describe("GTM funnel analytics wiring", () => {
     );
     expect(read("features/auth/api/authClient.ts")).toContain(
       'trackGtmEvent("user_logged_in"',
+    );
+    expect(read("features/auth/api/authClient.ts")).toContain(
+      'trackGtmEvent("password_reset_requested")',
+    );
+    expect(read("features/auth/api/authClient.ts")).toContain(
+      'trackGtmEvent("password_update_succeeded")',
     );
     expect(read("features/plants/api/plantsClient.ts")).toContain(
       'trackGtmEvent("activation_first_plant_created")',
