@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <title>Reset your password</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background-color: #f3efe6;
+      color: #1f2a24;
+      font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    "
+  >
+    <table
+      role="presentation"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      width="100%"
+      style="background-color: #f3efe6; padding: 32px 16px"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            width="100%"
+            style="
+              max-width: 560px;
+              background-color: #fbf9f4;
+              border: 1px solid #e6dfd1;
+              border-radius: 20px;
+              overflow: hidden;
+            "
+          >
+            <tr>
+              <td style="padding: 32px 32px 12px 32px">
+                <p
+                  style="
+                    margin: 0 0 12px 0;
+                    font-size: 11px;
+                    line-height: 16px;
+                    letter-spacing: 0.22em;
+                    text-transform: uppercase;
+                    color: #66766b;
+                    font-weight: 700;
+                  "
+                >
+                  Account recovery
+                </p>
+                <h1
+                  style="
+                    margin: 0;
+                    font-family: Georgia, 'Times New Roman', serif;
+                    font-size: 32px;
+                    line-height: 40px;
+                    font-weight: 700;
+                    color: #24352c;
+                  "
+                >
+                  Reset your password
+                </h1>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding: 8px 32px 0 32px">
+                <p
+                  style="
+                    margin: 0 0 16px 0;
+                    font-size: 16px;
+                    line-height: 26px;
+                    color: #425047;
+                  "
+                >
+                  We received a request to reset the password for your
+                  Conservatory account. Tap the button below on the phone or
+                  tablet where you use the app to choose a new password.
+                </p>
+                <p
+                  style="
+                    margin: 0 0 24px 0;
+                    font-size: 15px;
+                    line-height: 24px;
+                    color: #66766b;
+                  "
+                >
+                  This link is private and will expire soon. If it stops working,
+                  you can request a fresh one from the sign-in screen.
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td align="left" style="padding: 0 32px 28px 32px">
+                <a
+                  href="{{ .ConfirmationURL }}"
+                  style="
+                    display: inline-block;
+                    background-color: #315c45;
+                    color: #fbf9f4;
+                    text-decoration: none;
+                    font-size: 15px;
+                    line-height: 20px;
+                    font-weight: 700;
+                    padding: 14px 24px;
+                    border-radius: 999px;
+                  "
+                >
+                  Choose a new password
+                </a>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding: 0 32px 24px 32px">
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 13px;
+                    line-height: 21px;
+                    color: #66766b;
+                  "
+                >
+                  If the button does not open the app, copy and paste this link
+                  into the browser on your device:
+                </p>
+                <p style="margin: 10px 0 0 0; word-break: break-all">
+                  <a
+                    href="{{ .ConfirmationURL }}"
+                    style="color: #315c45; font-size: 13px; line-height: 20px"
+                    >{{ .ConfirmationURL }}</a
+                  >
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td
+                style="
+                  padding: 20px 32px 28px 32px;
+                  border-top: 1px solid #ebe4d7;
+                  background-color: #f6f2ea;
+                "
+              >
+                <p
+                  style="
+                    margin: 0 0 10px 0;
+                    font-size: 13px;
+                    line-height: 21px;
+                    color: #66766b;
+                  "
+                >
+                  If you did not request a password reset, you can safely ignore
+                  this email. Your password will stay the same.
+                </p>
+                <p style="margin: 0; font-size: 13px; line-height: 21px; color: #66766b">
+                  Need help?
+                  <a href="mailto:support@theconservatory.garden" style="color: #315c45"
+                    >support@theconservatory.garden</a
+                  >
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <p
+            style="
+              margin: 20px 0 0 0;
+              max-width: 560px;
+              font-size: 12px;
+              line-height: 18px;
+              color: #7a877d;
+              text-align: center;
+            "
+          >
+            The Conservatory · Calm plant journaling and care
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

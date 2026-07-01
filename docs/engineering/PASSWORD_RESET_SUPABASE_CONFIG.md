@@ -9,29 +9,50 @@ Add every URL below to **Authentication → URL Configuration → Redirect URLs*
 | URL | Purpose |
 |-----|---------|
 | `theconservatory://auth/reset-password` | Native deep link (iOS / Android) |
-| `https://theconservatory.app/auth/reset-password` | Email redirect + universal / app links |
+| `https://theconservatory.garden/auth/reset-password` | Email redirect + universal / app links |
 | `http://127.0.0.1:3000/auth/reset-password` | Local web fallback (optional dev) |
 
-The mobile app calls `resetPasswordForEmail` with `redirectTo: https://theconservatory.app/auth/reset-password` (see `features/auth/constants/authRedirects.ts`).
+The mobile app calls `resetPasswordForEmail` with `redirectTo: https://theconservatory.garden/auth/reset-password` (see `features/auth/constants/authRedirects.ts`, sourced from `LEGAL_WEB_BASE` in `features/legal/constants.ts`).
 
 ## Site URL
 
-Set **Site URL** to your primary web origin, for example:
+Set **Site URL** to your primary web origin:
 
-- Production: `https://theconservatory.app`
+- Production: `https://theconservatory.garden`
 - Local Supabase: `http://127.0.0.1:3000` (see `supabase/config.toml`)
 
 ## Email template
 
-Customize **Authentication → Email Templates → Reset password** if needed. The link must use the configured `redirectTo` and must not be rewritten to strip hash or query parameters.
+The branded reset email lives in the repo at `supabase/templates/recovery.html` and is wired in `supabase/config.toml`:
 
-Recommended tone: calm, neutral, no account-existence hints.
+```toml
+[auth.email.template.recovery]
+subject = "Reset your Conservatory password"
+content_path = "./supabase/templates/recovery.html"
+```
+
+### Local development
+
+Restart Supabase after changing the template (`supabase stop` / `supabase start`). Local auth emails appear in [Inbucket](http://127.0.0.1:54324) when running the Supabase stack locally.
+
+### Hosted Supabase (production)
+
+Apply the same template in the dashboard:
+
+1. Open **Authentication → Email Templates → Reset password**
+2. Set **Subject** to: `Reset your Conservatory password`
+3. Paste the HTML from `supabase/templates/recovery.html` into the **Body** editor
+4. Keep the link as `{{ .ConfirmationURL }}` — do not remove or rewrite query/hash parameters
+
+The template uses Supabase’s `{{ .ConfirmationURL }}` variable, which includes your app’s `redirectTo` (`https://theconservatory.garden/auth/reset-password`).
+
+Tone: calm, helpful, secure — no account-existence hints beyond the standard “ignore if you didn’t request this” line.
 
 ## Sender / SMTP
 
 For production:
 
-1. Configure a verified sender domain (e.g. `theconservatory.app`).
+1. Configure a verified sender domain (e.g. `theconservatory.garden`).
 2. Set custom SMTP under **Project Settings → Auth** if not using Supabase default mail.
 3. Confirm deliverability (SPF, DKIM, DMARC) with your DNS provider.
 
@@ -44,12 +65,12 @@ Supabase enforces email rate limits. The app maps rate-limit errors to a neutral
 ### iOS
 
 - App scheme: `theconservatory` (`app.config.js`)
-- Associated domains: `applinks:theconservatory.app`, `applinks:theconservatory.garden`
-- Host `/.well-known/apple-app-site-association` on both domains (served by `the-conservatory-web` when `APPLE_TEAM_ID` is set)
+- Associated domain: `applinks:theconservatory.garden`
+- Host `/.well-known/apple-app-site-association` on `theconservatory.garden` (served by `the-conservatory-web` when `APPLE_TEAM_ID` is set)
 
 ### Android
 
-- App Links intent filters for `https://theconservatory.app/auth/reset-password` and `https://theconservatory.garden/auth/reset-password`
+- App Links intent filter for `https://theconservatory.garden/auth/reset-password`
 - Custom scheme intent filter for `theconservatory://auth/reset-password`
 - Host `/.well-known/assetlinks.json` (served by `the-conservatory-web` when `ANDROID_APP_LINK_SHA256_FINGERPRINTS` is set)
 
@@ -62,9 +83,7 @@ Supabase enforces email rate limits. The app maps rate-limit errors to a neutral
 
 ## Web fallback
 
-`the-conservatory-web` serves `/auth/reset-password`, which attempts to open the app deep link and shows support contact if the app is not installed.
-
-Deploy this route on **both** `theconservatory.app` and `theconservatory.garden` if both domains are live.
+`the-conservatory-web` serves `/auth/reset-password` at `https://theconservatory.garden/auth/reset-password`, which attempts to open the app deep link and shows support contact if the app is not installed.
 
 ## Post-reset session behavior
 

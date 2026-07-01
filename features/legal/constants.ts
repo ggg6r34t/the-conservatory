@@ -1,12 +1,12 @@
 export const LEGAL_LAST_UPDATED = "June 2, 2026";
 
 export const LEGAL_CONTACT = {
-  privacyEmail: "privacy@theconservatory.app",
-  legalEmail: "legal@theconservatory.app",
-  supportEmail: "support@theconservatory.app",
+  privacyEmail: "privacy@theconservatory.garden",
+  legalEmail: "legal@theconservatory.garden",
+  supportEmail: "support@theconservatory.garden",
 } as const;
 
-export const LEGAL_WEB_BASE = "https://theconservatory.app";
+export const LEGAL_WEB_BASE = "https://theconservatory.garden";
 
 /** Primary in-app legal documents shown in Profile → Legal */
 export const LEGAL_ROUTES = {

@@ -60,7 +60,7 @@ describe("auth client password reset", () => {
 
     expect(mockSupabaseAuth.resetPasswordForEmail).toHaveBeenCalledWith(
       "curator@example.com",
-      { redirectTo: "https://theconservatory.app/auth/reset-password" },
+      { redirectTo: "https://theconservatory.garden/auth/reset-password" },
     );
     expect(mockTrackGtmEvent).toHaveBeenCalledWith("password_reset_requested");
     expect(mockTrackGtmEvent).toHaveBeenCalledWith(

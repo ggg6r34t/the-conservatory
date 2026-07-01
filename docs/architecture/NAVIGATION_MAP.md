@@ -80,7 +80,7 @@ Unauthenticated routes in `app/(auth)`:
 - `forgot-password` — request reset email (neutral success copy)
 - `reset-password` — set new password after recovery deep link
 
-Password recovery deep links (`theconservatory://auth/reset-password` or `https://theconservatory.app/auth/reset-password`) are handled by `PasswordRecoveryBridge` and route to `reset-password`. After a successful update, users return to `login`.
+Password recovery deep links (`theconservatory://auth/reset-password` or `https://theconservatory.garden/auth/reset-password`) are handled by `PasswordRecoveryBridge` and route to `reset-password`. After a successful update, users return to `login`.
 
 ### Debug
 

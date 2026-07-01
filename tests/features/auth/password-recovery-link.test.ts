@@ -15,7 +15,7 @@ describe("passwordRecoveryLink", () => {
   it("recognizes web recovery URLs", () => {
     expect(
       isPasswordRecoveryUrl(
-        "https://theconservatory.app/auth/reset-password?code=pkce-code",
+        "https://theconservatory.garden/auth/reset-password?code=pkce-code",
       ),
     ).toBe(true);
   });
@@ -26,7 +26,7 @@ describe("passwordRecoveryLink", () => {
       false,
     );
     expect(
-      isPasswordRecoveryUrl("https://theconservatory.app/login#type=recovery"),
+      isPasswordRecoveryUrl("https://theconservatory.garden/login#type=recovery"),
     ).toBe(false);
   });
 
@@ -53,7 +53,7 @@ describe("passwordRecoveryLink", () => {
   it("parses PKCE recovery codes", () => {
     expect(
       parsePasswordRecoveryUrl(
-        "https://theconservatory.app/auth/reset-password?code=pkce-code",
+        "https://theconservatory.garden/auth/reset-password?code=pkce-code",
       ),
     ).toEqual({
       kind: "code",
@@ -63,7 +63,7 @@ describe("passwordRecoveryLink", () => {
 
   it("returns null for recovery path without credentials", () => {
     expect(
-      parsePasswordRecoveryUrl("https://theconservatory.app/auth/reset-password"),
+      parsePasswordRecoveryUrl("https://theconservatory.garden/auth/reset-password"),
     ).toBeNull();
   });
 });

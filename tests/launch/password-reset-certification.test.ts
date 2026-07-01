@@ -31,7 +31,6 @@ describe("password reset certification", () => {
 
   it("configures mobile deep link and universal link handlers", () => {
     const appConfig = read("app.config.js");
-    expect(appConfig).toContain("applinks:theconservatory.app");
     expect(appConfig).toContain("applinks:theconservatory.garden");
     expect(appConfig).toContain('pathPrefix: "/auth/reset-password"');
     expect(read("features/auth/services/passwordRecoveryLink.ts")).toContain(
@@ -48,6 +47,19 @@ describe("password reset certification", () => {
     );
     expect(read("docs/engineering/PASSWORD_RESET_SUPABASE_CONFIG.md")).toContain(
       "theconservatory://auth/reset-password",
+    );
+  });
+
+  it("ships a branded recovery email template", () => {
+    expect(exists("supabase/templates/recovery.html")).toBe(true);
+    expect(read("supabase/config.toml")).toContain(
+      "[auth.email.template.recovery]",
+    );
+    expect(read("supabase/templates/recovery.html")).toContain(
+      "{{ .ConfirmationURL }}",
+    );
+    expect(read("supabase/config.toml")).toContain(
+      'subject = "Reset your Conservatory password"',
     );
   });
 

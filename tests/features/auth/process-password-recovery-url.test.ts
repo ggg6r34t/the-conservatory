@@ -57,7 +57,7 @@ describe("processPasswordRecoveryUrl", () => {
 
   it("surfaces invalid recovery links without tokens", async () => {
     const handled = await processPasswordRecoveryUrl(
-      "https://theconservatory.app/auth/reset-password",
+      "https://theconservatory.garden/auth/reset-password",
     );
 
     expect(handled).toBe(true);
