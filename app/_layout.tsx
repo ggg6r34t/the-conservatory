@@ -70,8 +70,9 @@ function RootNavigator({
   const pathname = usePathname();
   const { redirectTo } = useGlobalSearchParams<{ redirectTo?: string }>();
   const isAuthRoute = segments[0] === "(auth)";
+  const authChildSegment = segments.at(1);
   const isResetPasswordRoute =
-    segments[0] === "(auth)" && segments[1] === "reset-password";
+    isAuthRoute && authChildSegment === "reset-password";
   const passwordRecoveryActive = usePasswordRecoveryStore(
     (state) => state.isActive,
   );
