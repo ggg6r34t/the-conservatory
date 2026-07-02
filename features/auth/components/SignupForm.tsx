@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
 import { OAuthSignInSection } from "@/features/auth/components/OAuthSignInSection";
+import { PasswordRequirementsFeedback } from "@/features/auth/components/PasswordRequirementsFeedback";
 import { useSignup } from "@/features/auth/hooks/useSignup";
 import { signupSchema } from "@/features/auth/schemas/authValidation";
+import { evaluateSignupPassword } from "@/features/auth/services/evaluateSignupPassword";
 import { SignupLegalAcknowledgment } from "@/features/legal/components/SignupLegalAcknowledgment";
 import { useAlert } from "@/hooks/useAlert";
 import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
@@ -17,6 +19,7 @@ export function SignupForm() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState("");
   const signupMutation = useSignup();
@@ -27,6 +30,17 @@ export function SignupForm() {
       : backend.mode === "release-misconfigured"
         ? "Account creation isn't available until account setup is completed for this build."
         : "Account creation is unavailable right now.";
+
+  const passwordStatus = useMemo(
+    () =>
+      evaluateSignupPassword({
+        password,
+        fullName: displayName,
+        email,
+      }),
+    [password, displayName, email],
+  );
+  const showPasswordFeedback = password.length > 0;
 
   const clearFieldError = (field: "displayName" | "email" | "password") => {
     setErrors((current) => ({ ...current, [field]: "" }));
@@ -124,13 +138,24 @@ export function SignupForm() {
           setPassword(value);
           clearFieldError("password");
         }}
-        secureTextEntry
+        secureTextEntry={!showPassword}
         autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="go"
         placeholder="Choose a secure password"
         error={errors.password}
+        trailingIcon={showPassword ? "eye-off-outline" : "eye-outline"}
+        onTrailingPress={() => setShowPassword((current) => !current)}
+        trailingAccessibilityLabel={
+          showPassword ? "Hide password" : "Show password"
+        }
       />
+      {showPasswordFeedback ? (
+        <PasswordRequirementsFeedback
+          strength={passwordStatus.strength}
+          requirements={passwordStatus.requirements}
+        />
+      ) : null}
       {submitError ? (
         <Text style={[styles.submitError, { color: colors.error }]}>
           {submitError}

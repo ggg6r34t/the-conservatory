@@ -28,3 +28,19 @@ export const LEGAL_REDIRECT_ROUTES = {
   dataExportPolicy: "/data-export-policy",
   accountDeletion: "/account-deletion-policy",
 } as const;
+
+const ANONYMOUS_ACCESSIBLE_LEGAL_PATHS = new Set<string>([
+  LEGAL_ROUTES.terms,
+  LEGAL_ROUTES.privacy,
+  LEGAL_REDIRECT_ROUTES.subscriptionTerms,
+  LEGAL_REDIRECT_ROUTES.privacySecurityStatement,
+  LEGAL_REDIRECT_ROUTES.dataRetention,
+  LEGAL_REDIRECT_ROUTES.dataExportPolicy,
+  LEGAL_REDIRECT_ROUTES.accountDeletion,
+]);
+
+/** Legal documents reachable before account creation (signup acknowledgment links). */
+export function isAnonymousAccessibleLegalRoute(pathname: string) {
+  const normalized = pathname.replace(/\/+$/, "") || "/";
+  return ANONYMOUS_ACCESSIBLE_LEGAL_PATHS.has(normalized);
+}

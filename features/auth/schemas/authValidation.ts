@@ -1,10 +1,15 @@
 import { z } from "zod";
 
+import { evaluateSignupPassword } from "@/features/auth/services/evaluateSignupPassword";
+
 const passwordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters.")
   .regex(/[A-Za-z]/, "Password must include at least one letter.")
   .regex(/\d/, "Password must include at least one number.");
+
+const SIGNUP_PASSWORD_REQUIREMENTS_MESSAGE =
+  "Please meet all password requirements.";
 
 const displayNameSchema = z
   .string()
@@ -25,9 +30,31 @@ export const loginSchema = z.object({
   password: passwordSchema,
 });
 
-export const signupSchema = loginSchema.extend({
-  displayName: displayNameSchema,
-});
+export const signupSchema = z
+  .object({
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email("Enter a valid email address."),
+    password: z.string(),
+    displayName: displayNameSchema,
+  })
+  .superRefine((data, ctx) => {
+    const passwordStatus = evaluateSignupPassword({
+      password: data.password,
+      fullName: data.displayName,
+      email: data.email,
+    });
+
+    if (!passwordStatus.isValid) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: SIGNUP_PASSWORD_REQUIREMENTS_MESSAGE,
+        path: ["password"],
+      });
+    }
+  });
 export const forgotPasswordSchema = loginSchema.pick({
   email: true,
 });

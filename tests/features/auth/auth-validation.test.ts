@@ -16,7 +16,7 @@ describe("auth validation", () => {
     const result = signupSchema.safeParse({
       displayName: "Elowen Thorne",
       email: " Elowen@Garden.io ",
-      password: "secret123",
+      password: "GardenPass9",
     });
 
     expect(result.success).toBe(true);
@@ -26,11 +26,21 @@ describe("auth validation", () => {
     }
   });
 
-  it("should reject passwords without a number", () => {
+  it("should reject passwords without a number or symbol", () => {
     const result = signupSchema.safeParse({
       displayName: "Elowen Thorne",
       email: "elowen@garden.io",
-      password: "password",
+      password: "GardenPass",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("should reject passwords that contain the user's name", () => {
+    const result = signupSchema.safeParse({
+      displayName: "Elowen Thorne",
+      email: "elowen@garden.io",
+      password: "ElowenPass9",
     });
 
     expect(result.success).toBe(false);

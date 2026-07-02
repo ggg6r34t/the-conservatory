@@ -15,6 +15,7 @@ export function LoginForm() {
   const alert = useAlert();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState("");
   const loginMutation = useLogin();
@@ -97,12 +98,17 @@ export function LoginForm() {
         label="Password"
         value={password}
         onChangeText={handlePasswordChange}
-        secureTextEntry
+        secureTextEntry={!showPassword}
         autoComplete="current-password"
         textContentType="password"
         returnKeyType="go"
         placeholder="Enter your password"
         error={errors.password}
+        trailingIcon={showPassword ? "eye-off-outline" : "eye-outline"}
+        onTrailingPress={() => setShowPassword((current) => !current)}
+        trailingAccessibilityLabel={
+          showPassword ? "Hide password" : "Show password"
+        }
       />
       {submitError ? (
         <Text style={[styles.submitError, { color: colors.error }]}>

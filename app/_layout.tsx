@@ -17,6 +17,7 @@ import {
   resolveEntryRoute,
   resolveSafeAuthRedirectTarget,
 } from "@/features/onboarding/utils/resolveEntryRoute";
+import { isAnonymousAccessibleLegalRoute } from "@/features/legal/constants";
 import { Providers } from "@/providers/Providers";
 import { wrapWithCrashReporting } from "@/services/observability/crashReportingService";
 
@@ -112,7 +113,8 @@ function RootNavigator({
     !isIndexRoute &&
     !isOnboardingRoute &&
     !isDebugRoute &&
-    !isOAuthCallbackRoute
+    !isOAuthCallbackRoute &&
+    !isAnonymousAccessibleLegalRoute(pathname)
   ) {
     return <Redirect href={expectedPublicEntry} />;
   }

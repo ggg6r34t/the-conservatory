@@ -13,6 +13,8 @@ export function SignupLegalAcknowledgment() {
       <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
         By creating an account, you agree to our{" "}
         <Text
+          accessibilityRole="link"
+          accessibilityLabel="Terms of Service"
           style={[styles.link, { color: colors.primary }]}
           onPress={() => router.push(LEGAL_ROUTES.terms)}
         >
@@ -20,6 +22,8 @@ export function SignupLegalAcknowledgment() {
         </Text>{" "}
         and acknowledge our{" "}
         <Text
+          accessibilityRole="link"
+          accessibilityLabel="Privacy Policy"
           style={[styles.link, { color: colors.primary }]}
           onPress={() => router.push(LEGAL_ROUTES.privacy)}
         >
