@@ -22,6 +22,8 @@ jest.mock("@/services/supabase/backendReadiness", () => ({
 jest.mock("@/config/env", () => ({
   env: {
     isSupabaseConfigured: true,
+    isDevelopmentBuild: true,
+    isProductionBuild: false,
   },
 }));
 
@@ -70,7 +72,8 @@ describe("OAuthSignInSection", () => {
     expect(mockSignInWithProvider).toHaveBeenCalledWith("google");
   });
 
-  it("renders apple on ios and starts apple sign in on signup", () => {
+  it("renders apple on android during development builds", () => {
+    Platform.OS = "android";
     render(<OAuthSignInSection screen="signup" />);
 
     expect(screen.getByLabelText("Continue with Apple")).toBeTruthy();

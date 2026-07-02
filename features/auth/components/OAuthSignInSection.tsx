@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { env } from "@/config/env";
 import { AppleBrandIcon } from "@/features/auth/components/AppleBrandIcon";
@@ -8,6 +8,10 @@ import { OAuthProviderButton } from "@/features/auth/components/OAuthProviderBut
 import { useOAuthSignIn } from "@/features/auth/hooks/useOAuthSignIn";
 import type { OAuthSignInScreen } from "@/features/auth/services/oauthSignIn";
 import type { OAuthProvider } from "@/features/auth/services/oauthErrors";
+import {
+  shouldShowAppleOAuthButton,
+  shouldShowGoogleOAuthButton,
+} from "@/features/auth/utils/oauthProviderVisibility";
 import { useAlert } from "@/hooks/useAlert";
 import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 
@@ -26,8 +30,8 @@ export function OAuthSignInSection({
     useOAuthSignIn(screen);
 
   const oauthEnabled = backend.isSupabaseConfigured && env.isSupabaseConfigured;
-  const showApple = Platform.OS === "ios";
-  const showGoogle = true;
+  const showApple = shouldShowAppleOAuthButton();
+  const showGoogle = shouldShowGoogleOAuthButton();
 
   if (!oauthEnabled || (!showApple && !showGoogle)) {
     return null;
