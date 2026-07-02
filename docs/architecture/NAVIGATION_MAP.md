@@ -75,10 +75,12 @@ Onboarding routes are separate from the main app and should not be treated like 
 
 Unauthenticated routes in `app/(auth)`:
 
-- `login` — sign in; links to `forgot-password`
-- `signup` — create account
+- `login` — sign in with email/password or OAuth (Apple on iOS, Google); links to `forgot-password`
+- `signup` — create account with email/password or OAuth (Apple on iOS, Google)
 - `forgot-password` — request reset email (neutral success copy)
 - `reset-password` — set new password after recovery deep link
+
+OAuth callback deep links (`theconservatory://auth/callback` or `https://theconservatory.garden/auth/callback`) are handled by `OAuthCallbackBridge` and the `/auth/callback` fallback route. Session exchange is deduplicated in `oauthCallbackCoordinator.ts`; profile hydration is deduplicated in `oauthProfileCoordinator.ts`. Successful OAuth sign-in routes authenticated users to `/(tabs)` (or onboarding rules apply for new accounts via existing `finalizeAuthenticatedUser` + onboarding sync).
 
 Password recovery deep links (`theconservatory://auth/reset-password` or `https://theconservatory.garden/auth/reset-password`) are handled by `PasswordRecoveryBridge` and route to `reset-password`. After a successful update, users return to `login`.
 

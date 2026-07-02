@@ -2,6 +2,15 @@ import { env } from "@/config/env";
 import { supabase } from "@/config/supabase";
 import { PASSWORD_RECOVERY_REDIRECT_URL } from "@/features/auth/constants/authRedirects";
 import type { PasswordRecoveryLinkPayload } from "@/features/auth/services/passwordRecoveryLink";
+import {
+  buildAppUserFromAuthUser,
+  fetchExistingRemoteProfile,
+} from "@/features/auth/services/ensureUserProfile";
+import { mapOAuthError, type OAuthProvider } from "@/features/auth/services/oauthErrors";
+import { runOAuthProfileHydrationOnce } from "@/features/auth/services/oauthProfileCoordinator";
+import { inferOAuthProviderFromSession } from "@/features/auth/services/oauthSession";
+import type { OAuthSignInScreen } from "@/features/auth/services/oauthSignIn";
+import { getUserPreferences } from "@/features/settings/api/settingsClient";
 import { syncOnboardingStatusToAccount } from "@/features/onboarding/services/onboardingStorage";
 import { clearFeatureRequestCache } from "@/features/product-feedback/services/featureRequestCacheService";
 import {
@@ -19,7 +28,7 @@ import { enqueueSyncOperation } from "@/services/database/sync";
 import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 import type { AuthResult } from "@/types/api";
 import type { AppUser } from "@/types/models";
-import { trackGtmEvent } from "@/services/analytics/analyticsService";
+import { trackGtmEvent, trackEvent } from "@/services/analytics/analyticsService";
 import { logger } from "@/utils/logger";
 
 interface LocalUserRow {
@@ -38,17 +47,7 @@ interface LocalCredentialRow {
   password_hash: string;
 }
 
-class AuthClientError extends Error {
-  code: string;
-  retryable: boolean;
-
-  constructor(code: string, message: string, retryable = false) {
-    super(message);
-    this.name = "AuthClientError";
-    this.code = code;
-    this.retryable = retryable;
-  }
-}
+import { AuthClientError } from "@/features/auth/errors/AuthClientError";
 
 let localUserWriteQueue: Promise<void> = Promise.resolve();
 const deferredLocalUserPersistRuns = new Map<string, Promise<void>>();
@@ -551,6 +550,98 @@ async function finalizeAuthenticatedUser(user: AppUser) {
   await syncOnboardingStatusToAccount(user.id);
   await writeSession(user);
   return user;
+}
+
+export async function ensureUserProfile(
+  provider: OAuthProvider,
+  screen: OAuthSignInScreen | "callback" = "login",
+) {
+  if (!env.isSupabaseConfigured || !supabase) {
+    throw createAuthError(
+      "auth_unavailable",
+      getBackendUnavailableMessage(
+        "Sign-in isn't available in this build right now.",
+      ),
+    );
+  }
+
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session?.user) {
+    throw mapOAuthError(
+      error,
+      provider,
+      "We couldn't complete sign in. Please try again.",
+    );
+  }
+
+  return runOAuthProfileHydrationOnce(data.session.user.id, async () => {
+    const authUser = data.session!.user;
+    const sessionEmail = normalizeOptionalEmail(authUser.email);
+    if (!sessionEmail) {
+      throw createAuthError(
+        "oauth_profile_failed",
+        "We couldn't finish setting up your account. Please try again.",
+        true,
+      );
+    }
+
+    const existingProfile = await fetchExistingRemoteProfile(authUser.id);
+    const user = buildAppUserFromAuthUser(
+      authUser,
+      existingProfile?.display_name,
+      existingProfile?.avatar_url,
+    );
+    const syncedProfile = await syncRemoteProfile(user);
+    await persistLocalUserForAuth(syncedProfile);
+    await getUserPreferences(syncedProfile.id);
+    await finalizeAuthenticatedUser(syncedProfile);
+    trackGtmEvent("user_logged_in", { provider });
+    trackEvent("oauth_profile_ensured", {
+      provider,
+      screen,
+      reason_code: "profile_ensured",
+    });
+    trackEvent("oauth_sign_in_succeeded", {
+      provider,
+      screen,
+      reason_code: "session_established",
+    });
+
+    return syncedProfile;
+  });
+}
+
+export async function completeOAuthSignIn(
+  provider: OAuthProvider,
+  screen: OAuthSignInScreen | "callback" = "login",
+) {
+  try {
+    return await ensureUserProfile(provider, screen);
+  } catch (error) {
+    const mapped =
+      error instanceof AuthClientError
+        ? error
+        : mapOAuthError(
+            error,
+            provider,
+            "We couldn't complete sign in. Please try again.",
+          );
+    throw mapped;
+  }
+}
+
+export async function completeOAuthSignInFromCallback() {
+  if (!supabase) {
+    throw createAuthError(
+      "auth_unavailable",
+      "Sign in isn't available in this build right now.",
+    );
+  }
+
+  const { data } = await supabase.auth.getSession();
+  const provider = inferOAuthProviderFromSession(data.session?.user);
+
+  return completeOAuthSignIn(provider, "callback");
 }
 
 export async function shouldResumePasswordRecovery() {
@@ -1065,4 +1156,4 @@ export async function deleteAccount(): Promise<void> {
   await clearSession();
 }
 
-export { AuthClientError };
+export { AuthClientError } from "@/features/auth/errors/AuthClientError";

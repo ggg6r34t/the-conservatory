@@ -49,6 +49,29 @@ module.exports = {
           ],
           category: ["BROWSABLE", "DEFAULT"],
         },
+        {
+          action: "VIEW",
+          autoVerify: true,
+          data: [
+            {
+              scheme: "https",
+              host: "theconservatory.garden",
+              pathPrefix: "/auth/callback",
+            },
+          ],
+          category: ["BROWSABLE", "DEFAULT"],
+        },
+        {
+          action: "VIEW",
+          data: [
+            {
+              scheme: "theconservatory",
+              host: "auth",
+              pathPrefix: "/callback",
+            },
+          ],
+          category: ["BROWSABLE", "DEFAULT"],
+        },
       ],
       permissions: [
         "android.permission.CAMERA",
@@ -109,6 +132,8 @@ module.exports = {
       ],
       "expo-sqlite",
       "expo-secure-store",
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin",
     ],
     experiments: {
       typedRoutes: true,
@@ -126,6 +151,7 @@ module.exports = {
       eas: {
         projectId: "4069a0f9-86de-4697-b1b0-3ad1083668e0",
       },
+      expoPublicGoogleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
     },
   },
 };

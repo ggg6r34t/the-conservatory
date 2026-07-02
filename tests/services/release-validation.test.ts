@@ -3,6 +3,13 @@ import {
   isReleaseConfigurationValid,
 } from "@/services/startup/releaseValidation";
 
+jest.mock("@/config/env", () => ({
+  env: {
+    isProductionBuild: false,
+    googleWebClientId: null,
+  },
+}));
+
 jest.mock("@/services/supabase/backendReadiness", () => ({
   getBackendConfigurationSummary: jest.fn(() => ({
     requiresReleaseConfig: false,
@@ -45,5 +52,29 @@ describe("releaseValidation", () => {
       ]),
     );
     expect(issues.length).toBeGreaterThan(0);
+  });
+
+  it("reports missing google oauth client id for production supabase builds", () => {
+    const env = jest.requireMock("@/config/env").env;
+    env.isProductionBuild = true;
+    env.googleWebClientId = null;
+
+    const { getBackendConfigurationSummary } = jest.requireMock(
+      "@/services/supabase/backendReadiness",
+    );
+    getBackendConfigurationSummary.mockReturnValueOnce({
+      requiresReleaseConfig: false,
+      isSupabaseConfigured: true,
+      description: "",
+    });
+
+    const issues = collectReleaseValidationIssues();
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "google_oauth_missing" }),
+      ]),
+    );
+
+    env.isProductionBuild = false;
   });
 });

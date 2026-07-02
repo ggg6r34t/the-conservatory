@@ -63,11 +63,11 @@ This file tracks the app's current route screens and route-adjacent files so pro
 ## Auth Screens
 
 7. `/(auth)/login`
-   Screen: Login
+   Screen: Login (email/password + Apple/Google OAuth)
    File: `app/(auth)/login.tsx`
 
 8. `/(auth)/signup`
-   Screen: Sign Up
+   Screen: Sign Up (email/password + Apple/Google OAuth)
    File: `app/(auth)/signup.tsx`
 
 9. `/(auth)/forgot-password`
@@ -77,6 +77,10 @@ This file tracks the app's current route screens and route-adjacent files so pro
 10. `/(auth)/reset-password`
     Screen: Reset Password (recovery link)
     File: `app/(auth)/reset-password.tsx`
+
+11. `/auth/callback`
+    Screen: OAuth Callback (session completion fallback)
+    File: `app/auth/callback.tsx`
 
 ## Onboarding Screens
 

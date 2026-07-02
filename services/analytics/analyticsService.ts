@@ -158,7 +158,13 @@ export function trackGtmEvent(
     | 'backup_auto_sync_disabled'
     | 'import_collection_started'
     | 'import_collection_completed'
-    | 'import_collection_failed',
+    | 'import_collection_failed'
+    | 'oauth_sign_in_started'
+    | 'oauth_sign_in_cancelled'
+    | 'oauth_sign_in_failed'
+    | 'oauth_sign_in_succeeded'
+    | 'oauth_callback_received'
+    | 'oauth_profile_ensured',
   properties?: Record<string, string | number | boolean | null>,
 ): void {
   trackEvent(name, properties);

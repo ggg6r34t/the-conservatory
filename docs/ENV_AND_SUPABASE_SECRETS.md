@@ -21,6 +21,7 @@ These stay in your local `.env` and/or **EAS secrets** for the mobile app:
 | `EXPO_PUBLIC_USE_MOCK_BILLING` | App `.env` / EAS |
 | `EXPO_PUBLIC_POSTHOG_*` | App `.env` / EAS |
 | `EXPO_PUBLIC_SENTRY_DSN` | App `.env` / EAS |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | App `.env` / EAS (Google native sign-in + Supabase token exchange) |
 
 The anon key is **public by design** in the client. **Never** put the **service role** key in the app.
 

@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
+import { OAuthSignInSection } from "@/features/auth/components/OAuthSignInSection";
 import { useSignup } from "@/features/auth/hooks/useSignup";
 import { signupSchema } from "@/features/auth/schemas/authValidation";
 import { SignupLegalAcknowledgment } from "@/features/legal/components/SignupLegalAcknowledgment";
@@ -140,6 +141,11 @@ export function SignupForm() {
         label="Create Account"
         onPress={handleSubmit}
         loading={signupMutation.isPending}
+        disabled={signupMutation.isPending || !backend.authActionsEnabled}
+        fullWidth
+      />
+      <OAuthSignInSection
+        screen="signup"
         disabled={signupMutation.isPending || !backend.authActionsEnabled}
       />
     </View>

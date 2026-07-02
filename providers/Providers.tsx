@@ -26,6 +26,8 @@ import { ThemeEntitlementSync } from "@/providers/ThemeEntitlementSync";
 import { ThemeHydrationGate } from "@/providers/ThemeHydrationGate";
 import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
 import { PasswordRecoveryBridge } from "@/features/auth/components/PasswordRecoveryBridge";
+import { OAuthCallbackBridge } from "@/features/auth/components/OAuthCallbackBridge";
+import { configureGoogleSignIn } from "@/features/auth/services/googleSignIn";
 import { CareCalendarNotificationBridge } from "@/features/care-calendar/components/CareCalendarNotificationBridge";
 import {
   getDatabaseBootstrapState,
@@ -51,6 +53,10 @@ export function Providers({ children }: PropsWithChildren) {
 
   useEffect(() => {
     initializeCrashReporting();
+  }, []);
+
+  useEffect(() => {
+    void configureGoogleSignIn().catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -103,6 +109,7 @@ export function Providers({ children }: PropsWithChildren) {
                               <SyncAutoFailureNotifier />
                               <CareCalendarNotificationBridge />
                               <PasswordRecoveryBridge />
+                              <OAuthCallbackBridge />
                               {children}
                             </ThemeEntitlementSync>
                           </BillingBootstrapProvider>

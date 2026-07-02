@@ -80,6 +80,7 @@ function RootNavigator({
   const isIndexRoute = pathname === "/" && !isTabRoute;
   const isOnboardingRoute = segments[0] === "onboarding";
   const isDebugRoute = segments[0] === "debug";
+  const isOAuthCallbackRoute = pathname === "/auth/callback";
   const expectedPublicEntry = resolveEntryRoute({
     authStatus,
     onboardingStatus,
@@ -110,7 +111,8 @@ function RootNavigator({
     !isAuthRoute &&
     !isIndexRoute &&
     !isOnboardingRoute &&
-    !isDebugRoute
+    !isDebugRoute &&
+    !isOAuthCallbackRoute
   ) {
     return <Redirect href={expectedPublicEntry} />;
   }
@@ -170,6 +172,7 @@ function RootNavigator({
         options={{ headerShown: false }}
       />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={drillInScreenOptions} />
       <Stack.Screen name="change-password" options={drillInScreenOptions} />
