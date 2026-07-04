@@ -10,7 +10,7 @@ export const termsOfServiceDocument: LegalDocumentConfig = {
   prefaceLabel: "SERVICE TERMS",
   prefaceTitle: "Agreement to these terms",
   prefaceBody:
-    "By creating an account, subscribing, or using The Conservatory, you agree to these Terms of Service, including the subscription and billing terms in Part II below. If you do not agree, do not use the app.",
+    "You may use The Conservatory locally without creating an account. By creating an account, subscribing, or using cloud-backed features, you agree to these Terms of Service, including the subscription and billing terms in Part II below. If you do not agree, do not use those features.",
   sections: [
     {
       eyebrow: "ELIGIBILITY",

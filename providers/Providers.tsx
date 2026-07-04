@@ -26,6 +26,7 @@ import { ThemeEntitlementSync } from "@/providers/ThemeEntitlementSync";
 import { ThemeHydrationGate } from "@/providers/ThemeHydrationGate";
 import { SyncBootstrapProvider } from "@/providers/SyncBootstrapProvider";
 import { PasswordRecoveryBridge } from "@/features/auth/components/PasswordRecoveryBridge";
+import { GuestMigrationBridge } from "@/features/auth/components/GuestMigrationBridge";
 import { OAuthCallbackBridge } from "@/features/auth/components/OAuthCallbackBridge";
 import { configureGoogleSignIn } from "@/features/auth/services/googleSignIn";
 import { CareCalendarNotificationBridge } from "@/features/care-calendar/components/CareCalendarNotificationBridge";
@@ -110,6 +111,7 @@ export function Providers({ children }: PropsWithChildren) {
                               <CareCalendarNotificationBridge />
                               <PasswordRecoveryBridge />
                               <OAuthCallbackBridge />
+                              <GuestMigrationBridge />
                               {children}
                             </ThemeEntitlementSync>
                           </BillingBootstrapProvider>

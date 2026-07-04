@@ -29,10 +29,15 @@ import {
 import { upsertReleasedFeatureFeedback } from "@/features/product-feedback/api/featureRequestsClient";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useGuestRouteGuard } from "@/features/auth/hooks/useGuestRouteGuard";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
 export default function FeatureRequestDetailScreen() {
   const router = useRouter();
+  useGuestRouteGuard({
+    feature: "feature_requests",
+    returnTo: "/feature-requests",
+  });
   const { id, notificationId } = useLocalSearchParams<{
     id: string;
     notificationId?: string;

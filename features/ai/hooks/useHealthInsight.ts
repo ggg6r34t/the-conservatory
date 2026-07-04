@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { resolveGuestCloudAllowed } from "@/features/auth/services/guestFeatureAccess";
 import { useUsageLimits } from "@/features/billing/hooks/useUsageLimits";
 import { canUseFeature } from "@/features/billing/services/entitlementService";
 import {
@@ -14,7 +15,7 @@ export function useHealthInsight(input: {
   data?: PlantWithRelations | null;
   isPremium: boolean;
 }) {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { data: usage } = useUsageLimits();
 
   const accessResult =
@@ -22,7 +23,10 @@ export function useHealthInsight(input: {
       ? canUseFeature("ai_health_insight", input.isPremium, usage, input.plantId)
       : null;
 
-  const cloudAllowed = input.isPremium || (accessResult?.canUse === true);
+  const cloudAllowed = resolveGuestCloudAllowed(
+    isGuest,
+    input.isPremium || accessResult?.canUse === true,
+  );
   const quotaExhausted =
     !input.isPremium &&
     accessResult?.canUse === false &&

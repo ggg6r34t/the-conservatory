@@ -1,3 +1,15 @@
+import {
+  continueAsGuest as bootstrapContinueAsGuest,
+  hasGuestLocalData,
+  readPendingGuestMigrationId,
+  restoreGuestSession,
+  writePendingGuestMigrationId,
+} from "@/features/auth/services/guestSessionService";
+import {
+  deferGuestMigration,
+  deleteGuestLocalData,
+  migrateGuestDataToUser,
+} from "@/features/auth/services/guestDataMigrationService";
 import { env } from "@/config/env";
 import { supabase } from "@/config/supabase";
 import { PASSWORD_RECOVERY_REDIRECT_URL } from "@/features/auth/constants/authRedirects";
@@ -28,7 +40,7 @@ import { enqueueSyncOperation } from "@/services/database/sync";
 import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 import type { AuthResult } from "@/types/api";
 import type { AppUser } from "@/types/models";
-import { trackGtmEvent, trackEvent } from "@/services/analytics/analyticsService";
+import { trackGtmEvent, trackEvent, initializeAnalytics } from "@/services/analytics/analyticsService";
 import { logger } from "@/utils/logger";
 
 interface LocalUserRow {
@@ -546,7 +558,25 @@ async function persistLocalUserForAuth(user: AppUser) {
   }
 }
 
+async function restoreGuestSessionIfPresent() {
+  const guestSession = await restoreGuestSession();
+  if (guestSession) {
+    return guestSession;
+  }
+
+  return null;
+}
+
 async function finalizeAuthenticatedUser(user: AppUser) {
+  const priorSession = await readSession();
+  if (
+    priorSession?.isGuest &&
+    priorSession.id &&
+    (await hasGuestLocalData(priorSession.id))
+  ) {
+    await writePendingGuestMigrationId(priorSession.id);
+  }
+
   await syncOnboardingStatusToAccount(user.id);
   await writeSession(user);
   return user;
@@ -680,6 +710,11 @@ export async function getInitialAuthUser() {
       }
 
       if (!data.session?.user) {
+        const guestSession = await restoreGuestSessionIfPresent();
+        if (guestSession) {
+          return guestSession;
+        }
+
         await clearSession();
         return null;
       }
@@ -707,11 +742,21 @@ export async function getInitialAuthUser() {
   }
 
   if (!isLocalAuthEnabled()) {
+    const guestSession = await restoreGuestSessionIfPresent();
+    if (guestSession) {
+      return guestSession;
+    }
+
     await clearSession();
     return null;
   }
 
-  return readSession();
+  const session = await readSession();
+  if (session?.isGuest) {
+    return session;
+  }
+
+  return session;
 }
 
 export async function login(
@@ -1097,6 +1142,28 @@ export async function updateProfileIdentity(
 
   return nextUser;
 }
+
+export async function continueAsGuest(): Promise<AppUser> {
+  const guestUser = await bootstrapContinueAsGuest();
+  initializeAnalytics(guestUser.id);
+  trackEvent("guest_mode_started");
+  return guestUser;
+}
+
+export async function captureGuestMigrationSource() {
+  const guestSession = await restoreGuestSession();
+  if (guestSession?.id) {
+    return guestSession.id;
+  }
+
+  return readPendingGuestMigrationId();
+}
+
+export {
+  deferGuestMigration,
+  deleteGuestLocalData,
+  migrateGuestDataToUser,
+};
 
 export async function logout() {
   if (env.isSupabaseConfigured && supabase) {

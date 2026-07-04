@@ -30,6 +30,7 @@ jest.mock("@/features/onboarding/services/onboardingStorage", () => ({
 }));
 
 jest.mock("@/services/auth/sessionManager", () => ({
+  readSession: jest.fn().mockResolvedValue(null),
   writeSession: jest.fn().mockResolvedValue(undefined),
 }));
 

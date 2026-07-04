@@ -17,10 +17,10 @@ export function resolveSafeAuthRedirectTarget(
 }
 
 export function resolveEntryRoute(input: {
-  authStatus: "authenticated" | "anonymous";
+  authStatus: "authenticated" | "guest" | "anonymous";
   onboardingStatus: OnboardingStatus;
 }) {
-  if (input.authStatus === "authenticated") {
+  if (input.authStatus === "authenticated" || input.authStatus === "guest") {
     return "/(tabs)" as const;
   }
 

@@ -53,6 +53,7 @@ export interface AppUser {
   role: "user" | "admin";
   createdAt: string;
   updatedAt: string;
+  isGuest?: boolean;
 }
 
 export interface UserPreferences {

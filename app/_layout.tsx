@@ -28,19 +28,25 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function RootLayout() {
-  const { isReady, isAuthenticated, authStatus, user } = useAuth();
+  const { isReady, isAuthenticated, authStatus, user, hasAppAccess } = useAuth();
   const onboarding = useOnboarding(user?.id);
 
   if (!isReady || !onboarding.isReady) {
     return null;
   }
 
+  const resolvedAuthStatus =
+    authStatus === "authenticated"
+      ? "authenticated"
+      : authStatus === "guest"
+        ? "guest"
+        : "anonymous";
+
   return (
     <Providers>
       <RootNavigator
-        authStatus={
-          authStatus === "authenticated" ? "authenticated" : "anonymous"
-        }
+        authStatus={resolvedAuthStatus}
+        hasAppAccess={authStatus === "authenticated" || authStatus === "guest"}
         isAuthenticated={isAuthenticated}
         onboardingStatus={onboarding.status}
       />
@@ -51,10 +57,12 @@ function RootLayout() {
 
 function RootNavigator({
   authStatus,
+  hasAppAccess,
   isAuthenticated,
   onboardingStatus,
 }: {
-  authStatus: "authenticated" | "anonymous";
+  authStatus: "authenticated" | "guest" | "anonymous";
+  hasAppAccess: boolean;
   isAuthenticated: boolean;
   onboardingStatus: "pending" | "completed";
 }) {
@@ -108,7 +116,7 @@ function RootNavigator({
   }
 
   if (
-    !isAuthenticated &&
+    !hasAppAccess &&
     !isAuthRoute &&
     !isIndexRoute &&
     !isOnboardingRoute &&
@@ -124,18 +132,18 @@ function RootNavigator({
   }
 
   if (
-    !isAuthenticated &&
+    !hasAppAccess &&
     isOnboardingRoute &&
     onboardingStatus === "completed"
   ) {
     return <Redirect href="/(auth)/login" />;
   }
 
-  if (isAuthenticated && isOnboardingRoute) {
+  if (hasAppAccess && isOnboardingRoute) {
     return <Redirect href="/(tabs)" />;
   }
 
-  if (isAuthenticated && isAuthRoute && !isResetPasswordRoute) {
+  if (hasAppAccess && isAuthRoute && !isResetPasswordRoute) {
     return <Redirect href={safeRedirectTo} />;
   }
 

@@ -29,10 +29,15 @@ import type { FeatureRequestCategory } from "@/features/product-feedback/constan
 import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useGuestRouteGuard } from "@/features/auth/hooks/useGuestRouteGuard";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
 export default function NewFeatureRequestScreen() {
   const router = useRouter();
+  useGuestRouteGuard({
+    feature: "feature_requests",
+    returnTo: "/feature-requests/new",
+  });
   const { colors } = useTheme();
   const snackbar = useSnackbar();
   const { user } = useAuth();

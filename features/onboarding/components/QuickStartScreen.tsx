@@ -20,6 +20,7 @@ import {
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { SecondaryButton } from "@/components/common/Buttons/SecondaryButton";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
@@ -65,6 +66,7 @@ export default function QuickStartScreen({
   const { colors, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const alert = useAlert();
+  const { continueAsGuest } = useAuth();
   const lightOptions = [
     {
       key: "low" as const,
@@ -233,10 +235,8 @@ export default function QuickStartScreen({
         return;
       }
 
-      router.push({
-        pathname: "/(auth)/signup",
-        params: { redirectTo: "/plant/add" },
-      });
+      await continueAsGuest();
+      router.replace("/plant/add");
     } catch (error) {
       void alert.show({
         variant: "error",
@@ -261,7 +261,13 @@ export default function QuickStartScreen({
       await completeOnboarding();
       await markOnboardingCompletedAt();
       trackEvent("onboarding_quick_start_skipped");
-      router.push(debugPreview ? "/debug/onboarding" : "/(auth)/signup");
+      if (debugPreview) {
+        router.push("/debug/onboarding");
+        return;
+      }
+
+      await continueAsGuest();
+      router.replace("/(tabs)");
     } catch (error) {
       void alert.show({
         variant: "error",

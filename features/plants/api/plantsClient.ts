@@ -1,4 +1,5 @@
 import { optimizeReminderTiming } from "@/features/ai/services/reminderOptimizationService";
+import { isGuestUserId } from "@/features/auth/constants/guestUser";
 import {
   FREE_PLANT_LIMIT,
   FREE_PROGRESS_PHOTOS_PER_PLANT,
@@ -35,6 +36,7 @@ import {
 } from "@/features/plants/services/plantLibraryFilterService";
 import { createId } from "@/utils/id";
 import {
+  trackEvent,
   trackGtmEvent,
   trackMonetizationEvent,
 } from "@/services/analytics/analyticsService";
@@ -918,6 +920,10 @@ export async function createPlant(input: {
 
   if (activePlantCount === 0) {
     trackGtmEvent("activation_first_plant_created");
+  }
+
+  if (isGuestUserId(input.userId)) {
+    trackEvent("guest_plant_created");
   }
 
   return created!;

@@ -13,8 +13,16 @@ export const privacyPolicyDocument: LegalDocumentConfig = {
   prefaceLabel: "PRIVACY POLICY",
   prefaceTitle: "Your botanical archive, your control",
   prefaceBody:
-    "The Conservatory is a local-first plant care app. Most collection data lives on your device first. When you sign in and enable cloud features, selected data may sync to our backend so you can restore it across sessions or devices.",
+    "The Conservatory is a local-first plant care app. You may use core collection features without creating an account; data stays on your device until you sign up and enable cloud backup. When you sign in and enable cloud features, selected data may sync to our backend so you can restore it across sessions or devices.",
   sections: [
+    {
+      eyebrow: "LOCAL USE",
+      title: "Using the app without an account",
+      paragraphs: [
+        "You can add plants, care logs, photos, and reminders on this device without signing in. That local data remains on your device and is not backed up to our servers until you create an account and enable cloud sync.",
+        "Deleting the app or clearing local data may permanently remove local-only collections that were never synced.",
+      ],
+    },
     {
       eyebrow: "DATA WE COLLECT",
       title: "Information you provide",

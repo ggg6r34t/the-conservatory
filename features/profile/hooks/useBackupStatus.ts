@@ -19,7 +19,7 @@ import { useNetworkState } from "@/hooks/useNetworkState";
 import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
 
 export function useBackupStatus() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const queryClient = useQueryClient();
   const network = useNetworkState();
   const backendConfiguration = getBackendConfigurationSummary();
@@ -142,8 +142,11 @@ export function useBackupStatus() {
     hasPending,
     syncHealth,
     canSync:
-      Boolean(user?.id) && remoteAvailability.canSync && !isSyncRunning,
-    canToggleAutoSync: Boolean(user?.id),
+      !isGuest &&
+      Boolean(user?.id) &&
+      remoteAvailability.canSync &&
+      !isSyncRunning,
+    canToggleAutoSync: !isGuest && Boolean(user?.id),
     cloudSyncTitle: "Auto-sync Conservatory",
     cloudSyncDescription: isPremium
       ? "Automatically back up plants, care history, reminders, and progress photos to cloud storage."

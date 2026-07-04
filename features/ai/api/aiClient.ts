@@ -1,3 +1,5 @@
+import { getActiveDataOwnerUserId } from "@/services/database/syncDataOwner";
+import { isGuestUserId } from "@/features/auth/constants/guestUser";
 import { env } from "@/config/env";
 import { supabase } from "@/config/supabase";
 import type {
@@ -86,6 +88,11 @@ async function invokeFunction<TRequest, TResponse>(
   payload: TRequest,
 ): Promise<TResponse | null> {
   if (!env.isSupabaseConfigured || !supabase) {
+    return null;
+  }
+
+  if (isGuestUserId(getActiveDataOwnerUserId())) {
+    logEdgeFunctionDenial(name, "auth_required");
     return null;
   }
 

@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
+import { ContinueWithoutAccountSection } from "@/features/auth/components/ContinueWithoutAccountSection";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding";
 import {
@@ -162,6 +163,7 @@ export function WelcomeGateway({
                   I already have an account
                 </Text>
               </Pressable>
+              <ContinueWithoutAccountSection disabled={isSubmitting} />
             </View>
           </View>
         </View>

@@ -19,6 +19,9 @@ import { Icon } from "@/components/common/Icon/Icon";
 import { AppHeader } from "@/components/common/TopBar/AppHeader";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useAccountRequiredPrompt } from "@/features/auth/hooks/useAccountRequiredPrompt";
+import { isGuestUser } from "@/features/auth/constants/guestUser";
+import { deleteGuestLocalData } from "@/features/auth/api/authClient";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { getMembershipName } from "@/features/billing/membershipNames";
 import { useGraveyard } from "@/features/plants/hooks/useGraveyard";
@@ -115,7 +118,8 @@ function ProfileRow({
 
 export default function ProfileScreen() {
   const { colors, spacing } = useTheme();
-  const { user, signOut, isSigningOut } = useAuth();
+  const { user, signOut, isSigningOut, isGuest } = useAuth();
+  const { promptIfGuestRestricted } = useAccountRequiredPrompt();
   const alert = useAlert();
   const router = useRouter();
   const [showDeveloperMenu, setShowDeveloperMenu] = useState(false);
@@ -148,7 +152,9 @@ export default function ProfileScreen() {
   );
 
   const displayName = getProfileDisplayName(user?.displayName);
-  const email = getProfileDisplayEmail(user?.email);
+  const email = isGuest
+    ? "Stored only on this device"
+    : getProfileDisplayEmail(user?.email);
   const appVersion =
     Constants.expoConfig?.version ??
     Constants.manifest2?.extra?.expoClient?.version;
@@ -231,24 +237,58 @@ export default function ProfileScreen() {
           <Text style={[styles.profileEmail, { color: colors.onSurface }]}>
             {email}
           </Text>
-
-          <Pressable
-            accessibilityRole="button"
-            style={styles.editProfilePressable}
-            onPress={() => router.push("/profile-edit")}
-          >
-            <Text
-              style={[styles.editProfileLabel, { color: colors.secondary }]}
-            >
-              EDIT PROFILE
-            </Text>
+          {isGuest ? (
             <View
               style={[
-                styles.editProfileUnderline,
-                { backgroundColor: colors.secondaryContainer },
+                styles.localModeBadge,
+                { backgroundColor: colors.surfaceContainerHigh },
               ]}
-            />
-          </Pressable>
+            >
+              <Text
+                style={[styles.localModeBadgeText, { color: colors.secondary }]}
+              >
+                LOCAL MODE
+              </Text>
+            </View>
+          ) : null}
+
+          {isGuest ? (
+            <Pressable
+              accessibilityRole="button"
+              style={styles.editProfilePressable}
+              onPress={() => router.push("/(auth)/signup")}
+            >
+              <Text
+                style={[styles.editProfileLabel, { color: colors.primary }]}
+              >
+                CREATE ACCOUNT
+              </Text>
+              <View
+                style={[
+                  styles.editProfileUnderline,
+                  { backgroundColor: colors.primaryContainer },
+                ]}
+              />
+            </Pressable>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              style={styles.editProfilePressable}
+              onPress={() => router.push("/profile-edit")}
+            >
+              <Text
+                style={[styles.editProfileLabel, { color: colors.secondary }]}
+              >
+                EDIT PROFILE
+              </Text>
+              <View
+                style={[
+                  styles.editProfileUnderline,
+                  { backgroundColor: colors.secondaryContainer },
+                ]}
+              />
+            </Pressable>
+          )}
         </View>
 
         <View
@@ -303,6 +343,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {!isGuest ? (
         <View style={styles.section}>
           <Text
             style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
@@ -381,6 +422,48 @@ export default function ProfileScreen() {
             />
           </LinearGradient>
         </View>
+        ) : (
+          <View style={styles.section}>
+            <Text
+              style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
+            >
+              YOUR CONSERVATORY
+            </Text>
+            <View
+              style={[
+                styles.groupCard,
+                { backgroundColor: colors.surfaceContainerLowest },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.guestInfoCopy,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
+                Your plants live on this device. Create an account to back up
+                and sync your conservatory.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push("/(auth)/signup")}
+                style={[
+                  styles.subscriptionButton,
+                  { backgroundColor: colors.primaryContainer },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.subscriptionButtonLabel,
+                    { color: colors.onPrimaryContainer },
+                  ]}
+                >
+                  Create account
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text
@@ -457,13 +540,25 @@ export default function ProfileScreen() {
             <ProfileRow
               icon="lightbulb-on-outline"
               label="Request a Feature"
-              onPress={() => router.push("/feature-requests" as Href)}
+              onPress={() => {
+                if (isGuest) {
+                  void promptIfGuestRestricted({
+                    feature: "feature_requests",
+                    returnTo: "/feature-requests",
+                  });
+                  return;
+                }
+
+                router.push("/feature-requests" as Href);
+              }}
             />
-            <ProfileRow
-              icon="star-circle-outline"
-              label="Manage Subscription"
-              onPress={() => router.push("/subscription-plans")}
-            />
+            {!isGuest ? (
+              <ProfileRow
+                icon="star-circle-outline"
+                label="Manage Subscription"
+                onPress={() => router.push("/subscription-plans")}
+              />
+            ) : null}
             <ProfileRow
               icon="shield-account-outline"
               label="Privacy & Security"
@@ -474,11 +569,13 @@ export default function ProfileScreen() {
               label="Data & Backup"
               onPress={() => router.push("/data-backup")}
             />
-            <ProfileRow
-              icon="lock-reset"
-              label="Change Password"
-              onPress={() => router.push("/change-password")}
-            />
+            {!isGuest ? (
+              <ProfileRow
+                icon="lock-reset"
+                label="Change Password"
+                onPress={() => router.push("/change-password")}
+              />
+            ) : null}
           </View>
         </View>
 
@@ -525,12 +622,13 @@ export default function ProfileScreen() {
             void (async () => {
               const confirmed = await alert.confirm({
                 variant: "confirm",
-                title: "Sign out?",
-                message:
-                  "You'll need to sign in again to access your collection on this device.",
-                confirmLabel: "Sign out",
-                cancelLabel: "Stay signed in",
-                analyticsKey: "profile_sign_out",
+                title: isGuest ? "Leave local mode?" : "Sign out?",
+                message: isGuest
+                  ? "You'll return to the welcome screen. Your local plants stay on this device until you clear them."
+                  : "You'll need to sign in again to access your collection on this device.",
+                confirmLabel: isGuest ? "Leave local mode" : "Sign out",
+                cancelLabel: isGuest ? "Stay here" : "Stay signed in",
+                analyticsKey: isGuest ? "profile_leave_guest_mode" : "profile_sign_out",
                 sourceScreen: "profile",
               });
               if (confirmed) {
@@ -542,9 +640,45 @@ export default function ProfileScreen() {
         >
           <Icon name="logout" size={22} color={colors.secondary} />
           <Text style={[styles.signOutLabel, { color: colors.secondary }]}>
-            {isSigningOut ? "SIGNING OUT" : "SIGN OUT"}
+            {isSigningOut
+              ? "SIGNING OUT"
+              : isGuest
+                ? "LEAVE LOCAL MODE"
+                : "SIGN OUT"}
           </Text>
         </Pressable>
+
+        {isGuest ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              void (async () => {
+                const confirmed = await alert.confirm({
+                  variant: "destructive",
+                  title: "Clear local data?",
+                  message:
+                    "All local plants, photos, and care logs will be removed from this device. This cannot be undone.",
+                  confirmLabel: "Clear local data",
+                  cancelLabel: "Keep my plants",
+                  analyticsKey: "profile_clear_local_data",
+                  sourceScreen: "profile",
+                });
+
+                if (confirmed && user?.id && isGuestUser(user)) {
+                  await deleteGuestLocalData(user.id);
+                  await signOut();
+                  router.replace("/");
+                }
+              })();
+            }}
+            style={styles.signOutRow}
+          >
+            <Icon name="delete-outline" size={22} color={colors.error} />
+            <Text style={[styles.signOutLabel, { color: colors.error }]}>
+              CLEAR LOCAL DATA
+            </Text>
+          </Pressable>
+        ) : null}
 
         {__DEV__ && showDeveloperMenu ? (
           <View style={styles.section}>
@@ -894,5 +1028,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+  },
+  localModeBadge: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  localModeBadgeText: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 11,
+    letterSpacing: 1.4,
+  },
+  guestInfoCopy: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 15,
+    lineHeight: 22,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
 });

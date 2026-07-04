@@ -13,8 +13,15 @@ export default function IndexRoute() {
     return null;
   }
 
+  const resolvedAuthStatus =
+    authStatus === "authenticated"
+      ? "authenticated"
+      : authStatus === "guest"
+        ? "guest"
+        : "anonymous";
+
   const entryRoute = resolveEntryRoute({
-    authStatus: authStatus === "authenticated" ? "authenticated" : "anonymous",
+    authStatus: resolvedAuthStatus,
     onboardingStatus: onboarding.status,
   });
 

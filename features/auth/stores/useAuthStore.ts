@@ -1,10 +1,12 @@
 import { create } from "zustand";
 
 import type { AppUser } from "@/types/models";
+import { setActiveDataOwnerUserId } from "@/services/database/syncDataOwner";
 
 export type AuthStatus =
   | "loading"
   | "authenticated"
+  | "guest"
   | "anonymous"
   | "signing_out";
 
@@ -15,7 +17,9 @@ interface AuthState {
   beginRestore: () => number | null;
   beginSignOut: () => number;
   setUser: (user: AppUser) => void;
+  setGuestUser: (user: AppUser) => void;
   resolveUser: (user: AppUser, transitionId: number) => void;
+  resolveGuestUser: (user: AppUser, transitionId: number) => void;
   clearUser: (transitionId?: number) => void;
 }
 
@@ -44,24 +48,45 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
     return nextId;
   },
-  setUser: (user) =>
+  setUser: (user) => {
+    setActiveDataOwnerUserId(user.id);
     set((state) => ({
       user,
       status: "authenticated",
       transitionId: state.transitionId + 1,
-    })),
-  resolveUser: (user, transitionId) =>
+    }));
+  },
+  setGuestUser: (user) => {
+    setActiveDataOwnerUserId(user.id);
+    set((state) => ({
+      user,
+      status: "guest",
+      transitionId: state.transitionId + 1,
+    }));
+  },
+  resolveUser: (user, transitionId) => {
+    setActiveDataOwnerUserId(user.id);
     set((state) =>
       state.transitionId === transitionId
         ? { user, status: "authenticated" }
         : state,
-    ),
+    );
+  },
+  resolveGuestUser: (user, transitionId) => {
+    setActiveDataOwnerUserId(user.id);
+    set((state) =>
+      state.transitionId === transitionId
+        ? { user, status: "guest" }
+        : state,
+    );
+  },
   clearUser: (transitionId) =>
     set((state) => {
       if (transitionId != null && state.transitionId !== transitionId) {
         return state;
       }
 
+      setActiveDataOwnerUserId(null);
       return { user: null, status: "anonymous" };
     }),
 }));

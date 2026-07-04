@@ -1,3 +1,4 @@
+import { isGuestUserId } from "@/features/auth/constants/guestUser";
 import { getDatabase } from "@/services/database/sqlite";
 import {
   runAtomicMutationWithSyncOutbox,
@@ -12,7 +13,7 @@ function defaultPreferences(userId: string): UserPreferences {
   return {
     userId,
     remindersEnabled: true,
-    autoSyncEnabled: true,
+    autoSyncEnabled: !isGuestUserId(userId),
     preferredTheme: "linen-light",
     timezone: "UTC",
     defaultWateringHour: 9,

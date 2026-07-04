@@ -4,18 +4,22 @@ import { StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
+import { ContinueWithoutAccountSection } from "@/features/auth/components/ContinueWithoutAccountSection";
 import { OAuthSignInSection } from "@/features/auth/components/OAuthSignInSection";
 import { PasswordRequirementsFeedback } from "@/features/auth/components/PasswordRequirementsFeedback";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSignup } from "@/features/auth/hooks/useSignup";
 import { signupSchema } from "@/features/auth/schemas/authValidation";
 import { evaluateSignupPassword } from "@/features/auth/services/evaluateSignupPassword";
 import { SignupLegalAcknowledgment } from "@/features/legal/components/SignupLegalAcknowledgment";
 import { useAlert } from "@/hooks/useAlert";
 import { getBackendConfigurationSummary } from "@/services/supabase/backendReadiness";
+import { trackEvent } from "@/services/analytics/analyticsService";
 
 export function SignupForm() {
   const { colors } = useTheme();
   const alert = useAlert();
+  const { isGuest } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -76,6 +80,10 @@ export function SignupForm() {
     setErrors({});
     setSubmitError("");
 
+    if (isGuest) {
+      trackEvent("guest_signup_started");
+    }
+
     try {
       const result = await signupMutation.mutateAsync(parsed.data);
 
@@ -88,6 +96,10 @@ export function SignupForm() {
           primaryAction: { label: "Close" },
         });
         return;
+      }
+
+      if (isGuest) {
+        trackEvent("guest_signup_completed");
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Try again.";
@@ -172,6 +184,9 @@ export function SignupForm() {
       <OAuthSignInSection
         screen="signup"
         disabled={signupMutation.isPending || !backend.authActionsEnabled}
+      />
+      <ContinueWithoutAccountSection
+        disabled={signupMutation.isPending}
       />
     </View>
   );

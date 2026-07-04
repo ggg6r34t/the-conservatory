@@ -23,6 +23,7 @@ import {
 } from "@/features/product-feedback/hooks/useBetaProgramConsent";
 import { trackProductFeedbackEvent } from "@/features/product-feedback/services/featureRequestAnalyticsService";
 import { ProfileScreenScaffold } from "@/features/profile/components/ProfileScreenScaffold";
+import { useGuestRouteGuard } from "@/features/auth/hooks/useGuestRouteGuard";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
 function flattenSection(query: ReturnType<typeof useFeatureRequests>) {
@@ -32,6 +33,10 @@ function flattenSection(query: ReturnType<typeof useFeatureRequests>) {
 export default function FeatureRequestsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  useGuestRouteGuard({
+    feature: "feature_requests",
+    returnTo: "/feature-requests",
+  });
   const snackbar = useSnackbar();
   const voteMutation = useVoteFeatureRequestMutation();
   const betaConsentQuery = useBetaProgramConsent();

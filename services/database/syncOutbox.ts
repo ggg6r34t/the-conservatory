@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
 import type { SyncOperation } from "@/services/database/sync";
+import { shouldSkipSyncOutboxForActiveUser } from "@/services/database/syncDataOwner";
 import { notifySyncQueueChanged } from "@/services/database/syncSignals";
 import { createId } from "@/utils/id";
 
@@ -121,12 +122,15 @@ export async function runAtomicMutationWithSyncOutbox<T>(
 
   await database.withTransactionAsync(async () => {
     const execution = await input.perform(nowIso);
+    const skipSyncOutbox = shouldSkipSyncOutboxForActiveUser();
 
-    for (const operation of execution.operations) {
-      await insertSyncOutboxOperationInTransaction(database, {
-        operation,
-        nowIso,
-      });
+    if (!skipSyncOutbox) {
+      for (const operation of execution.operations) {
+        await insertSyncOutboxOperationInTransaction(database, {
+          operation,
+          nowIso,
+        });
+      }
     }
 
     result = execution.result;
@@ -136,7 +140,9 @@ export async function runAtomicMutationWithSyncOutbox<T>(
     throw new Error("Atomic sync mutation completed without a result.");
   }
 
-  notifySyncQueueChanged();
+  if (!shouldSkipSyncOutboxForActiveUser()) {
+    notifySyncQueueChanged();
+  }
   return result;
 }
 

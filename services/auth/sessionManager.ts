@@ -21,6 +21,7 @@ function isAppUser(value: unknown): value is AppUser {
   }
 
   const user = value as Partial<AppUser>;
+  const isGuest = user.isGuest === true;
   return (
     typeof user.id === "string" &&
     user.id.length > 0 &&
@@ -31,7 +32,8 @@ function isAppUser(value: unknown): value is AppUser {
     (user.avatarUrl == null || typeof user.avatarUrl === "string") &&
     (user.role === "user" || user.role === "admin") &&
     isValidDateString(user.createdAt) &&
-    isValidDateString(user.updatedAt)
+    isValidDateString(user.updatedAt) &&
+    (isGuest ? user.isGuest === true : user.isGuest == null || user.isGuest === false)
   );
 }
 

@@ -14,6 +14,8 @@ import {
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useAccountRequiredPrompt } from "@/features/auth/hooks/useAccountRequiredPrompt";
 import { getMembershipName } from "@/features/billing/membershipNames";
 import { resolvePremiumOfferingPackages } from "@/features/billing/services/offeringPackageResolution";
 import { LegalFooterLinks } from "@/features/legal/components/LegalFooterLinks";
@@ -87,6 +89,8 @@ const PREMIUM_FEATURES = [
 export default function PremiumScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { isGuest } = useAuth();
+  const { promptIfGuestRestricted } = useAccountRequiredPrompt();
   const {
     isPremium,
     tier,
@@ -271,7 +275,18 @@ export default function PremiumScreen() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push("/subscription-plans")}
+            onPress={() => {
+              if (isGuest) {
+                void promptIfGuestRestricted({
+                  feature: "premium_purchase",
+                  returnTo: "/subscription-plans",
+                  reason: "premium_requires_account",
+                });
+                return;
+              }
+
+              router.push("/subscription-plans");
+            }}
             style={styles.freeUpgradeRow}
           >
             <Text style={[styles.freeUpgradeText, { color: colors.primary }]}>
@@ -406,7 +421,18 @@ export default function PremiumScreen() {
         <LegalFooterLinks
           showRestore={!isPremium}
           isRestoring={isRestoring}
-          onRestore={() => void restore()}
+          onRestore={() => {
+            if (isGuest) {
+              void promptIfGuestRestricted({
+                feature: "premium_restore",
+                returnTo: "/premium",
+                reason: "premium_requires_account",
+              });
+              return;
+            }
+
+            void restore();
+          }}
         />
         <View style={styles.membershipQuote}>
           <Icon

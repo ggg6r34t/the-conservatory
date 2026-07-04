@@ -7,6 +7,8 @@ import { listArchiveCurationOverrides } from "@/features/ai/services/archiveCura
 import type { ArchiveCuratedPair } from "@/features/ai/types/ai";
 import type { GraveyardPlantListItem } from "@/features/plants/api/plantsClient";
 import { cloudAllowedForFeature } from "@/features/billing/services/featureAccess";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { resolveGuestCloudAllowed } from "@/features/auth/services/guestFeatureAccess";
 import { getPlantById } from "@/features/plants/api/plantsClient";
 import { resolvePhotoDisplayUri } from "@/features/plants/services/plantPhotoResolver";
 
@@ -15,6 +17,7 @@ export function useArchiveCuration(input: {
   memorials: GraveyardPlantListItem[];
   isPremium: boolean;
 }) {
+  const { isGuest } = useAuth();
   const plantQueries = useQueries({
     queries: input.memorials.map((memorial) => ({
       queryKey: queryKeys.plant(memorial.plantId),
@@ -50,9 +53,9 @@ export function useArchiveCuration(input: {
     )
     .join("|");
 
-  const cloudAllowed = cloudAllowedForFeature(
-    "ai_archive_curation",
-    input.isPremium,
+  const cloudAllowed = resolveGuestCloudAllowed(
+    isGuest,
+    cloudAllowedForFeature("ai_archive_curation", input.isPremium),
   );
 
   const curationQuery = useQuery({

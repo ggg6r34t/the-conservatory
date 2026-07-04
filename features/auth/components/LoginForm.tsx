@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { TextInputField } from "@/components/common/Forms/TextInput";
 import { useTheme } from "@/components/design-system/useTheme";
+import { ContinueWithoutAccountSection } from "@/features/auth/components/ContinueWithoutAccountSection";
 import { OAuthSignInSection } from "@/features/auth/components/OAuthSignInSection";
 import { useLogin } from "@/features/auth/hooks/useLogin";
 import { loginSchema } from "@/features/auth/schemas/authValidation";
@@ -125,6 +126,9 @@ export function LoginForm() {
       <OAuthSignInSection
         screen="login"
         disabled={loginMutation.isPending || !backend.authActionsEnabled}
+      />
+      <ContinueWithoutAccountSection
+        disabled={loginMutation.isPending}
       />
     </View>
   );

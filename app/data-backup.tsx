@@ -5,6 +5,8 @@ import { StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/common/Buttons/PrimaryButton";
 import { Icon } from "@/components/common/Icon/Icon";
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useAccountRequiredPrompt } from "@/features/auth/hooks/useAccountRequiredPrompt";
 import { CloudSyncControlCard } from "@/features/profile/components/CloudSyncControlCard";
 import { DataBackupExportCard } from "@/features/profile/components/DataBackupExportCard";
 import { DataBackupHeroCard } from "@/features/profile/components/DataBackupHeroCard";
@@ -23,6 +25,8 @@ export default function DataBackupScreen() {
   const router = useRouter();
   const alert = useAlert();
   const snackbar = useSnackbar();
+  const { isGuest } = useAuth();
+  const { promptIfGuestRestricted } = useAccountRequiredPrompt();
   const {
     overviewState,
     overviewSupportingLabel,
@@ -43,6 +47,49 @@ export default function DataBackupScreen() {
   useEffect(() => {
     trackGtmEvent("backup_screen_viewed");
   }, []);
+
+  if (isGuest) {
+    return (
+      <ProfileScreenScaffold
+        title="Data & Backup"
+        subtitle="Archive care"
+        description="Your conservatory is stored only on this device until you create an account."
+      >
+        <View style={styles.content}>
+          <View
+            style={[
+              styles.guestLocalCard,
+              { backgroundColor: colors.surfaceContainerLow },
+            ]}
+          >
+            <Icon name="cloud-off-outline" size={28} color={colors.secondary} />
+            <Text style={[styles.guestLocalTitle, { color: colors.primary }]}>
+              Stored only on this device
+            </Text>
+            <Text
+              style={[styles.guestLocalBody, { color: colors.onSurfaceVariant }]}
+            >
+              Cloud backup and sync require an account so your conservatory can
+              be protected and restored across devices.
+            </Text>
+            <PrimaryButton
+              label="Create account to back up"
+              onPress={() => {
+                void promptIfGuestRestricted({
+                  feature: "cloud_backup",
+                  returnTo: "/data-backup",
+                });
+              }}
+              fullWidth
+            />
+          </View>
+          <DataBackupExportCard
+            onPress={() => router.push("/export-collection-data")}
+          />
+        </View>
+      </ProfileScreenScaffold>
+    );
+  }
 
   const handleSync = () => {
     trackGtmEvent("backup_sync_started");
@@ -231,5 +278,21 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_500Medium",
     fontSize: 12,
     lineHeight: 18,
+  },
+  guestLocalCard: {
+    borderRadius: 24,
+    padding: 24,
+    gap: 12,
+    alignItems: "flex-start",
+  },
+  guestLocalTitle: {
+    fontFamily: "NotoSerif_700Bold",
+    fontSize: 20,
+    lineHeight: 28,
+  },
+  guestLocalBody: {
+    fontFamily: "Manrope_500Medium",
+    fontSize: 14,
+    lineHeight: 22,
   },
 });

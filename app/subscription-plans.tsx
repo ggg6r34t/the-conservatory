@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Platform,
@@ -10,6 +11,8 @@ import {
 } from "react-native";
 
 import { useTheme } from "@/components/design-system/useTheme";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useAccountRequiredPrompt } from "@/features/auth/hooks/useAccountRequiredPrompt";
 import { LegalFooterLinks } from "@/features/legal/components/LegalFooterLinks";
 import { useSubscription } from "@/features/billing/hooks/useSubscription";
 import { getMembershipNameForPackageType } from "@/features/billing/membershipNames";
@@ -24,7 +27,10 @@ import { trackMonetizationEvent } from "@/services/analytics/analyticsService";
 
 export default function SubscriptionPlansScreen() {
   const { colors } = useTheme();
+  const router = useRouter();
   const alert = useAlert();
+  const { isGuest } = useAuth();
+  const { promptIfGuestRestricted } = useAccountRequiredPrompt();
   const {
     isPremium,
     isLoading,
@@ -48,6 +54,22 @@ export default function SubscriptionPlansScreen() {
   }, [refreshOfferings]);
 
   useEffect(() => {
+    if (!isGuest) {
+      return;
+    }
+
+    void promptIfGuestRestricted({
+      feature: "premium_purchase",
+      returnTo: "/subscription-plans",
+      reason: "premium_requires_account",
+    }).then((allowed) => {
+      if (!allowed) {
+        router.back();
+      }
+    });
+  }, [isGuest, promptIfGuestRestricted, router]);
+
+  useEffect(() => {
     if (!isLoading && !isPremium && offerings !== null) {
       const resolved = resolvePremiumOfferingPackages(offerings.packages ?? [], {
         annual: offerings.annual ?? null,
@@ -62,6 +84,15 @@ export default function SubscriptionPlansScreen() {
 
   async function handlePurchase() {
     if (!selectedPackage || purchasing) return;
+
+    if (isGuest) {
+      void promptIfGuestRestricted({
+        feature: "premium_purchase",
+        returnTo: "/subscription-plans",
+        reason: "premium_requires_account",
+      });
+      return;
+    }
 
     const planName =
       getMembershipNameForPackageType(selectedPackage.packageType) ??
@@ -122,6 +153,15 @@ export default function SubscriptionPlansScreen() {
   }
 
   async function handleRestore() {
+    if (isGuest) {
+      void promptIfGuestRestricted({
+        feature: "premium_restore",
+        returnTo: "/subscription-plans",
+        reason: "premium_requires_account",
+      });
+      return;
+    }
+
     trackMonetizationEvent("restore_started");
     const result = await restore();
     if (result.success) {

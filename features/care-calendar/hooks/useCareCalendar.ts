@@ -17,12 +17,13 @@ import { useReminders } from "@/features/notifications/hooks/useReminders";
 import { useAllActivePlants } from "@/features/plants/hooks/usePlants";
 import { listCareScheduleSuggestions } from "@/features/care-calendar/api/careScheduleSuggestionsClient";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { resolveGuestCloudAllowed } from "@/features/auth/services/guestFeatureAccess";
 
 export function useCareCalendar(input?: {
   plantId?: string;
   filter?: CareCalendarFilter;
 }) {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { isPremium } = useSubscription();
   const plantsQuery = useAllActivePlants();
   const remindersQuery = useReminders();
@@ -34,12 +35,15 @@ export function useCareCalendar(input?: {
     isPremium,
   });
   const filter = input?.filter ?? "all";
-  const cloudAllowed = cloudAllowedForFeature("ai_care_schedule", isPremium, {
-    totalPlantCount: plants.length,
-    progressPhotosForPlant: {},
-    aiHealthInsightsThisMonth: {},
-    plantIdThisMonth: 0,
-  });
+  const cloudAllowed = resolveGuestCloudAllowed(
+    isGuest,
+    cloudAllowedForFeature("ai_care_schedule", isPremium, {
+      totalPlantCount: plants.length,
+      progressPhotosForPlant: {},
+      aiHealthInsightsThisMonth: {},
+      plantIdThisMonth: 0,
+    }),
+  );
 
   const schedulesQuery = useQuery({
     queryKey: ["care-calendar", "schedules", user?.id ?? "guest"],
